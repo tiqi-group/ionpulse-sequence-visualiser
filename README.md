@@ -21,3 +21,4 @@ The Visualiser is based on plotly.js (https://plotly.com/javascript/) which give
 
 The Visualiser will read your the Hardware/hardware_desciption attribute from your Library to know which RF and TTL channes are used, and will automatically enable this channels and hide the rest. You can however use the "Channel configuration" button to decide which channels to show and hide. 
 
+Under the tab "Hardware" you can find the hardware description of your setup.
