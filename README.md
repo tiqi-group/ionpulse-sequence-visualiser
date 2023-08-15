@@ -1,70 +1,23 @@
-# Getting Started with Create React App
+This is the sequence visualiser used to have a nice real-time visualisation of your pulse sequences created using the Library, PyCrystal and the sequence-generator. For example, running the CoolDet from the Cryo setup looks like this:
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+<img>
 
-## Available Scripts
+# Getting Started
+First git clone this repo in a suittable location.
 
-In the project directory, you can run:
+Next thing you need it to install Node.js https://nodejs.org/en/download.
 
-### `npm start`
+Then go into the repo and change the settings.json file such that the IP address and port match the one from your Library. 
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Then run `npm install` in the head of the repo. Once the installation is finished, use `npm start` to run the visualiser! By default this will run in 
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+http://localhost:3000
 
-### `npm test`
+# Usage
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The visualiser is connected to the Library using socket.io (https://socket.io/docs/v3). The Library updates it's hardware/scope_sequence attribute, and the visualiser gets notified about this update using the socket. As soon as the socket is updated the new sequence is rendered. Give it a try by using the `update_zedboard_sequence` in any of the experiments of your Library. 
 
-### `npm run build`
+The Visualiser is based on plotly.js (https://plotly.com/javascript/) which gives us a great flexibility in its use. Try zooming in, and out of your sequence.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The Visualiser will read your the Hardware/hardware_desciption attribute from your Library to know which RF and TTL channes are used, and will automatically enable this channels and hide the rest. You can however use the "Channel configuration" button to decide which channels to show and hide. 
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
