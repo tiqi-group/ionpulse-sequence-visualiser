@@ -1,6 +1,6 @@
 This is the sequence visualiser used to have a nice real-time visualisation of your pulse sequences created using the Library, PyCrystal and the sequence-generator. For example, running the CoolDet from the Cryo setup looks like this:
 
-<img>
+![example CoolDet](images/visualiser_cooldet.png)
 
 # Getting Started
 First git clone this repo in a suittable location.
