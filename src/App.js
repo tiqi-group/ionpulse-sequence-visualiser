@@ -32,8 +32,10 @@ for (var i = 0; i <= 32; i++) {
   rf_names_map["RF" + i] = "RF" + i;
   TTL_names_map["TTL" + i] = "TTL" + i;
   RF_input["RF" + i] = {freq: [0], phase: [0], amp: [0], time: [0]}
-  RF_input["TTL" + i] ={time: [0], values: [0, 1, 0, 1]}
+  RF_input["TTL" + i] ={time: [0], values: [0]}
 }
+
+RF_input["PMT0"] = {time: [0], values: [0]}
 
 TTLs["TTL1"]= true
 TTLs["TTL2"]= true
@@ -134,7 +136,7 @@ export default class App extends React.Component {
           enabled_TTL_channels={this.state.enabledTTLs}
           onEvent={this.handleRFChange}
         />}/>
-        
+
         <RFScope RF_input={this.state.RF_input}
          enabledChannels={this.state.enabledChannels}
          rf_names_map = {this.state.rf_names_map}

@@ -119,6 +119,10 @@ let RFScope = function statelessFunctionComponentClass(input) {
   let enabled_TTLs = filter(input.enabledChannels, Object.keys(input.TTL_names_map));
   let n_TTL_channels = Object.values(enabled_TTLs).reduce((a, item) => a + item, 0) //Count number of enabled TTLs
   let TTL_input = filter(input.RF_input, Object.keys(input.TTL_names_map));
+  
+  console.log("RF", input.RF_input)
+  let PMT_input = {PMT0 : input.RF_input["PMT0"]}
+  
   let rf_names_map = input.rf_names_map;
 
   let data_template_TTL = {
@@ -129,6 +133,9 @@ let RFScope = function statelessFunctionComponentClass(input) {
     showlegend: false,
     fill: "tozeroy"
   };
+
+  let data_template_PMT = structuredClone(data_template_TTL);
+  data_template_PMT.marker.color = "lightblue";
 
   let data_template = {
     line: { shape: "hv" },
@@ -160,11 +167,11 @@ let RFScope = function statelessFunctionComponentClass(input) {
   let data = [];
   let index = 1;
 
+  console.log("PMT", PMT_input)
 
-let layout_to_use = createLayout(n_RF_channels, n_TTL_channels);
-layout_to_use.annotations = []
-console.log("LTS", layout_to_use)
-console.log(TTL_input)
+
+
+
 for (const [channel, value] of Object.entries(TTL_input)){
   if (input.enabledChannels[channel]){ 
   let TTL_to_add = Object.assign({}, data_template_TTL);
@@ -181,6 +188,18 @@ for (const [channel, value] of Object.entries(TTL_input)){
   data.push(TTL_to_add);
   }
 }
+
+let layout_to_use = createLayout(n_RF_channels, n_TTL_channels+1);
+layout_to_use.annotations = []
+
+let PMT_to_add = Object.assign({}, data_template_PMT);
+PMT_to_add.x = PMT_input.PMT0.time;
+PMT_to_add.y = PMT_input.PMT0.values;
+
+PMT_to_add.yaxis = "y" + index;
+index++;
+data.push(PMT_to_add);
+
   console.log(input.enabledChannels)
   for (const [channel, value] of Object.entries(RF_input)) {
     if (input.enabledChannels[channel]) {
