@@ -37,7 +37,7 @@ class EnableChannel extends Component {
     return (
       <div>
         <React.Fragment>
-          {this.props.states[this.name] &&
+          {this.props.states[this.name].enabled &&
             createElement(
               "p",
               {
@@ -46,7 +46,7 @@ class EnableChannel extends Component {
               },
               this.props.nameMapping[this.name]
             )}
-          {!this.props.states[this.name] &&
+          {!this.props.states[this.name].enabled &&
             createElement(
               "p",
               {
