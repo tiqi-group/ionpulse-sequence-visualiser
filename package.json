@@ -14,10 +14,14 @@
     "react-plotly.js": "^2.6.0",
     "react-router-dom": "^6.15.0",
     "react-scripts": "^5.0.1",
-    "socket.io-client": "^4",
-    "settings": "file:./settings.json"
+    "settings": "file:./settings.json",
+    "socket.io-client": "^4"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.4"
   },
   "scripts": {
+    "prestart": "cp scripts/pre-commit .git/hooks/ && chmod u+x .git/hooks/pre-commit && echo 'hook copied'",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

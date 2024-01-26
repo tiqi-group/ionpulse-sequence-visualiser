@@ -9,16 +9,16 @@ const Item = styled(Paper)(({ theme }) => ({
   ...theme.typography.body2,
   padding: theme.spacing(1),
   textAlign: "center",
-  color: theme.palette.text.secondary
+  color: theme.palette.text.secondary,
 }));
 const style_enabled = {
   fontSize: 14,
-  color: "#009411"
+  color: "#009411",
 };
 
 const style_disabled = {
   fontSize: 14,
-  color: "#808080"
+  color: "#808080",
 };
 
 class EnableChannel extends Component {
@@ -42,18 +42,18 @@ class EnableChannel extends Component {
               "p",
               {
                 style: style_enabled,
-                onClick: this.handleClick.bind(this)
+                onClick: this.handleClick.bind(this),
               },
-              this.props.nameMapping[this.name]
+              this.props.nameMapping[this.name],
             )}
           {!this.props.states[this.name].enabled &&
             createElement(
               "p",
               {
                 style: style_disabled,
-                onClick: this.handleClick.bind(this)
+                onClick: this.handleClick.bind(this),
               },
-              this.props.nameMapping[this.name]
+              this.props.nameMapping[this.name],
             )}
         </React.Fragment>
       </div>
@@ -66,15 +66,12 @@ class EnablingGroup extends Component {
     super(props);
   }
 
-
   onClickElement(e) {
     this.props.onEvent(e);
   }
 
-
-  
   addElement(el) {
-    return(
+    return (
       <div class="container">
         <div class="row justify-content-center">
           <div class="col">
@@ -83,8 +80,8 @@ class EnablingGroup extends Component {
               channelName: "RF" + el,
               nameMapping: this.props.names_map,
               onClick: this.onClickElement.bind(this),
-              states: this.props.enabledChannels}
-            )}
+              states: this.props.enabledChannels,
+            })}
           </div>
           <div class="col">
             {createElement(EnableChannel, {
@@ -92,8 +89,8 @@ class EnablingGroup extends Component {
               channelName: "TTL" + el,
               nameMapping: this.props.names_map_TTL,
               onClick: this.onClickElement.bind(this),
-              states: this.props.enabledChannels}
-            )}
+              states: this.props.enabledChannels,
+            })}
           </div>
         </div>
       </div>
@@ -101,9 +98,7 @@ class EnablingGroup extends Component {
   }
 
   addAllElements() {
-   return(
-      Array.from(Array(32).keys()).map(i=>this.addElement(i))
-   );
+    return Array.from(Array(32).keys()).map((i) => this.addElement(i));
   }
 
   render() {
@@ -124,4 +119,4 @@ class EnablingGroup extends Component {
   }
 }
 
-export { EnablingGroup};
+export { EnablingGroup };

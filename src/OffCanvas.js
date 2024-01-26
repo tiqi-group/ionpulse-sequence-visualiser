@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import Button from 'react-bootstrap/Button';
-import Offcanvas from 'react-bootstrap/Offcanvas';
+import { useState } from "react";
+import Button from "react-bootstrap/Button";
+import Offcanvas from "react-bootstrap/Offcanvas";
 
 function EnablingGroupOff(input) {
   const [show, setShow] = useState(false);
@@ -18,9 +18,7 @@ function EnablingGroupOff(input) {
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>Offcanvas</Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body>
-            {input.Enablers}
-        </Offcanvas.Body>
+        <Offcanvas.Body>{input.Enablers}</Offcanvas.Body>
       </Offcanvas>
     </>
   );
