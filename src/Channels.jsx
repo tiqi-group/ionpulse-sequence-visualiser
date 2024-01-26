@@ -284,31 +284,33 @@ class RFScope extends Component {
       }
     }
 
-    let PMT_to_add = Object.assign({}, data_template_PMT);
-    PMT_to_add.x = PMT_input.PMT0.time;
-    PMT_to_add.y = PMT_input.PMT0.values;
+    for (const [channel, value] of Object.entries(PMT_input)) {
+      let PMT_to_add = Object.assign({}, data_template_PMT);
+      PMT_to_add.x = value.time;
+      PMT_to_add.y = value.values;
 
-    let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-    let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-    let annotation_position =
-      (annotation_position_1 + annotation_position_2) / 2;
-    let annotation_to_add = {
-      xanchor: "right",
-      yanchor: "middle",
-      xref: "paper",
-      yref: "paper",
-      x: -0.01,
-      y: annotation_position,
-      text: "PMT",
-      showarrow: false,
-      //textangle: -90,
-      //captureevents: true
-    };
-    layout_to_use.annotations.push(annotation_to_add);
+      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+      let annotation_position =
+        (annotation_position_1 + annotation_position_2) / 2;
+      let annotation_to_add = {
+        xanchor: "right",
+        yanchor: "middle",
+        xref: "paper",
+        yref: "paper",
+        x: -0.01,
+        y: annotation_position,
+        text: channel,
+        showarrow: false,
+        //textangle: -90,
+        //captureevents: true
+      };
+      layout_to_use.annotations.push(annotation_to_add);
 
-    PMT_to_add.yaxis = "y" + index;
-    index++;
-    data.push(PMT_to_add);
+      PMT_to_add.yaxis = "y" + index;
+      index++;
+      data.push(PMT_to_add);
+    }
 
     // console.log(input.enabledChannels)
     for (const [channel, value] of Object.entries(RF_input)) {

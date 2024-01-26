@@ -1,13 +1,11 @@
 import AOM from "./Aom";
 let Hardware = function (input) {
-  if (Object.keys(input.aomConfiguration).length > 0)
-    for (let [key, value] of Object.keys(input.aomConfiguration)) {
-      <AOM aomConfiguration={value} />;
-    }
+  let ret = [];
+  for (let [key, value] of Object.entries(input.aomConfiguration)) {
+    <AOM key={key} aomConfiguration={value} />;
+  }
 
-  return Object.values(input.aomConfiguration).map((value) => (
-    <AOM aomConfiguration={value} />
-  ));
+  return ret;
 };
 
 export { Hardware };

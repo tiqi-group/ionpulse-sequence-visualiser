@@ -56,15 +56,14 @@ export default class App extends React.Component {
     };
     this.libraryIp = settings["Library ip"];
     this.libraryPort = settings["Library port"];
-    this.handleRFChange = this.handleRFChange.bind(this);
-    this.createRFMap = this.createRFMap.bind(this);
-    this.onNotify = this.onNotify.bind(this);
-    this.handleFreqPhaseSwap = this.handleFreqPhaseSwap.bind(this);
     let socket_url = `ws://${this.libraryIp}:${this.libraryPort}`;
     this.socket = io(socket_url, {
       path: "/ws/socket.io/",
       transports: ["websocket"],
     });
+  }
+
+  componentDidMount() {
     this.socket.on("notify", (value) => {
       //console.log(this.state.RF_input);
       // Extracting data from the notification
@@ -72,11 +71,14 @@ export default class App extends React.Component {
         this.setState({ RF_input: JSON.parse(value.data.value) });
       }
     });
-  }
 
-  componentDidMount() {
-    let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware/description`;
-    fetch(hardware_url)
+    this.handleRFChange = this.handleRFChange.bind(this);
+    this.createRFMap = this.createRFMap.bind(this);
+    this.onNotify = this.onNotify.bind(this);
+    this.handleFreqPhaseSwap = this.handleFreqPhaseSwap.bind(this);
+
+    let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
+    fetch(hardware_url + "/description")
       .then((response) => response.json())
       .then((data) => {
         this.setState({ aom_configuration: JSON.parse(data)["RFs"] });
@@ -86,6 +88,11 @@ export default class App extends React.Component {
         this.setState({
           TTL_names_map: this.createTTLMap(JSON.parse(data)["TTLs"]),
         });
+      });
+    fetch(hardware_url + "/scope_sequence")
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({ RF_input: JSON.parse(data) });
       });
   }
 
@@ -146,7 +153,7 @@ export default class App extends React.Component {
 
   render() {
     return (
-      <body>
+      <div>
         <NavBar />
         {/* <Container fluid="sm">
         <IpPort handler = {this.handleIPPortChange}/>
@@ -185,10 +192,9 @@ export default class App extends React.Component {
                 <Hardware aomConfiguration={this.state.aom_configuration} />
               }
             />
-            {/* </Route> */}
           </Routes>
         </Router>
-      </body>
+      </div>
     );
   }
 }
