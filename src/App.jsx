@@ -1,7 +1,7 @@
 import io from "socket.io-client";
 import React, { useState } from "react";
 import Plot from "react-plotly.js";
-import { SingleTTLChannel, RFScope } from "./Channels";
+import { RFScope } from "./Channels";
 import NavBar from "./Header";
 import EnablingGroupOff from "./OffCanvas";
 import Container from "react-bootstrap/Container";
@@ -11,7 +11,7 @@ import { Hardware } from "./Hardware";
 import { EnablingGroup } from "./VisualiserConfiguration";
 
 import { IpPort } from "./Settings";
-import settings from "settings";
+import settings from "../settings";
 
 var RF = {};
 var TTLs = {};
@@ -45,6 +45,7 @@ RF_input["PMT0"] = { time: [0], values: [0] };
 export default class App extends React.Component {
   constructor() {
     super();
+    console.log("Start constructor");
     this.state = {
       // TTL_input: TTL_input,
       enabledChannels: { ...RF, ...TTLs },
