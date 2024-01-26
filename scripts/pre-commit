@@ -3,18 +3,23 @@
 FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
 [ -z "$FILES" ] && exit 0
 
-stash_commit="$(git stash create)"
+# Store diff of current working changes
+# It looks like git stash is the way to go here, it is not
+# https://stackoverflow.com/questions/20479794/how-do-i-properly-git-stash-pop-in-pre-commit-hooks-to-get-a-clean-working-tree
+working_tree="$(git diff)"
+git restore --quiet .
 
-# Prettify all selected files
-echo "$FILES" | xargs ./node_modules/.bin/prettier --ignore-unknown --write
+# Check formatting of all selected files
+echo "$FILES" | xargs ./node_modules/.bin/prettier --ignore-unknown --check
 
 status=$?
 
-# Add back the modified/prettified files to staging
-echo "$FILES" | xargs git add
+echo "${working_tree}" | git apply --allow-empty
 
-if [[ -n "${stash_commit}" ]]; then
-  git stash apply "${stash_commit}"
+if [ ${status} -ne 0 ]; then
+	echo "Please run 'prettier' before committing"
+	echo "  ./node_modules/.bin/prettier --write ."
+	echo "And don't forget to 'git add'"
 fi
 
-exit $status
+exit ${status}
