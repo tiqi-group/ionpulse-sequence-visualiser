@@ -72,9 +72,9 @@ class EnablingGroup extends Component {
 
   addElement(el) {
     return (
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col">
+      <div className="container" key={"enabler" + el}>
+        <div className="row justify-content-center">
+          <div className="col">
             {createElement(EnableChannel, {
               //channel: this.props.groupType + el,
               channelName: "RF" + el,
@@ -83,7 +83,7 @@ class EnablingGroup extends Component {
               states: this.props.enabledChannels,
             })}
           </div>
-          <div class="col">
+          <div className="col">
             {createElement(EnableChannel, {
               //channel: this.props.groupType + el,
               channelName: "TTL" + el,
