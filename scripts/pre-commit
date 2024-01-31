@@ -14,7 +14,8 @@ echo "$FILES" | xargs ./node_modules/.bin/prettier --ignore-unknown --check
 
 status=$?
 
-echo "${working_tree}" | git apply --allow-empty
+# --allow-empty is not supported in git 2.34 (Ubuntu 22.04 LTS default)
+[ -n "${working_tree}" ] && echo "${working_tree}" | git apply
 
 if [ ${status} -ne 0 ]; then
 	echo "Please run 'prettier' before committing"
