@@ -23,7 +23,7 @@
     "vitest": "^1.2.1"
   },
   "scripts": {
-    "preinstall": "cp scripts/pre-commit .git/hooks/ && chmod u+x .git/hooks/pre-commit && echo 'hook copied'",
+    "preinstall": "./scripts/preinstall.sh",
     "start": "vite",
     "build": "tsc && vite build",
     "serve": "vite preview",

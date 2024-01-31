@@ -10,9 +10,17 @@ function EnablingGroupOff(input) {
 
   return (
     <>
-      <Button variant="primary" onClick={handleShow}>
-        Channels
-      </Button>
+      <div
+        style={{
+          position: "fixed",
+          bottom: "8px",
+          right: "8px",
+        }}
+      >
+        <Button variant="primary" onClick={handleShow}>
+          Channels
+        </Button>
+      </div>
 
       <Offcanvas show={show} onHide={handleClose}>
         <Offcanvas.Header closeButton>
