@@ -1,6 +1,8 @@
-import React from "react";
 import Plot from "react-plotly.js";
 import { Component } from "react";
+import { io } from "socket.io-client";
+
+import settings from "../settings";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -71,10 +73,14 @@ function compileEventName(eventNames) {
   return compiledEventNames;
 }
 
-function createLayout(n_RF_channels, n_TTL_channels) {
+function createLayout(n_channels) {
+  // PMT channels are treated as TTL channels here
   let individual_TTL_height = 40;
   let individual_RF_height = 70;
   let pad = 0;
+
+  let n_RF_channels = n_channels["RF"];
+  let n_TTL_channels = n_channels["PMT"] + n_channels["TTL"];
 
   let grid_params = {
     rows: 2 * n_RF_channels + n_TTL_channels,
@@ -182,6 +188,8 @@ let data_templates = {
   freq: data_template_freq,
   amp: data_template_amp,
   phase: data_template_phase,
+  PMT: data_template_PMT,
+  TTL: data_template_TTL,
 };
 
 let title_template = {
@@ -193,64 +201,110 @@ let title_template = {
   },
 };
 
-class RFScope extends Component {
+class SequencePlot extends Component {
   constructor(props) {
     super(props);
-    this.props = props;
+    let plotSettings = {};
+    for (const k in this.props.channelSettings) {
+      if (k.includes("RF")) {
+        // Extend channels settings
+        plotSettings[k] = { yDataType: "freq" };
+      }
+    }
+
+    let sequenceData = {};
+    for (const k in this.props.channelSettings) {
+      if (k.includes("RF")) {
+        sequenceData[k] = {
+          freq: [0],
+          phase: [0],
+          amp: [0],
+          time: [0],
+          names: [{ sequences: [""] }],
+        };
+      } else {
+        sequenceData[k] = { time: [0], values: [0] };
+      }
+    }
+    this.state = {
+      plotSettings: plotSettings,
+      sequenceData: sequenceData,
+    };
     this.onClickAnnotation = this.onClickAnnotation.bind(this);
+
+    this.libraryIp = settings["Library ip"];
+    this.libraryPort = settings["Library port"];
+    let socket_url = `ws://${this.libraryIp}:${this.libraryPort}`;
+    this.socket = io(socket_url, {
+      path: "/ws/socket.io/",
+      transports: ["websocket"],
+    });
   }
 
-  //(input)
+  componentDidMount() {
+    console.log("SequencePlot DidMount");
+    this.socket.on("notify", (value) => {
+      // Extracting data from the notification
+      if (value.data.name == "Hardware.scope_sequence") {
+        this.setState({ sequenceData: JSON.parse(value.data.value) });
+      }
+    });
 
-  // console.log("RF", input.RF_input)
+    let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
+    fetch(hardware_url + "/scope_sequence")
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({ sequenceData: JSON.parse(data) });
+      });
+  }
+
+  componentWillUnmount() {
+    this.socket.close();
+  }
 
   onClickAnnotation(e) {
-    let clickedChannel = Object.keys(this.props.rf_names_map).find(
-      (key) => this.props.rf_names_map[key] === e.annotation.text,
+    let channel = Object.keys(this.props.channelSettings).find(
+      (key) => this.props.channelSettings[key].name === e.annotation.text,
     );
 
-    //console.log()
-    this.props.channelSwapHandler(clickedChannel);
-    // this.enabledChannels["TTL0"].enabled= true;
+    console.log(channel);
+    let newPlotSettings = { ...this.state.plotSettings };
+    if (newPlotSettings[channel].yDataType == "freq") {
+      newPlotSettings[channel].yDataType = "phase";
+    } else if (newPlotSettings[channel].yDataType == "phase") {
+      newPlotSettings[channel].yDataType = "freq";
+    }
+    this.setState({ plotSettings: newPlotSettings });
   }
 
   render() {
-    let RF_input = filter(
-      this.props.RF_input,
-      Object.keys(this.props.rf_names_map),
+    console.log("Render SequencePlot");
+    let sequenceData = filter(
+      this.state.sequenceData,
+      Object.keys(this.props.channelDescription),
     );
-    let enabled_RFs = filter(
-      this.props.enabledChannels,
-      Object.keys(this.props.rf_names_map),
+    let n_channels = Object.keys(this.props.channelSettings).reduce(
+      (a, key) => {
+        a[this.props.channelSettings[key].type] +=
+          this.props.channelSettings[key].isEnabled;
+        return a;
+      },
+      { RF: 0, TTL: 0, PMT: 0 },
     );
-    let n_RF_channels = Object.values(enabled_RFs).reduce(
-      (a, item) => a + item.enabled,
-      0,
-    );
-
-    let enabled_TTLs = filter(
-      this.props.enabledChannels,
-      Object.keys(this.props.TTL_names_map),
-    );
-    let n_TTL_channels = Object.values(enabled_TTLs).reduce(
-      (a, item) => a + item.enabled,
-      0,
-    ); //Count number of enabled TTLs
-    let TTL_input = filter(
-      this.props.RF_input,
-      Object.keys(this.props.TTL_names_map),
-    );
-    let PMT_input = { PMT0: this.props.RF_input["PMT0"] };
-    // let rf_names_map = this.props.rf_names_map;
 
     let data = [];
     let index = 1;
-    let layout_to_use = createLayout(n_RF_channels, n_TTL_channels + 1);
+    let layout_to_use = createLayout(n_channels);
     layout_to_use.annotations = [];
     layout_to_use.shapes = [];
 
-    for (const [channel, value] of Object.entries(TTL_input)) {
-      if (this.props.enabledChannels[channel].enabled) {
+    console.log("descript", this.props.channelDescription);
+    console.log("settings", this.props.channelSettings);
+    for (const [channel, value] of Object.entries(sequenceData)) {
+      if (
+        this.props.channelSettings[channel].isEnabled &&
+        this.props.channelSettings[channel].type === "TTL"
+      ) {
         let TTL_to_add = Object.assign({}, data_template_TTL);
         TTL_to_add.x = value.time;
         TTL_to_add.y = value.values;
@@ -272,7 +326,7 @@ class RFScope extends Component {
           yref: "paper",
           x: -0.01,
           y: annotation_position,
-          text: this.props.TTL_names_map[channel],
+          text: this.props.channelDescription[channel].name,
           showarrow: false,
           //textangle: -90,
           //captureevents: true
@@ -284,54 +338,57 @@ class RFScope extends Component {
       }
     }
 
-    for (const [channel, value] of Object.entries(PMT_input)) {
-      let PMT_to_add = Object.assign({}, data_template_PMT);
-      PMT_to_add.x = value.time;
-      PMT_to_add.y = value.values;
+    for (const [channel, value] of Object.entries(sequenceData))
+      if (
+        this.props.channelSettings[channel].isEnabled &&
+        this.props.channelSettings[channel].type === "PMT"
+      ) {
+        let PMT_to_add = Object.assign({}, data_template_PMT);
+        PMT_to_add.x = value.time;
+        PMT_to_add.y = value.values;
 
-      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-      let annotation_position =
-        (annotation_position_1 + annotation_position_2) / 2;
-      let annotation_to_add = {
-        xanchor: "right",
-        yanchor: "middle",
-        xref: "paper",
-        yref: "paper",
-        x: -0.01,
-        y: annotation_position,
-        text: channel,
-        showarrow: false,
-        //textangle: -90,
-        //captureevents: true
-      };
-      layout_to_use.annotations.push(annotation_to_add);
+        let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+        let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+        let annotation_position =
+          (annotation_position_1 + annotation_position_2) / 2;
+        let annotation_to_add = {
+          xanchor: "right",
+          yanchor: "middle",
+          xref: "paper",
+          yref: "paper",
+          x: -0.01,
+          y: annotation_position,
+          text: channel,
+          showarrow: false,
+          //textangle: -90,
+          //captureevents: true
+        };
+        layout_to_use.annotations.push(annotation_to_add);
 
-      PMT_to_add.yaxis = "y" + index;
-      index++;
-      data.push(PMT_to_add);
-    }
+        PMT_to_add.yaxis = "y" + index;
+        index++;
+        data.push(PMT_to_add);
+      }
 
-    // console.log(input.enabledChannels)
-    for (const [channel, value] of Object.entries(RF_input)) {
-      if (this.props.enabledChannels[channel].enabled) {
+    for (const [channel, value] of Object.entries(sequenceData)) {
+      if (
+        this.props.channelSettings[channel].isEnabled &&
+        this.props.channelSettings[channel].type === "RF"
+      ) {
         let object_to_add = Object.assign(
           {},
-          data_templates[this.props.enabledChannels[channel].showing],
+          data_templates[this.state.plotSettings[channel].yDataType],
         );
         object_to_add.x = value.time;
-        object_to_add.y = value[this.props.enabledChannels[channel].showing];
+        object_to_add.y = value[this.state.plotSettings[channel].yDataType];
         //object_to_add.text = compileEventName(value.names);
         object_to_add.name = "";
         object_to_add.yaxis = "y" + index;
 
-        //layout["yaxis" + index] += structuredClone(RF_freq_yaxis_params);
-        // layout_to_use["yaxis" + index].title.text = rf_names_map[channel] + "<br>freq";
-        console.log(index, layout_to_use["yaxis" + index]);
         layout_to_use["yaxis" + index].title.text =
-          this.props.enabledChannels[channel].showing;
+          this.state.plotSettings[channel].yDataType;
         layout_to_use["yaxis" + index].range =
-          RF_yaxis_ranges[this.props.enabledChannels[channel].showing];
+          RF_yaxis_ranges[this.state.plotSettings[channel].yDataType];
         layout_to_use["xaxis" + index] = xAxisParams;
 
         let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
@@ -345,8 +402,6 @@ class RFScope extends Component {
         //amp_to_add.text = compileEventName(value.names);
         amp_to_add.yaxis = "y" + index;
 
-        // layout["yaxis" + index] = structuredClone(RF_amp_yaxis_params);
-        //layout_to_use["yaxis" + index].title.text = rf_names_map[channel] + "<br>amp";
         layout_to_use["yaxis" + index].title.text = "amp";
         layout_to_use["xaxis" + index] = xAxisParams;
         let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
@@ -359,7 +414,7 @@ class RFScope extends Component {
           yref: "paper",
           x: -0.05,
           y: annotation_position,
-          text: this.props.rf_names_map[channel],
+          text: this.props.channelDescription[channel].name,
           showarrow: false,
           textangle: -90,
           captureevents: true,
@@ -370,7 +425,6 @@ class RFScope extends Component {
         } else {
           channel_idx = (index - 1) / 2;
         }
-        console.log(channel_idx, channel_idx % 2);
         if (channel_idx % 2 == 0) {
           let shape_to_add = {
             type: "rect",
@@ -390,7 +444,6 @@ class RFScope extends Component {
           layout_to_use.shapes.push(shape_to_add);
         }
         layout_to_use.annotations.push(annotation_to_add);
-        console.log("final", layout_to_use);
         data.push(amp_to_add);
         index++;
       }
@@ -406,4 +459,4 @@ class RFScope extends Component {
   }
 }
 
-export { RFScope };
+export { SequencePlot };

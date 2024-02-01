@@ -37,7 +37,7 @@ class EnableChannel extends Component {
     return (
       <div>
         <React.Fragment>
-          {this.props.states[this.name].enabled &&
+          {this.props.states[this.name].isEnabled &&
             createElement(
               "p",
               {
@@ -46,7 +46,7 @@ class EnableChannel extends Component {
               },
               this.props.nameMapping[this.name],
             )}
-          {!this.props.states[this.name].enabled &&
+          {!this.props.states[this.name].isEnabled &&
             createElement(
               "p",
               {
@@ -71,28 +71,26 @@ class EnablingGroup extends Component {
   }
 
   addElement(el) {
+    cols = [];
+    for (type of ["RF", "TTL", "PMT"]) {
+      element_key = type + el;
+      if (Object.keys(this.props.channelSettings).contains(element_key)) {
+        cols.push(
+          <div className="col">
+            {createElement(EnableChannel, {
+              //channel: this.props.groupType + el,
+              channelName: element_key,
+              displayName: this.props.channelSettings[element_key].name,
+              onClick: this.onClickElement.bind(this),
+              states: this.props.channelSettings,
+            })}
+          </div>,
+        );
+      }
+    }
     return (
-      <div className="container" key={"enabler" + el}>
-        <div className="row justify-content-center">
-          <div className="col">
-            {createElement(EnableChannel, {
-              //channel: this.props.groupType + el,
-              channelName: "RF" + el,
-              nameMapping: this.props.names_map,
-              onClick: this.onClickElement.bind(this),
-              states: this.props.enabledChannels,
-            })}
-          </div>
-          <div className="col">
-            {createElement(EnableChannel, {
-              //channel: this.props.groupType + el,
-              channelName: "TTL" + el,
-              nameMapping: this.props.names_map_TTL,
-              onClick: this.onClickElement.bind(this),
-              states: this.props.enabledChannels,
-            })}
-          </div>
-        </div>
+      <div className="container" key={"enablerDiv" + el}>
+        <div className="row justify-content-center">cols</div>
       </div>
     );
   }
