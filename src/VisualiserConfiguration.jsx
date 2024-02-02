@@ -24,36 +24,33 @@ const style_disabled = {
 class EnableChannel extends Component {
   constructor(props) {
     super(props);
-    this.name = props.channelName;
-    //this.nameMapping = props.nameMapping;
-    // this.state = {nameMapping: props.nameMapping};
   }
 
   handleClick(e) {
-    this.props.onClick({ name: this.name });
+    this.props.onClick({ name: this.props.channelName });
   }
 
   render() {
     return (
       <div>
         <React.Fragment>
-          {this.props.states[this.name].isEnabled &&
+          {this.props.isEnabled &&
             createElement(
               "p",
               {
                 style: style_enabled,
                 onClick: this.handleClick.bind(this),
               },
-              this.props.nameMapping[this.name],
+              this.props.displayName,
             )}
-          {!this.props.states[this.name].isEnabled &&
+          {!this.props.isEnabled &&
             createElement(
               "p",
               {
                 style: style_disabled,
                 onClick: this.handleClick.bind(this),
               },
-              this.props.nameMapping[this.name],
+              this.props.displayName,
             )}
         </React.Fragment>
       </div>
@@ -74,15 +71,15 @@ class EnablingGroup extends Component {
     cols = [];
     for (type of ["RF", "TTL", "PMT"]) {
       element_key = type + el;
-      if (Object.keys(this.props.channelSettings).contains(element_key)) {
+      if (this.props.channelEnabled.hasOwn(element_key)) {
         cols.push(
           <div className="col">
             {createElement(EnableChannel, {
               //channel: this.props.groupType + el,
               channelName: element_key,
-              displayName: this.props.channelSettings[element_key].name,
+              displayName: this.props.channelDescription[element_key].name,
               onClick: this.onClickElement.bind(this),
-              states: this.props.channelSettings,
+              isEnabled: this.props.channelEnabled[element_key],
             })}
           </div>,
         );
@@ -96,11 +93,16 @@ class EnablingGroup extends Component {
   }
 
   addAllElements() {
-    return Array.from(Array(32).keys()).map((i) => this.addElement(i));
+    const nRows = Object.values(this.props.channelDescription).reduce(
+      (count, val) => (count += val.group === "RF"),
+      0,
+    );
+    return Array.from(Array(Math.max(nRows, 32)).keys()).map((i) =>
+      this.addElement(i),
+    );
   }
 
   render() {
-    //console.log(this.props.enabled_TTLs);
     return (
       <div>
         <Box sx={{ flexGrow: 1 }}>

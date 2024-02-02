@@ -204,16 +204,16 @@ let title_template = {
 class SequencePlot extends Component {
   constructor(props) {
     super(props);
-    let plotSettings = {};
-    for (const k in this.props.channelSettings) {
+    let channelYDataType = {};
+    for (const k in this.props.channelDescription) {
       if (k.includes("RF")) {
         // Extend channels settings
-        plotSettings[k] = { yDataType: "freq" };
+        channelYDataType[k] = "freq";
       }
     }
 
     let sequenceData = {};
-    for (const k in this.props.channelSettings) {
+    for (const k in this.props.channelDescription) {
       if (k.includes("RF")) {
         sequenceData[k] = {
           freq: [0],
@@ -227,7 +227,7 @@ class SequencePlot extends Component {
       }
     }
     this.state = {
-      plotSettings: plotSettings,
+      channelYDataType: channelYDataType,
       sequenceData: sequenceData,
     };
     this.onClickAnnotation = this.onClickAnnotation.bind(this);
@@ -242,7 +242,6 @@ class SequencePlot extends Component {
   }
 
   componentDidMount() {
-    console.log("SequencePlot DidMount");
     this.socket.on("notify", (value) => {
       // Extracting data from the notification
       if (value.data.name == "Hardware.scope_sequence") {
@@ -258,35 +257,50 @@ class SequencePlot extends Component {
       });
   }
 
+  componentDidUpdate() {
+    const channelYDataTypeKeys = Object.keys(this.state.channelYDataType);
+    const channelDescKeys = Object.keys(this.props.channelDescription);
+    const allKeys = channelYDataTypeKeys.concat(channelDescKeys);
+    const union = new Set(allKeys);
+
+    if (union.size !== channelYDataTypeKeys.length) {
+      let newChannelYDataType = { ...this.state.channelYDataType };
+      for (const k of channelDescKeys) {
+        if (!(k in this.state.channelYDataType)) {
+          newChannelYDataType[k] = "freq";
+        }
+      }
+      this.setState({ channelYDataType: newChannelYDataType });
+    }
+  }
+
   componentWillUnmount() {
     this.socket.close();
   }
 
   onClickAnnotation(e) {
-    let channel = Object.keys(this.props.channelSettings).find(
-      (key) => this.props.channelSettings[key].name === e.annotation.text,
+    let channel = Object.keys(this.props.channelDescription).find(
+      (key) => this.props.channelDescription[key].name === e.annotation.text,
     );
 
-    console.log(channel);
-    let newPlotSettings = { ...this.state.plotSettings };
-    if (newPlotSettings[channel].yDataType == "freq") {
-      newPlotSettings[channel].yDataType = "phase";
-    } else if (newPlotSettings[channel].yDataType == "phase") {
-      newPlotSettings[channel].yDataType = "freq";
+    let newChannelYDataType = { ...this.state.channelYDataType };
+    if (newChannelYDataType[channel] == "freq") {
+      newChannelYDataType[channel] = "phase";
+    } else if (newChannelYDataType[channel] == "phase") {
+      newChannelYDataType[channel] = "freq";
     }
-    this.setState({ plotSettings: newPlotSettings });
+    this.setState({ channelYDataType: newChannelYDataType });
   }
 
   render() {
-    console.log("Render SequencePlot");
     let sequenceData = filter(
       this.state.sequenceData,
       Object.keys(this.props.channelDescription),
     );
-    let n_channels = Object.keys(this.props.channelSettings).reduce(
+    let n_channels = Object.keys(this.props.channelDescription).reduce(
       (a, key) => {
-        a[this.props.channelSettings[key].type] +=
-          this.props.channelSettings[key].isEnabled;
+        a[this.props.channelDescription[key].group] +=
+          this.props.channelEnabled[key] == true;
         return a;
       },
       { RF: 0, TTL: 0, PMT: 0 },
@@ -298,12 +312,10 @@ class SequencePlot extends Component {
     layout_to_use.annotations = [];
     layout_to_use.shapes = [];
 
-    console.log("descript", this.props.channelDescription);
-    console.log("settings", this.props.channelSettings);
     for (const [channel, value] of Object.entries(sequenceData)) {
       if (
-        this.props.channelSettings[channel].isEnabled &&
-        this.props.channelSettings[channel].type === "TTL"
+        this.props.channelDescription[channel].group === "TTL" &&
+        this.props.channelEnabled[channel]
       ) {
         let TTL_to_add = Object.assign({}, data_template_TTL);
         TTL_to_add.x = value.time;
@@ -340,8 +352,8 @@ class SequencePlot extends Component {
 
     for (const [channel, value] of Object.entries(sequenceData))
       if (
-        this.props.channelSettings[channel].isEnabled &&
-        this.props.channelSettings[channel].type === "PMT"
+        this.props.channelDescription[channel].group === "PMT" &&
+        this.props.channelEnabled[channel]
       ) {
         let PMT_to_add = Object.assign({}, data_template_PMT);
         PMT_to_add.x = value.time;
@@ -372,23 +384,23 @@ class SequencePlot extends Component {
 
     for (const [channel, value] of Object.entries(sequenceData)) {
       if (
-        this.props.channelSettings[channel].isEnabled &&
-        this.props.channelSettings[channel].type === "RF"
+        this.props.channelDescription[channel].group === "RF" &&
+        this.props.channelEnabled[channel]
       ) {
         let object_to_add = Object.assign(
           {},
-          data_templates[this.state.plotSettings[channel].yDataType],
+          data_templates[this.state.channelYDataType[channel]],
         );
         object_to_add.x = value.time;
-        object_to_add.y = value[this.state.plotSettings[channel].yDataType];
+        object_to_add.y = value[this.state.channelYDataType[channel]];
         //object_to_add.text = compileEventName(value.names);
         object_to_add.name = "";
         object_to_add.yaxis = "y" + index;
 
         layout_to_use["yaxis" + index].title.text =
-          this.state.plotSettings[channel].yDataType;
+          this.state.channelYDataType[channel];
         layout_to_use["yaxis" + index].range =
-          RF_yaxis_ranges[this.state.plotSettings[channel].yDataType];
+          RF_yaxis_ranges[this.state.channelYDataType[channel]];
         layout_to_use["xaxis" + index] = xAxisParams;
 
         let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];

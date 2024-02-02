@@ -54,7 +54,6 @@ export default class App extends React.Component {
   }
 
   componentDidMount() {
-    console.log("App DidMount");
     let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
     fetch(hardware_url + "/description")
       .then((response) => response.json())
