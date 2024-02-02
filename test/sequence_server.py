@@ -42,15 +42,40 @@ if __name__ == "__main__":
 
     @app.route("/Hardware/description")
     def description() -> str:
+        n_ttls = 32
+        n_rfs = 32
+        n_pmts = 8
+        try:
+            with open(plot_json_filename) as f:
+                data = f.read()
+                if len(data) > 0:
+                    try:
+                        seq = json.loads(data)
+                        ch_keys = list(seq.keys())
+                        n_ttls = len([s for s in ch_keys if "TTL" in s])
+                        n_rfs = len([s for s in ch_keys if "RF" in s])
+                        n_pmts = len([s for s in ch_keys if "PMT" in s])
+                    except:
+                        pass
+        except:
+            pass
         d = dict()
         d["RFs"] = dict()
-        d["TTLs"] = dict()
-        for i in range(32):
+        for i in range(n_rfs):
             d["RFs"][f"RF{i}"] = {"name": f"RF{i}",
                                   "type": "single pass",
-                                  "central_frequency": 100
+                                  "central_frequency": 100,
+                                  "order": 1,
+                                  "dds_channels":[i]
                                   }
+
+        d["TTLs"] = dict()
+        for i in range(n_ttls):
             d["TTLs"][f"TTL{i}"] = f"TTL{i}"
+
+        d["PMTs"] = dict()
+        for i in range(n_pmts):
+            d["PMTs"][f"PMT{i}"] = f"PMT{i}"
         
         out = dict()
         out = json.dumps(d)
@@ -68,8 +93,8 @@ if __name__ == "__main__":
         return ""
 
     @app.route("/")
-    def main() -> str:
-        return ""
+    def index() -> str:
+        return "Index page"
     
     class JsonChangeHandler(FileSystemEventHandler):
         def safe_emit(self):
