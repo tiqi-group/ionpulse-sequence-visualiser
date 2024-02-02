@@ -1,8 +1,5 @@
 import Plot from "react-plotly.js";
 import { Component } from "react";
-import { io } from "socket.io-client";
-
-import settings from "../settings";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -212,49 +209,10 @@ class SequencePlot extends Component {
       }
     }
 
-    let sequenceData = {};
-    for (const k in this.props.channelDescription) {
-      if (k.includes("RF")) {
-        sequenceData[k] = {
-          freq: [0],
-          phase: [0],
-          amp: [0],
-          time: [0],
-          names: [{ sequences: [""] }],
-        };
-      } else {
-        sequenceData[k] = { time: [0], values: [0] };
-      }
-    }
     this.state = {
       channelYDataType: channelYDataType,
-      sequenceData: sequenceData,
     };
     this.onClickAnnotation = this.onClickAnnotation.bind(this);
-
-    this.libraryIp = settings["Library ip"];
-    this.libraryPort = settings["Library port"];
-    let socket_url = `ws://${this.libraryIp}:${this.libraryPort}`;
-    this.socket = io(socket_url, {
-      path: "/ws/socket.io/",
-      transports: ["websocket"],
-    });
-  }
-
-  componentDidMount() {
-    this.socket.on("notify", (value) => {
-      // Extracting data from the notification
-      if (value.data.name == "Hardware.scope_sequence") {
-        this.setState({ sequenceData: JSON.parse(value.data.value) });
-      }
-    });
-
-    let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
-    fetch(hardware_url + "/scope_sequence")
-      .then((response) => response.json())
-      .then((data) => {
-        this.setState({ sequenceData: JSON.parse(data) });
-      });
   }
 
   componentDidUpdate() {
@@ -294,7 +252,7 @@ class SequencePlot extends Component {
 
   render() {
     let sequenceData = filter(
-      this.state.sequenceData,
+      this.props.sequenceData,
       Object.keys(this.props.channelDescription),
     );
     let n_channels = Object.keys(this.props.channelDescription).reduce(

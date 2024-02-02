@@ -5,32 +5,48 @@ import { Hardware } from "./Hardware";
 import { SequencePlotPage } from "./SequencePlotPage";
 
 import settings from "../settings";
-
-let channelDescription = {};
-for (var i = 0; i < 32; i++) {
-  channelDescription["RF" + i] = {
-    name: "RF" + i,
-    type: "single_pass",
-    central_frequency: 100,
-    order: 1,
-    dds_channels: i,
-    group: "RF",
-  };
-  channelDescription["TTL" + i] = {
-    name: "TTL" + i,
-    group: "TTL",
-  };
-}
-channelDescription["PMT0"] = {
-  name: "PMT0",
-  group: "PMT",
-};
+import { socket } from "./socket";
 
 export default class App extends React.Component {
   constructor() {
     super();
+
+    let channelDescription = {};
+    for (var i = 0; i < 32; i++) {
+      channelDescription["RF" + i] = {
+        name: "RF" + i,
+        type: "single_pass",
+        central_frequency: 100,
+        order: 1,
+        dds_channels: i,
+        group: "RF",
+      };
+      channelDescription["TTL" + i] = {
+        name: "TTL" + i,
+        group: "TTL",
+      };
+    }
+    channelDescription["PMT0"] = {
+      name: "PMT0",
+      group: "PMT",
+    };
+    let sequenceData = {};
+    for (const k in channelDescription) {
+      if (k.includes("RF")) {
+        sequenceData[k] = {
+          freq: [0],
+          phase: [0],
+          amp: [0],
+          time: [0],
+          names: [{ sequences: [""] }],
+        };
+      } else {
+        sequenceData[k] = { time: [0], values: [0] };
+      }
+    }
     this.state = {
       channelDescription: channelDescription,
+      sequenceData: sequenceData,
     };
     this.libraryIp = settings["Library ip"];
     this.libraryPort = settings["Library port"];
@@ -54,12 +70,30 @@ export default class App extends React.Component {
   }
 
   componentDidMount() {
-    let hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
+    const hardware_url = `http://${this.libraryIp}:${this.libraryPort}/Hardware`;
+
     fetch(hardware_url + "/description")
       .then((response) => response.json())
       .then((data) => {
         this.updateChannelSettings(JSON.parse(data));
       });
+
+    fetch(hardware_url + "/scope_sequence")
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState({ sequenceData: JSON.parse(data) });
+      });
+
+    socket.on("notify", (value) => {
+      // Extracting data from the notification
+      if (value.data.name == "Hardware.scope_sequence") {
+        this.setState({ sequenceData: JSON.parse(value.data.value) });
+      }
+    });
+  }
+
+  componentWillUnmount() {
+    socket.off("notify");
   }
 
   handleIPPortChange(ip, port) {
@@ -80,6 +114,7 @@ export default class App extends React.Component {
               element={
                 <SequencePlotPage
                   channelDescription={this.state.channelDescription}
+                  sequenceData={this.state.sequenceData}
                 />
               }
             />

@@ -4,16 +4,6 @@ import EnablingGroupOff from "./OffCanvas";
 import { EnablingGroup } from "./VisualiserConfiguration";
 import { SequencePlot } from "./SequencePlot";
 
-// https://stackoverflow.com/questions/14368596/how-can-i-check-that-two-objects-have-the-same-set-of-property-names
-function objectsHaveSameKeys(...objects) {
-  const allKeys = objects.reduce(
-    (keys, object) => keys.concat(Object.keys(object)),
-    [],
-  );
-  const union = new Set(allKeys);
-  return objects.every((object) => union.size === Object.keys(object).length);
-}
-
 class SequencePlotPage extends Component {
   constructor(props) {
     super(props);
@@ -24,10 +14,6 @@ class SequencePlotPage extends Component {
     this.state = {
       channelEnabled: channelEnabledInit,
     };
-  }
-
-  componentDidMount() {
-    this.handleEnableChange = this.handleEnableChange.bind(this);
   }
 
   componentDidUpdate() {
@@ -63,13 +49,14 @@ class SequencePlotPage extends Component {
             <EnablingGroup
               channelDescription={this.props.channelDescription}
               channelEnabled={this.state.channelEnabled}
-              onEvent={this.handleEnableChange}
+              onEvent={this.handleEnableChange.bind(this)}
             />
           }
         />
         <SequencePlot
           channelDescription={this.props.channelDescription}
           channelEnabled={this.state.channelEnabled}
+          sequenceData={this.props.sequenceData}
         />
       </div>
     );
