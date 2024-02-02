@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Tuple
 from numpy.typing import NDArray
 from numpy import array, log2, binary_repr
 import json
+import argparse
 
 from ionpulse_sequence_generator import (
         Sequence,
@@ -206,8 +207,13 @@ def plot_data_for_channel_sequence(
         raise KeyError("Channels other than RF are not supported")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--jsononly", help="Only create the plot json and don't plot", action="store_true")
+    parser.add_argument("--sbcloops", help="Number of SBC loops", default=5)
+    args = parser.parse_args()
+
     state_prep = state_init("", 6)
-    sbc_loop = sbc("0", 0, state_prep)
+    sbc_loop = sbc("0", 0, state_prep, n_loops=int(args.sbcloops))
     pi_2_unit_1 = pi_2("unit 1", 0, True)
     pi_2_unit_2 = pi_2("unit 2", 3)
     ms12 = ms_1_2("1 2", 0, 3)
@@ -234,6 +240,9 @@ if __name__ == "__main__":
 
     with open("ionpulse_seq_plot.json", "w") as f:
         json.dump(generate_simplified_json(_seq), f)
+
+    if args.jsononly:
+        exit(0)
 
     # channel, value, path
     channelvalues = [

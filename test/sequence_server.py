@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
 
-    app = Flask("Plot server")
+    app = Flask("Sequence server")
     CORS(app, origins=origins)
     # create a Socket.IO server
     sio = socketio.Server(
