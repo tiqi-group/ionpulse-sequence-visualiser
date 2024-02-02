@@ -19,6 +19,9 @@
     "vite": "^5.0.12"
   },
   "devDependencies": {
+    "@testing-library/react": "^14.2.1",
+    "canvas": "^2.11.2",
+    "jsdom": "^24.0.0",
     "prettier": "^3.2.4",
     "vitest": "^1.2.1"
   },
@@ -28,12 +31,6 @@
     "build": "tsc && vite build",
     "serve": "vite preview",
     "test": "vitest"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
