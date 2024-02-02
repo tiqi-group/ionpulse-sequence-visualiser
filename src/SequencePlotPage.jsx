@@ -1,66 +1,54 @@
-import { Component } from "react";
+import { memo, useState } from "react";
 
 import EnablingGroupOff from "./OffCanvas";
-import { EnablingGroup } from "./VisualiserConfiguration";
 import { SequencePlot } from "./SequencePlot";
 
-class SequencePlotPage extends Component {
-  constructor(props) {
-    super(props);
-    let channelEnabledInit = {};
-    for (const k in props.channelDescription) {
-      channelEnabledInit[k] = true;
-    }
-    this.state = {
-      channelEnabled: channelEnabledInit,
-    };
-  }
+const SequencePlotPage = memo(function SequencePlotPage({
+  channelDescription,
+  sequenceData,
+}) {
+  const [channelEnabled, setChannelEnabled] = useState(() => {
+    return Object.keys(channelDescription).reduce((init, k) => {
+      init[k] = true;
+      return init;
+    }, {});
+  });
 
-  componentDidUpdate() {
-    const channelEnabledKeys = Object.keys(this.state.channelEnabled);
-    const channelDescKeys = Object.keys(this.props.channelDescription);
-    const allKeys = channelEnabledKeys.concat(channelDescKeys);
-    const union = new Set(allKeys);
+  const channelEnabledKeys = Object.keys(channelEnabled);
+  const channelDescKeys = Object.keys(channelDescription);
+  const allKeys = channelEnabledKeys.concat(channelDescKeys);
+  const union = new Set(allKeys);
 
-    if (union.size !== channelEnabledKeys.length) {
-      let newChannelEnabled = { ...this.state.channelEnabled };
-      for (const k of channelDescKeys) {
-        if (!(k in this.state.channelEnabled)) {
-          newChannelEnabled[k] = true;
-        }
+  if (union.size !== channelEnabledKeys.length) {
+    let newChannelEnabled = { ...channelEnabled };
+    for (const k of channelDescKeys) {
+      if (!(k in channelEnabled)) {
+        newChannelEnabled[k] = true;
       }
-      this.setState({ channelEnabled: newChannelEnabled });
     }
+    setChannelEnabled(newChannelEnabled);
   }
 
-  handleEnableChange(e) {
-    let newChannelEnabled = { ...this.state.channelEnabled };
+  function handleEnableChange(e) {
+    let newChannelEnabled = { ...channelEnabled };
     newChannelEnabled[e.name] = !newChannelEnabled[e.name];
-    this.setState({
-      channelEnabled: newChannelEnabled,
-    });
+    setChannelEnabled(newChannelEnabled);
   }
 
-  render() {
-    return (
-      <div>
-        <EnablingGroupOff
-          Enablers={
-            <EnablingGroup
-              channelDescription={this.props.channelDescription}
-              channelEnabled={this.state.channelEnabled}
-              onEvent={this.handleEnableChange.bind(this)}
-            />
-          }
-        />
-        <SequencePlot
-          channelDescription={this.props.channelDescription}
-          channelEnabled={this.state.channelEnabled}
-          sequenceData={this.props.sequenceData}
-        />
-      </div>
-    );
-  }
-}
+  return (
+    <div>
+      <EnablingGroupOff
+        channelDescription={channelDescription}
+        channelEnabled={channelEnabled}
+        handleEnableChange={handleEnableChange}
+      />
+      <SequencePlot
+        channelDescription={channelDescription}
+        channelEnabled={channelEnabled}
+        sequenceData={sequenceData}
+      />
+    </div>
+  );
+});
 
 export { SequencePlotPage };

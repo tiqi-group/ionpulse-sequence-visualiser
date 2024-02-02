@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import Button from "react-bootstrap/Button";
 import Offcanvas from "react-bootstrap/Offcanvas";
+import { EnablingGroup } from "./VisualiserConfiguration";
 
-function EnablingGroupOff(input) {
+const EnablingGroupOff = memo(function EnablingGroupOff({
+  channelDescription,
+  channelEnabled,
+  handleEnableChange,
+}) {
   const [show, setShow] = useState(false);
 
   const handleClose = () => setShow(false);
@@ -24,12 +29,18 @@ function EnablingGroupOff(input) {
 
       <Offcanvas show={show} onHide={handleClose}>
         <Offcanvas.Header closeButton>
-          <Offcanvas.Title>Offcanvas</Offcanvas.Title>
+          <Offcanvas.Title>Channels to display</Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body>{input.Enablers}</Offcanvas.Body>
+        <Offcanvas.Body>
+          <EnablingGroup
+            channelDescription={channelDescription}
+            channelEnabled={channelEnabled}
+            onEvent={handleEnableChange}
+          />
+        </Offcanvas.Body>
       </Offcanvas>
     </>
   );
-}
+});
 
 export default EnablingGroupOff;

@@ -1,8 +1,9 @@
-import React, { useState, createElement, Component } from "react";
+import React, { memo } from "react";
 import Grid from "@mui/material/Grid";
 import { styled } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
+import { green, grey } from "@mui/material/colors";
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === "dark" ? "#1A2027" : "#fff",
@@ -11,113 +12,84 @@ const Item = styled(Paper)(({ theme }) => ({
   textAlign: "center",
   color: theme.palette.text.secondary,
 }));
-const style_enabled = {
+
+const enableChannelStyle = {
   fontSize: 14,
-  color: "#009411",
+  textAlign: "center",
+  lineHeight: "50px",
+  height: "50px",
+};
+const style_enabled = {
+  ...enableChannelStyle,
+  color: green[900],
+  backgroundColor: "white",
 };
 
 const style_disabled = {
-  fontSize: 14,
-  color: "#808080",
+  ...enableChannelStyle,
+  color: grey[900],
+  backgroundColor: grey[200],
 };
 
-class EnableChannel extends Component {
-  constructor(props) {
-    super(props);
-  }
+const EnableChannel = memo(function EnableChannel({
+  channelName,
+  displayName,
+  isEnabled,
+  onClick,
+}) {
+  return (
+    <div className="col" style={isEnabled ? style_enabled : style_disabled}>
+      <React.Fragment>
+        <p onClick={() => onClick({ name: channelName })}>{displayName}</p>
+      </React.Fragment>
+    </div>
+  );
+});
 
-  handleClick(e) {
-    this.props.onClick({ name: this.props.channelName });
-  }
+const EnablingGroup = memo(function EnablingGroup({
+  channelDescription,
+  channelEnabled,
+  onEvent,
+}) {
+  const nRows = Object.values(channelDescription).reduce(
+    (count, val) => (count += val.group === "RF"),
+    0,
+  );
 
-  render() {
-    return (
-      <div>
-        <React.Fragment>
-          {this.props.isEnabled &&
-            createElement(
-              "p",
-              {
-                style: style_enabled,
-                onClick: this.handleClick.bind(this),
-              },
-              this.props.displayName,
-            )}
-          {!this.props.isEnabled &&
-            createElement(
-              "p",
-              {
-                style: style_disabled,
-                onClick: this.handleClick.bind(this),
-              },
-              this.props.displayName,
-            )}
-        </React.Fragment>
-      </div>
-    );
-  }
-}
-
-class EnablingGroup extends Component {
-  constructor(props) {
-    super(props);
-  }
-
-  onClickElement(e) {
-    this.props.onEvent(e);
-  }
-
-  addElement(el) {
+  const rows = Array.from(Array(Math.max(nRows, 32)).keys()).map((row) => {
     let cols = [];
     for (const type of ["RF", "TTL", "PMT"]) {
-      let elementKey = type + el;
-      if (elementKey in this.props.channelDescription) {
+      let elementKey = type + row;
+      if (elementKey in channelDescription) {
         cols.push(
-          <div className="col" key={"enablerCol" + elementKey}>
-            {createElement(EnableChannel, {
-              channelName: elementKey,
-              displayName: this.props.channelDescription[elementKey].name,
-              onClick: this.onClickElement.bind(this),
-              isEnabled: this.props.channelEnabled[elementKey],
-            })}
-          </div>,
+          <EnableChannel
+            channelName={elementKey}
+            displayName={channelDescription[elementKey].name}
+            onClick={onEvent}
+            isEnabled={channelEnabled[elementKey]}
+            key={"enableCol" + elementKey}
+          />,
         );
       } else {
         cols.push(<div className="col" key={"enableCol" + elementKey}></div>);
       }
     }
     return (
-      <div className="container" key={"enablerRow" + el}>
+      <div className="container" key={"enablerRow" + row}>
         <div className="row justify-content-center">{cols}</div>
       </div>
     );
-  }
+  });
 
-  addAllElements() {
-    const nRows = Object.values(this.props.channelDescription).reduce(
-      (count, val) => (count += val.group === "RF"),
-      0,
-    );
-    return Array.from(Array(Math.max(nRows, 32)).keys()).map((i) =>
-      this.addElement(i),
-    );
-  }
-
-  render() {
-    return (
-      <div>
-        <Box sx={{ flexGrow: 1 }}>
-          <Grid
-            container
-            rowSpacing={1}
-            columnSpacing={{ xs: 1, sm: 2, md: 3 }}
-          >
-            {this.addAllElements()}
-          </Grid>
-        </Box>
-      </div>
-    );
-  }
-}
+  return (
+    <div>
+      <Box sx={{ flexGrow: 1 }}>
+        <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+          {rows}
+        </Grid>
+      </Box>
+    </div>
+  );
+});
 
 export { EnablingGroup };
