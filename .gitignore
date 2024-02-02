@@ -16,7 +16,9 @@ yarn-error.log*
 
 # settings
 settings.json
+ionpulse*.json
 
+__*
 .*
 !.gitignore
 !.gitmodules

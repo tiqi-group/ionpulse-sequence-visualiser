@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "sequence_server"
+version = "0.1.0"
+description = ""
+authors = [
+  "Alfredo Ricci <aricci@phys.ethz.ch>",
+  "Martin Stadler <mstadle@phys.ethz.ch>",
+]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = ">=1.24.2"
+msgpack = ">=1.0.5"
+ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", branch = "fix/plot", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+isort = "^5.12.0"
+flake8 = "^5.0.4"
+flake8-use-fstring = "^1.4"
+flake8-functions = "^0.0.7"
+flake8-comprehensions = "^3.11.1"
+flake8-pep585 = "^0.1.7"
+flake8-pep604 = "^0.1.0"
+flake8-eradicate = "^1.4.0"
+mypy = "^1.1.1"
+
+
+[tool.poetry.group.plot]
+optional=false
+
+[tool.poetry.group.plot.dependencies]
+python-socketio = "^5.11.0"
+flask = "^3.0.1"
+watchdog = "^3.0.0"
+flask-cors = "^4.0.0"
+matplotlib = ">=3.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | venv
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+show_error_codes = 1
+disallow-untyped-calls = 1
+disallow-untyped-signatures = 1
+disallow_untyped_defs = 1
