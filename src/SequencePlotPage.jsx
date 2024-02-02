@@ -35,7 +35,7 @@ class SequencePlotPage extends Component {
 
   handleEnableChange(e) {
     let newChannelEnabled = { ...this.state.channelEnabled };
-    newChannelEnabled[e.name].isEnabled = !newChannelEnabled[e.name].isEnabled;
+    newChannelEnabled[e.name] = !newChannelEnabled[e.name];
     this.setState({
       channelEnabled: newChannelEnabled,
     });

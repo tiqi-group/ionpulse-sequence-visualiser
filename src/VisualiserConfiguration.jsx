@@ -68,26 +68,27 @@ class EnablingGroup extends Component {
   }
 
   addElement(el) {
-    cols = [];
-    for (type of ["RF", "TTL", "PMT"]) {
-      element_key = type + el;
-      if (this.props.channelEnabled.hasOwn(element_key)) {
+    let cols = [];
+    for (const type of ["RF", "TTL", "PMT"]) {
+      let elementKey = type + el;
+      if (elementKey in this.props.channelDescription) {
         cols.push(
-          <div className="col">
+          <div className="col" key={"enablerCol" + elementKey}>
             {createElement(EnableChannel, {
-              //channel: this.props.groupType + el,
-              channelName: element_key,
-              displayName: this.props.channelDescription[element_key].name,
+              channelName: elementKey,
+              displayName: this.props.channelDescription[elementKey].name,
               onClick: this.onClickElement.bind(this),
-              isEnabled: this.props.channelEnabled[element_key],
+              isEnabled: this.props.channelEnabled[elementKey],
             })}
           </div>,
         );
+      } else {
+        cols.push(<div className="col" key={"enableCol" + elementKey}></div>);
       }
     }
     return (
-      <div className="container" key={"enablerDiv" + el}>
-        <div className="row justify-content-center">cols</div>
+      <div className="container" key={"enablerRow" + el}>
+        <div className="row justify-content-center">{cols}</div>
       </div>
     );
   }

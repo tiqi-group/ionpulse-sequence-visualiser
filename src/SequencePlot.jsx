@@ -232,10 +232,6 @@ class SequencePlot extends Component {
     }
   }
 
-  componentWillUnmount() {
-    this.socket.close();
-  }
-
   onClickAnnotation(e) {
     let channel = Object.keys(this.props.channelDescription).find(
       (key) => this.props.channelDescription[key].name === e.annotation.text,
