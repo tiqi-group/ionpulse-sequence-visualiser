@@ -30,7 +30,7 @@
     "start": "vite",
     "build": "tsc && vite build",
     "serve": "vite preview",
-    "test": "vitest"
+    "test": "./scripts/run-test-server.sh"
   },
   "browserslist": {
     "production": [
