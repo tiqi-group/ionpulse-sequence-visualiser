@@ -13,7 +13,7 @@ readme = "README.md"
 python = "^3.10"
 numpy = ">=1.24.2"
 msgpack = ">=1.0.5"
-ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", branch = "fix/plot", develop = true}
+ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", branch = "master", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
