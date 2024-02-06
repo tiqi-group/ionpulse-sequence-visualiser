@@ -17,10 +17,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     plot_json_filename = args.file
 
-    local_ip = socket.gethostbyname(socket.gethostname())
     protocols = ["http://"]
     hosts = ["localhost"]
-    hosts += [local_ip]
+    try:
+        local_ip = socket.gethostbyname(socket.gethostname())
+        hosts += [local_ip]
+    except:
+        print("Can't retrieve local ip");
     hosts += [socket.gethostname()]
     hosts += [socket.gethostname()+".lab"]
     ports = [8003, 3000]
