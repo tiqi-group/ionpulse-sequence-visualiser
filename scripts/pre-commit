@@ -19,7 +19,7 @@ status=$?
 
 if [ ${status} -ne 0 ]; then
 	echo "Please run 'prettier' before committing"
-	echo "  ./node_modules/.bin/prettier --write ."
+	echo "  node run prettier"
 	echo "And don't forget to 'git add'"
 fi
 

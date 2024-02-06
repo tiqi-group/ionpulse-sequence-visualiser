@@ -33,4 +33,4 @@ Under the tab "Hardware" you can find the hardware description of your setup.
 # Development
 
 Once you have installed the visualiser, a pre-commit hook is added that uses `prettier` to check the code formatting before committing.
-If you get an error from the pre-commit hook, run `./node_modules/.bin/prettier --write .`
+If you get an error from the pre-commit hook, run `npm run prettier`
