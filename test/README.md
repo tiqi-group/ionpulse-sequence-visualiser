@@ -1,4 +1,9 @@
-# Test server for the library visualiser
+# Test sequences for the library visualiser
 
-Setup a flask server that the library visualiser can connect to.
-Provide a matplotlib example for sequence plotting as well
+This folder contains Python scripts that generate JSON strings for the Library Visualiser.
+
+## Usage
+
+- `poetry install` to set up the virtual environment.
+- `poetry run python plot_example.py` to generate the `ionpulse_seq_plot.json` file for the sequence server
+- `poetry run python sequence_server.py` fires up a minimal flask server that the Library Visualiser can connect to
