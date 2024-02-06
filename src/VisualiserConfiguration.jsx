@@ -1,9 +1,7 @@
 import React, { memo } from "react";
-import Grid from "@mui/material/Grid";
 import { styled } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import { green, grey } from "@mui/material/colors";
+import { Grid, Box, Paper, ToggleButton } from "@mui/material";
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === "dark" ? "#1A2027" : "#fff",
@@ -38,11 +36,22 @@ const EnableChannel = memo(function EnableChannel({
   onClick,
 }) {
   return (
-    <div className="col" style={isEnabled ? style_enabled : style_disabled}>
-      <React.Fragment>
-        <p onClick={() => onClick({ name: channelName })}>{displayName}</p>
-      </React.Fragment>
-    </div>
+    // <div className="col" style={isEnabled ? style_enabled : style_disabled}>
+    //   <React.Fragment>
+    //     <p onClick={() => onClick({ name: channelName })}>{displayName}</p>
+    //   </React.Fragment>
+    // </div>
+
+    <ToggleButton
+      className="col"
+      value="check"
+      selected={isEnabled}
+      onChange={() => {
+        onClick({ name: channelName });
+      }}
+    >
+      {displayName}
+    </ToggleButton>
   );
 });
 

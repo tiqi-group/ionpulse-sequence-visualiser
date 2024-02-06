@@ -1,6 +1,6 @@
 import React from "react";
 import NavBar from "./Header";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { SequencePlotPage } from "./SequencePlotPage";
 
@@ -107,25 +107,24 @@ export default class App extends React.Component {
         {/* <Container fluid="sm">
         <IpPort handler = {this.handleIPPortChange}/>
         </Container> */}
-        <Router>
-          <Routes>
-            <Route
-              path="/plot"
-              element={
-                <SequencePlotPage
-                  channelDescription={this.state.channelDescription}
-                  sequenceData={this.state.sequenceData}
-                />
-              }
-            />
-            <Route
-              path="/hardware"
-              element={
-                <Hardware channelDescription={this.state.channelDescription} />
-              }
-            />
-          </Routes>
-        </Router>
+        <Routes>
+          <Route
+            path="/plot"
+            element={
+              <SequencePlotPage
+                channelDescription={this.state.channelDescription}
+                sequenceData={this.state.sequenceData}
+              />
+            }
+          />
+          <Route
+            path="/hardware"
+            element={
+              <Hardware channelDescription={this.state.channelDescription} />
+            }
+          />
+          <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
+        </Routes>
       </>
     );
   }
