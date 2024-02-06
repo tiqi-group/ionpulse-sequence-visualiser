@@ -1,5 +1,5 @@
 import Plot from "react-plotly.js";
-import { Component } from "react";
+import { memo, useState } from "react";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -198,231 +198,218 @@ let title_template = {
   },
 };
 
-class SequencePlot extends Component {
-  constructor(props) {
-    super(props);
-    let channelYDataType = {};
-    for (const k in this.props.channelDescription) {
+const SequencePlot = function SequencePlot({
+  channelDescription,
+  channelEnabled,
+  sequenceData,
+}) {
+  const [channelYDataType, setChannelYDataType] = useState(() => {
+    let init = {};
+    for (const k in channelDescription) {
       if (k.includes("RF")) {
         // Extend channels settings
-        channelYDataType[k] = "freq";
+        init[k] = "freq";
       }
     }
+    return init;
+  });
 
-    this.state = {
-      channelYDataType: channelYDataType,
-    };
-    this.onClickAnnotation = this.onClickAnnotation.bind(this);
-  }
+  const channelYDataTypeKeys = Object.keys(channelYDataType);
+  const channelDescKeys = Object.keys(channelDescription);
+  const allKeys = channelYDataTypeKeys.concat(channelDescKeys);
+  const union = new Set(allKeys);
 
-  componentDidUpdate() {
-    const channelYDataTypeKeys = Object.keys(this.state.channelYDataType);
-    const channelDescKeys = Object.keys(this.props.channelDescription);
-    const allKeys = channelYDataTypeKeys.concat(channelDescKeys);
-    const union = new Set(allKeys);
-
-    if (union.size !== channelYDataTypeKeys.length) {
-      let newChannelYDataType = { ...this.state.channelYDataType };
-      for (const k of channelDescKeys) {
-        if (!(k in this.state.channelYDataType)) {
-          newChannelYDataType[k] = "freq";
-        }
+  if (union.size !== channelYDataTypeKeys.length) {
+    let newChannelYDataType = { ...channelYDataType };
+    for (const k of channelDescKeys) {
+      if (!(k in channelYDataType)) {
+        newChannelYDataType[k] = "freq";
       }
-      this.setState({ channelYDataType: newChannelYDataType });
     }
+    setChannelYDataType(newChannelYDataType);
   }
 
-  onClickAnnotation(e) {
-    let channel = Object.keys(this.props.channelDescription).find(
-      (key) => this.props.channelDescription[key].name === e.annotation.text,
+  function onClickAnnotation(e) {
+    let channel = Object.keys(channelDescription).find(
+      (key) => channelDescription[key].name === e.annotation.text,
     );
 
-    let newChannelYDataType = { ...this.state.channelYDataType };
+    let newChannelYDataType = { ...channelYDataType };
     if (newChannelYDataType[channel] == "freq") {
       newChannelYDataType[channel] = "phase";
     } else if (newChannelYDataType[channel] == "phase") {
       newChannelYDataType[channel] = "freq";
     }
-    this.setState({ channelYDataType: newChannelYDataType });
+    setChannelYDataType(newChannelYDataType);
   }
 
-  render() {
-    let sequenceData = filter(
-      this.props.sequenceData,
-      Object.keys(this.props.channelDescription),
-    );
-    let n_channels = Object.keys(this.props.channelDescription).reduce(
-      (a, key) => {
-        a[this.props.channelDescription[key].group] +=
-          this.props.channelEnabled[key] == true;
-        return a;
-      },
-      { RF: 0, TTL: 0, PMT: 0 },
-    );
+  sequenceData = filter(sequenceData, Object.keys(channelDescription));
+  let n_channels = Object.keys(channelDescription).reduce(
+    (a, key) => {
+      a[channelDescription[key].group] += channelEnabled[key] == true;
+      return a;
+    },
+    { RF: 0, TTL: 0, PMT: 0 },
+  );
 
-    let data = [];
-    let index = 1;
-    let layout_to_use = createLayout(n_channels);
-    layout_to_use.annotations = [];
-    layout_to_use.shapes = [];
+  let data = [];
+  let index = 1;
+  let layout_to_use = createLayout(n_channels);
+  layout_to_use.annotations = [];
+  layout_to_use.shapes = [];
 
-    for (const [channel, value] of Object.entries(sequenceData)) {
-      if (
-        this.props.channelDescription[channel].group === "TTL" &&
-        this.props.channelEnabled[channel]
-      ) {
-        let TTL_to_add = Object.assign({}, data_template_TTL);
-        TTL_to_add.x = value.time;
-        TTL_to_add.y = value.values;
-        //object_to_add.xaxis = "x" + index;
-        TTL_to_add.yaxis = "y" + index;
-        //TTL_to_add.xaxis = "x" + index;
+  for (const [channel, value] of Object.entries(sequenceData)) {
+    if (
+      channelDescription[channel].group === "TTL" &&
+      channelEnabled[channel]
+    ) {
+      let TTL_to_add = Object.assign({}, data_template_TTL);
+      TTL_to_add.x = value.time;
+      TTL_to_add.y = value.values;
+      //object_to_add.xaxis = "x" + index;
+      TTL_to_add.yaxis = "y" + index;
+      //TTL_to_add.xaxis = "x" + index;
 
-        // layout["yaxis" + index] = yaxis_params;
-        // layout["xaxis" + index] = xAxisParams;
+      // layout["yaxis" + index] = yaxis_params;
+      // layout["xaxis" + index] = xAxisParams;
 
-        let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-        let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-        let annotation_position =
-          (annotation_position_1 + annotation_position_2) / 2;
-        let annotation_to_add = {
-          xanchor: "right",
-          yanchor: "middle",
-          xref: "paper",
-          yref: "paper",
-          x: -0.01,
-          y: annotation_position,
-          text: this.props.channelDescription[channel].name,
-          showarrow: false,
-          //textangle: -90,
-          //captureevents: true
-        };
-        layout_to_use.annotations.push(annotation_to_add);
+      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+      let annotation_position =
+        (annotation_position_1 + annotation_position_2) / 2;
+      let annotation_to_add = {
+        xanchor: "right",
+        yanchor: "middle",
+        xref: "paper",
+        yref: "paper",
+        x: -0.01,
+        y: annotation_position,
+        text: channelDescription[channel].name,
+        showarrow: false,
+        //textangle: -90,
+        //captureevents: true
+      };
+      layout_to_use.annotations.push(annotation_to_add);
 
-        index++;
-        data.push(TTL_to_add);
-      }
+      index++;
+      data.push(TTL_to_add);
     }
-
-    for (const [channel, value] of Object.entries(sequenceData))
-      if (
-        this.props.channelDescription[channel].group === "PMT" &&
-        this.props.channelEnabled[channel]
-      ) {
-        let PMT_to_add = Object.assign({}, data_template_PMT);
-        PMT_to_add.x = value.time;
-        PMT_to_add.y = value.values;
-
-        let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-        let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-        let annotation_position =
-          (annotation_position_1 + annotation_position_2) / 2;
-        let annotation_to_add = {
-          xanchor: "right",
-          yanchor: "middle",
-          xref: "paper",
-          yref: "paper",
-          x: -0.01,
-          y: annotation_position,
-          text: channel,
-          showarrow: false,
-          //textangle: -90,
-          //captureevents: true
-        };
-        layout_to_use.annotations.push(annotation_to_add);
-
-        PMT_to_add.yaxis = "y" + index;
-        index++;
-        data.push(PMT_to_add);
-      }
-
-    for (const [channel, value] of Object.entries(sequenceData)) {
-      if (
-        this.props.channelDescription[channel].group === "RF" &&
-        this.props.channelEnabled[channel]
-      ) {
-        let object_to_add = Object.assign(
-          {},
-          data_templates[this.state.channelYDataType[channel]],
-        );
-        object_to_add.x = value.time;
-        object_to_add.y = value[this.state.channelYDataType[channel]];
-        //object_to_add.text = compileEventName(value.names);
-        object_to_add.name = "";
-        object_to_add.yaxis = "y" + index;
-
-        layout_to_use["yaxis" + index].title.text =
-          this.state.channelYDataType[channel];
-        layout_to_use["yaxis" + index].range =
-          RF_yaxis_ranges[this.state.channelYDataType[channel]];
-        layout_to_use["xaxis" + index] = xAxisParams;
-
-        let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-
-        data.push(object_to_add);
-        index++;
-
-        let amp_to_add = Object.assign({}, data_templates.amp);
-        amp_to_add.x = value.time;
-        amp_to_add.y = value.amp;
-        //amp_to_add.text = compileEventName(value.names);
-        amp_to_add.yaxis = "y" + index;
-
-        layout_to_use["yaxis" + index].title.text = "amp";
-        layout_to_use["xaxis" + index] = xAxisParams;
-        let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-        let annotation_position =
-          (annotation_position_1 + annotation_position_2) / 2;
-        let annotation_to_add = {
-          xanchor: "right",
-          yanchor: "middle",
-          xref: "paper",
-          yref: "paper",
-          x: -0.05,
-          y: annotation_position,
-          text: this.props.channelDescription[channel].name,
-          showarrow: false,
-          textangle: -90,
-          captureevents: true,
-        };
-        let channel_idx = 0;
-        if (index % 2 == 0) {
-          channel_idx = index / 2;
-        } else {
-          channel_idx = (index - 1) / 2;
-        }
-        if (channel_idx % 2 == 0) {
-          let shape_to_add = {
-            type: "rect",
-            xref: "paper",
-            yref: "paper",
-            x0: 0,
-            y0: annotation_position_1,
-            x1: 1,
-            y1: annotation_position_2,
-            fillcolor: "#d3d3d3",
-            opacity: 0.7,
-            line: {
-              width: 0,
-            },
-            layer: "below",
-          };
-          layout_to_use.shapes.push(shape_to_add);
-        }
-        layout_to_use.annotations.push(annotation_to_add);
-        data.push(amp_to_add);
-        index++;
-      }
-    }
-
-    return (
-      <Plot
-        data={data}
-        layout={layout_to_use}
-        onClickAnnotation={this.onClickAnnotation}
-      />
-    );
   }
-}
+
+  for (const [channel, value] of Object.entries(sequenceData))
+    if (
+      channelDescription[channel].group === "PMT" &&
+      channelEnabled[channel]
+    ) {
+      let PMT_to_add = Object.assign({}, data_template_PMT);
+      PMT_to_add.x = value.time;
+      PMT_to_add.y = value.values;
+
+      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+      let annotation_position =
+        (annotation_position_1 + annotation_position_2) / 2;
+      let annotation_to_add = {
+        xanchor: "right",
+        yanchor: "middle",
+        xref: "paper",
+        yref: "paper",
+        x: -0.01,
+        y: annotation_position,
+        text: channel,
+        showarrow: false,
+        //textangle: -90,
+        //captureevents: true
+      };
+      layout_to_use.annotations.push(annotation_to_add);
+
+      PMT_to_add.yaxis = "y" + index;
+      index++;
+      data.push(PMT_to_add);
+    }
+
+  for (const [channel, value] of Object.entries(sequenceData)) {
+    if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
+      let object_to_add = Object.assign(
+        {},
+        data_templates[channelYDataType[channel]],
+      );
+      object_to_add.x = value.time;
+      object_to_add.y = value[channelYDataType[channel]];
+      //object_to_add.text = compileEventName(value.names);
+      object_to_add.name = "";
+      object_to_add.yaxis = "y" + index;
+
+      layout_to_use["yaxis" + index].title.text = channelYDataType[channel];
+      layout_to_use["yaxis" + index].range =
+        RF_yaxis_ranges[channelYDataType[channel]];
+      layout_to_use["xaxis" + index] = xAxisParams;
+
+      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+
+      data.push(object_to_add);
+      index++;
+
+      let amp_to_add = Object.assign({}, data_templates.amp);
+      amp_to_add.x = value.time;
+      amp_to_add.y = value.amp;
+      //amp_to_add.text = compileEventName(value.names);
+      amp_to_add.yaxis = "y" + index;
+
+      layout_to_use["yaxis" + index].title.text = "amp";
+      layout_to_use["xaxis" + index] = xAxisParams;
+      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+      let annotation_position =
+        (annotation_position_1 + annotation_position_2) / 2;
+      let annotation_to_add = {
+        xanchor: "right",
+        yanchor: "middle",
+        xref: "paper",
+        yref: "paper",
+        x: -0.05,
+        y: annotation_position,
+        text: channelDescription[channel].name,
+        showarrow: false,
+        textangle: -90,
+        captureevents: true,
+      };
+      let channel_idx = 0;
+      if (index % 2 == 0) {
+        channel_idx = index / 2;
+      } else {
+        channel_idx = (index - 1) / 2;
+      }
+      if (channel_idx % 2 == 0) {
+        let shape_to_add = {
+          type: "rect",
+          xref: "paper",
+          yref: "paper",
+          x0: 0,
+          y0: annotation_position_1,
+          x1: 1,
+          y1: annotation_position_2,
+          fillcolor: "#d3d3d3",
+          opacity: 0.7,
+          line: {
+            width: 0,
+          },
+          layer: "below",
+        };
+        layout_to_use.shapes.push(shape_to_add);
+      }
+      layout_to_use.annotations.push(annotation_to_add);
+      data.push(amp_to_add);
+      index++;
+    }
+  }
+
+  return (
+    <Plot
+      data={data}
+      layout={layout_to_use}
+      onClickAnnotation={onClickAnnotation}
+    />
+  );
+};
 
 export { SequencePlot };
