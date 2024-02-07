@@ -13,9 +13,10 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
-    parser.add_argument("--file", required=False, default="ionpulse_seq_plot.json")
+    parser.add_argument("--plot", required=False, default="ionpulse_seq_plot.json")
+    parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     args = parser.parse_args()
-    plot_json_filename = args.file
+    plot_json_filename = args.plot
 
     protocols = ["http://"]
     hosts = ["localhost"]
@@ -80,16 +81,28 @@ if __name__ == "__main__":
         for i in range(n_pmts):
             d["PMTs"][f"PMT{i}"] = f"PMT{i}"
         
-        out = dict()
-        out = json.dumps(d)
-        return f'{json.dumps(out)}'
+        # Double dump to return a properly escaped string
+        return json.dumps(json.dumps(d))
 
     @app.route("/Hardware/scope_sequence")
     def scope_sequence() -> str:
         try:
             with open(plot_json_filename) as f:
-                data = f.read()
-            return json.dumps(data)
+                data = json.load(f)
+            # Double dump to return a properly escaped string
+            return json.dumps(json.dumps(data))
+        except:
+            pass
+
+        return ""
+
+    @app.route("/Hardware/sequence")
+    def sequence() -> str:
+        try:
+            with open(args.file) as f:
+                data = json.load(f)
+            # Double dump to return a properly escaped string
+            return json.dumps(json.dumps(data))
         except:
             pass
 

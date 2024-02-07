@@ -9,7 +9,9 @@ from ionpulse_sequence_generator import (
         Sequence,
         LinearSequence,
         ChannelMask,
-        ChannelIndex
+        ChannelIndex,
+        Header,
+        ReadoutPostprocessingMethod
         )
 
 from ionpulse_seq_gen_test import (
@@ -238,6 +240,25 @@ if __name__ == "__main__":
 
     with open("ionpulse_seq_plot.json", "w") as f:
         json.dump(generate_simplified_json(_seq), f)
+
+    header = Header()
+
+    header.add_field(
+        name="sequence_description",
+        value="Test Sequence for Library Visualiser"
+    )
+    header.shot_channel_names = ["Signal", "Background"]
+    header.shot_channel_plot_index = [0, 0]
+    header.readout_channel_names = [
+        "Raw",
+        "Background Corrected",
+    ]
+    header.readout_postprocessing_method = [
+        ReadoutPostprocessingMethod.SUM,
+        ReadoutPostprocessingMethod.AVERAGE,
+    ]
+    header.readout_channel_plot_index = [0, 1]
+    _seq.save_to_json_file("ionpulse_seq.json", header)
 
     if args.jsononly:
         exit(0)
