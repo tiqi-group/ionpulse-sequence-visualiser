@@ -7,6 +7,8 @@ import { SequencePlotPage } from "./SequencePlotPage";
 import settings from "../settings";
 import { socket } from "./socket";
 
+import { SequenceParser } from "./SequenceParser.js";
+
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
     let init = {};
@@ -68,7 +70,6 @@ function App() {
   }
 
   useEffect(() => {
-    console.log("Called App effect");
     const hardware_url = `http://${libraryIp}:${libraryPort}/Hardware`;
 
     fetch(hardware_url + "/description")
@@ -77,10 +78,16 @@ function App() {
         updateChannelSettings(JSON.parse(data));
       });
 
-    fetch(hardware_url + "/scope_sequence")
+    // fetch(hardware_url + "/scope_sequence")
+    //   .then((response) => response.json())
+    //   .then((data) => {
+    //     setSequenceData(JSON.parse(data));
+    //   });
+    fetch(hardware_url + "/sequence")
       .then((response) => response.json())
       .then((data) => {
-        setSequenceData(JSON.parse(data));
+        let parser = new SequenceParser(JSON.parse(data));
+        setSequenceData(parser.plotData);
       });
 
     function updateSequenceData(value) {
