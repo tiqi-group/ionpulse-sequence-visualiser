@@ -31,7 +31,6 @@ class SequenceParser {
           }),
         ),
     );
-    console.log("#Sequences:", this.#sequences);
     this.#plotData = this.generatePlotData();
   }
 
@@ -212,16 +211,16 @@ class SequenceParser {
           channelIdx += 8;
           let mask = 1 << channelIdx;
           data["values"].push(
-            data["values"][-1] &
-              ((event["pmts_to_change"] & mask) >> channelIdx) ||
-              (event["pmts"] & mask) >> channelIdx,
+            (data["values"][-1] &
+              ((event["pmts_to_change"] & mask) === 0 ? 0 : 1)) |
+              ((event["pmts"] & mask) === 0 ? 0 : 1),
           );
         } else {
           let mask = 1 << channelIdx;
           data["values"].push(
-            data["values"][-1] &
-              ((event["ttls_to_change"] & mask) >> channelIdx) ||
-              (event["ttl_target"] & mask) >> channelIdx,
+            (data["values"][-1] &
+              ((event["ttls_to_change"] & mask) === 0 ? 0 : 1)) |
+              ((event["ttl_target"] & mask) === 0 ? 0 : 1),
           );
         }
         break;
