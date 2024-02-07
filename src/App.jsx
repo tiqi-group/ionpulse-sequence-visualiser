@@ -39,7 +39,7 @@ function App() {
           phase: [0],
           amp: [0],
           time: [0],
-          names: [{ sequences: [""] }],
+          names: [[""]],
         };
       } else {
         init[k] = { time: [0], values: [0] };

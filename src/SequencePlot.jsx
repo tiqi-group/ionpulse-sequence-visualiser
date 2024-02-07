@@ -57,16 +57,16 @@ let xAxisParams = {
 };
 
 function compileEventName(eventNames) {
-  console.log(eventNames);
   let compiledEventNames = [];
-  for (const eventName of eventNames) {
-    if (eventName.sequences) {
-      compiledEventNames.push(eventName.sequences.join(" "));
-    } else {
-      compiledEventNames.push("");
+  if (eventNames) {
+    for (const eventName of eventNames) {
+      if (eventName) {
+        compiledEventNames.push(eventName.join("->"));
+      } else {
+        compiledEventNames.push("");
+      }
     }
   }
-  console.log(compiledEventNames);
   return compiledEventNames;
 }
 
@@ -269,6 +269,7 @@ const SequencePlot = function SequencePlot({
       //object_to_add.xaxis = "x" + index;
       TTL_to_add.yaxis = "y" + index;
       //TTL_to_add.xaxis = "x" + index;
+      TTL_to_add.text = compileEventName(value.names);
 
       // layout["yaxis" + index] = yaxis_params;
       // layout["xaxis" + index] = xAxisParams;
@@ -304,6 +305,7 @@ const SequencePlot = function SequencePlot({
       let PMT_to_add = Object.assign({}, data_template_PMT);
       PMT_to_add.x = value.time;
       PMT_to_add.y = value.values;
+      PMT_to_add.text = compileEventName(value.names);
 
       let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
       let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
@@ -336,7 +338,7 @@ const SequencePlot = function SequencePlot({
       );
       object_to_add.x = value.time;
       object_to_add.y = value[channelYDataType[channel]];
-      //object_to_add.text = compileEventName(value.names);
+      object_to_add.text = compileEventName(value.names);
       object_to_add.name = "";
       object_to_add.yaxis = "y" + index;
 
@@ -353,7 +355,7 @@ const SequencePlot = function SequencePlot({
       let amp_to_add = Object.assign({}, data_templates.amp);
       amp_to_add.x = value.time;
       amp_to_add.y = value.amp;
-      //amp_to_add.text = compileEventName(value.names);
+      amp_to_add.text = compileEventName(value.names);
       amp_to_add.yaxis = "y" + index;
 
       layout_to_use["yaxis" + index].title.text = "amp";

@@ -26,10 +26,6 @@ import matplotlib.pyplot as plt
 # From experiment library
 def generate_simplified_json(sequence):
     generated_dict = dict()
-    for i in range(32):
-        generated_dict[f"TTL{i}"] = {"values": [], "times": []}
-    for pmt_idx in range(8):
-        generated_dict[f"PMT{pmt_idx}"] = {"values": [], "times": []}
     for channel in sequence._ch_mask.to_idx_list():
         if channel.is_rf_channel():
 
@@ -37,24 +33,26 @@ def generate_simplified_json(sequence):
                     channel)
             channel_sequence["time"] = list(array(channel_sequence["time"]).cumsum(dtype=float))
 
-            #channel_sequence["names"] = names
+            channel_sequence["names"] = names
 
             generated_dict[f"RF{int(log2(channel.rf))}"] = channel_sequence
         elif channel.is_digital_io():
 
-            events = sequence.get_event_params_per_channel(channel)[0]
+            events, _,_,_,_, names = sequence.get_event_params_per_channel(channel)
 
             for i in range(32):
                 generated_dict[f"TTL{i}"] = {"values": []}
                 for ttl_event in events["ttl_target"]:
                     generated_dict[f"TTL{i}"]["values"].append(int(binary_repr(ttl_event, 32)[::-1][i]))
                     generated_dict[f"TTL{i}"]["time"] = list(array(events["time"]).cumsum(dtype=float))
+                    generated_dict[f"TTL{i}"]["names"] = names
 
             for pmt_idx in range(8):
                 generated_dict[f"PMT{pmt_idx}"] = {"values": []}
                 for pmt_event in events["pmts"]:
                     generated_dict[f"PMT{pmt_idx}"]["values"].append(int(binary_repr(pmt_event, 8)[::-1][pmt_idx]))
                     generated_dict[f"PMT{pmt_idx}"]["time"] = list(array(events["time"]).cumsum(dtype=float))
+                    generated_dict[f"PMT{pmt_idx}"]["names"] = names
 
     return generated_dict
 
