@@ -3,33 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@emotion/react": "11.11.0",
-    "@emotion/styled": "11.11.0",
-    "@mui/material": "5.11.15",
+    "@emotion/react": "*",
+    "@emotion/styled": "*",
+    "@mui/material": "*",
+    "@vitejs/plugin-react-swc": "^3.5.0",
     "bootstrap": "^5.3.1",
-    "loader-utils": "3.2.1",
-    "plotly.js": "2.20.0",
-    "react": "18.2.0",
+    "plotly.js": "^2.20.0",
+    "react": "^18.2.0",
     "react-bootstrap": "^2.8.0",
-    "react-dom": "18.2.0",
-    "react-plotly.js": "2.6.0",
-    "react-radio-buttons": "1.2.2",
+    "react-dom": "^18.2.0",
+    "react-plotly.js": "^2.6.0",
     "react-router-dom": "^6.15.0",
-    "react-scripts": "5.0.1",
-    "socket.io-client": "2",
-    "settings": "file:./settings.json"
+    "settings": "file:./settings.json",
+    "socket.io-client": "^4",
+    "vite": "^5.0.12"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.2.1",
+    "jsdom": "^24.0.0",
+    "prettier": "^3.2.4",
+    "vitest": "^1.2.1",
+    "vitest-canvas-mock": "^0.3.3"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "preinstall": "./scripts/preinstall.sh",
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview",
+    "test": "./scripts/run-test-server.sh",
+    "prettier": "prettier --write ."
   },
   "browserslist": {
     "production": [

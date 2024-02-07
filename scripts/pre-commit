@@ -1,0 +1,26 @@
+#!/bin/sh
+
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
+[ -z "$FILES" ] && exit 0
+
+# Store diff of current working changes
+# It looks like git stash is the way to go here, it is not
+# https://stackoverflow.com/questions/20479794/how-do-i-properly-git-stash-pop-in-pre-commit-hooks-to-get-a-clean-working-tree
+working_tree="$(git diff)"
+git restore --quiet .
+
+# Check formatting of all selected files
+echo "$FILES" | xargs ./node_modules/.bin/prettier --ignore-unknown --check
+
+status=$?
+
+# --allow-empty is not supported in git 2.34 (Ubuntu 22.04 LTS default)
+[ -n "${working_tree}" ] && echo "${working_tree}" | git apply
+
+if [ ${status} -ne 0 ]; then
+	echo "Please run 'prettier' before committing"
+	echo "  npm run prettier"
+	echo "And don't forget to 'git add'"
+fi
+
+exit ${status}
