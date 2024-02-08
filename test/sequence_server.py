@@ -146,13 +146,20 @@ if __name__ == "__main__":
     files = [plot_json_filename, args.file]
     file_types = ["scope_sequence", "sequence"]
     observer = Observer()
+    handlers = []
     for file, file_type in zip(files, file_types):
         if not isfile(file):
             print(f"File {file} doesn't exist")
             exit(1)
-        observer.schedule(JsonChangeHandler(file_type, file), file)
+        handler = JsonChangeHandler(file_type, file)
+        # Recursive is needed on mac for example. In any case, it doesn't hurt
+        observer.schedule(handler, file, recursive=True)
+        handlers.append(handler)
+
     observer.start()
 
-    app.run(host="0.0.0.0", port=8003, debug=args.debug)
-    observer.stop()
-    observer.join()
+    try:
+        app.run(host="0.0.0.0", port=8003, debug=args.debug)
+    finally:
+        observer.stop()
+        observer.join()
