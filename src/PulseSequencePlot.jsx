@@ -1,5 +1,5 @@
 import Plot from "react-plotly.js";
-import { memo, useState } from "react";
+import { useState } from "react";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -198,7 +198,7 @@ let title_template = {
   },
 };
 
-const SequencePlot = function SequencePlot({
+const PulseSequencePlot = function SequencePlot({
   channelDescription,
   channelEnabled,
   sequenceData,
@@ -414,4 +414,4 @@ const SequencePlot = function SequencePlot({
   );
 };
 
-export { SequencePlot };
+export { PulseSequencePlot };

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
-import { SequencePlotPage } from "./SequencePlotPage";
+import { SequenceVisualiser } from "./SequenceVisualiser";
 
 import settings from "../settings";
 import { socket } from "./socket";
@@ -32,22 +32,31 @@ function App() {
     };
     return init;
   });
-  const [sequenceData, setSequenceData] = useState(() => {
-    let init = {};
-    for (const k in channelDescription) {
-      if (k.includes("RF")) {
-        init[k] = {
-          freq: [0],
-          phase: [0],
-          amp: [0],
-          time: [0],
-          names: [[""]],
-        };
-      } else {
-        init[k] = { time: [0], values: [0] };
-      }
-    }
-    return init;
+  const [sequenceParser, setSequenceParser] = useState(() => {
+    let init = {
+      Freq: [],
+      Phase: [],
+      Amp: [],
+      Time: [],
+      Event: [],
+      Sequence: [
+        {
+          name: "main",
+          type: "LinearSequence",
+          ch_mask: {
+            rf: 0,
+            digital_io: false,
+            readout: false,
+            qubit: 0,
+          },
+          rf_channel_sequences: {},
+          digital_io: [],
+          readout: [],
+          qubit_sequences: {},
+        },
+      ],
+    };
+    return new SequenceParser(init);
   });
   var libraryIp = settings["Library ip"];
   var libraryPort = settings["Library port"];
@@ -78,27 +87,21 @@ function App() {
         updateChannelSettings(JSON.parse(data));
       });
 
-    // fetch(hardware_url + "/scope_sequence")
-    //   .then((response) => response.json())
-    //   .then((data) => {
-    //     setSequenceData(JSON.parse(data));
-    //   });
     fetch(hardware_url + "/sequence")
       .then((response) => response.json())
       .then((data) => {
-        let parser = new SequenceParser(JSON.parse(data));
-        setSequenceData(parser.plotData);
+        setSequenceParser(new SequenceParser(JSON.parse(data)));
       });
 
-    function updateSequenceData(value) {
+    function updateSequenceParser(value) {
       // Extracting data from the notification
-      if (value.data.name == "Hardware.scope_sequence") {
-        setSequenceData(JSON.parse(value.data.value));
+      if (value.data.name == "Hardware.sequence") {
+        setSequenceParser(new SequenceParser(JSON.parse(value.data.value)));
       }
     }
 
-    socket.on("notify", updateSequenceData);
-    return () => socket.off("notify", updateSequenceData);
+    socket.on("notify", updateSequenceParser);
+    return () => socket.off("notify", updateSequenceParser);
   }, []);
 
   return (
@@ -108,9 +111,9 @@ function App() {
         <Route
           path="/plot"
           element={
-            <SequencePlotPage
+            <SequenceVisualiser
               channelDescription={channelDescription}
-              sequenceData={sequenceData}
+              sequenceParser={sequenceParser}
             />
           }
         />

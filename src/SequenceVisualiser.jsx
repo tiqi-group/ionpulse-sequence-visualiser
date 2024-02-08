@@ -1,11 +1,11 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 
 import EnablingGroupOff from "./OffCanvas";
-import { SequencePlot } from "./SequencePlot";
+import { PulseSequencePlot } from "./PulseSequencePlot";
 
-const SequencePlotPage = memo(function SequencePlotPage({
+const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
-  sequenceData,
+  sequenceParser,
 }) {
   const [channelEnabled, setChannelEnabled] = useState(() => {
     return Object.keys(channelDescription).reduce((init, k) => {
@@ -42,13 +42,13 @@ const SequencePlotPage = memo(function SequencePlotPage({
         channelEnabled={channelEnabled}
         handleEnableChange={handleEnableChange}
       />
-      <SequencePlot
+      <PulseSequencePlot
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
-        sequenceData={sequenceData}
+        sequenceData={sequenceParser.plotData}
       />
     </div>
   );
-});
+};
 
-export { SequencePlotPage };
+export { SequenceVisualiser };

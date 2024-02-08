@@ -113,22 +113,27 @@ if __name__ == "__main__":
         return "Index page"
     
     class JsonChangeHandler(FileSystemEventHandler):
+        def __init__(self, name, filename):
+            self.name = name
+            self.filename = filename
+
         def safe_emit(self):
             sleep(1)
             try:
-                with open(plot_json_filename) as f:
+                with open(self.filename) as f:
                     data = f.read()
                     if len(data) > 0:
                         try:
                             json.loads(data)
                             sio.emit("notify",{"data": {
-                                "name": "Hardware.scope_sequence",
+                                "name": f"Hardware.{self.name}",
                                 "value": data
                                 }})
                         except:
-                            pass
+                            print(f"Can't emit notification for change in file {self.filename}")
+
             except:
-                pass
+                print(f"Can't open file {self.filename}")
 
         def on_modified(self, event):
             self.safe_emit()
@@ -138,12 +143,14 @@ if __name__ == "__main__":
             self.safe_emit()
             return super().on_created(event)
 
-    if not isfile(plot_json_filename):
-        print(f"File {plot_json_filename} doesn't exist")
-        exit(1)
-    jsonChangeHandler = JsonChangeHandler()
+    files = [plot_json_filename, args.file]
+    file_types = ["scope_sequence", "sequence"]
     observer = Observer()
-    observer.schedule(jsonChangeHandler, plot_json_filename)
+    for file, file_type in zip(files, file_types):
+        if not isfile(file):
+            print(f"File {file} doesn't exist")
+            exit(1)
+        observer.schedule(JsonChangeHandler(file_type, file), file)
     observer.start()
 
     app.run(host="0.0.0.0", port=8003, debug=args.debug)
