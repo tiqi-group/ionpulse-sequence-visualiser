@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
+import { SequenceBlockPlot } from "./SequenceBlockPlot";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
@@ -35,19 +36,57 @@ const SequenceVisualiser = function SequenceVisualiser({
     setChannelEnabled(newChannelEnabled);
   }
 
+  const [sequenceConfig, setSequenceConfig] = useState(() => {
+    if (sequenceParser.hasNames) {
+      return Object.entries(sequenceParser.sequenceConfig).reduce(
+        (cfg, entry) => {
+          cfg[entry[1]["name"]] = entry[1];
+          return cfg;
+        },
+        {},
+      );
+    } else {
+      return sequenceParser.sequenceConfig;
+    }
+  });
+
+  const sequenceConfigKeys = Object.keys(sequenceConfig);
+  const newConfigKeys = Object.keys(sequenceParser.sequenceConfig);
+  const configKeysUnion = new Set(sequenceConfigKeys.concat(newConfigKeys));
+
+  if (configKeysUnion.size !== sequenceConfigKeys.length) {
+    let newSequenceConfig = {
+      ...sequenceConfig,
+      ...sequenceParser.sequenceConfig,
+    };
+    setSequenceConfig(newSequenceConfig);
+  }
+
   return (
-    <div>
+    <>
       <EnablingGroupOff
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
         handleEnableChange={handleEnableChange}
       />
-      <PulseSequencePlot
-        channelDescription={channelDescription}
-        channelEnabled={channelEnabled}
-        sequenceData={sequenceParser.plotData}
-      />
-    </div>
+      <div className="row">
+        <div className="col">
+          <PulseSequencePlot
+            channelDescription={channelDescription}
+            channelEnabled={channelEnabled}
+            sequenceData={sequenceParser.plotData}
+          />
+        </div>
+        <div className="col">
+          <SequenceBlockPlot
+            channelDescription={channelDescription}
+            channelEnabled={channelEnabled}
+            sequenceConfig={sequenceConfig}
+            setSequenceConfig={setSequenceConfig}
+          />
+        </div>
+      </div>
+    </>
   );
 };
 

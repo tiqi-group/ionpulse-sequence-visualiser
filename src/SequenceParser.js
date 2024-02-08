@@ -14,24 +14,36 @@ function stripIdxFromName(name) {
 
 class SequenceParser {
   #main;
-  #sequences;
+  #sequenceConfig;
   #plotData;
+  #isUpToDate;
   constructor(main) {
     this.#main = main;
-    this.#sequences = Object.fromEntries(
-      [...main["Event"].keys()]
-        .map((key) => [key, { display: "full" }])
-        .concat(
-          [...main["Sequence"].entries()].map((entry) => {
-            let settings = { display: "full" };
-            if (entry[1]["type"] === "Fork") {
-              settings["pathIdx"] = 0;
-            }
-            return [entry[0], settings];
-          }),
-        ),
+    this.hasNames =
+      main["Sequence"].length > 0 && Object.hasOwn(main["Sequence"][0], "name");
+    this.#sequenceConfig = Object.fromEntries(
+      [...main["Sequence"].entries()].map((entry) => {
+        let settings = { display: "full" };
+        if (entry[1]["type"] === "Fork") {
+          settings["pathIdx"] = 0;
+        }
+        if (this.hasNames) {
+          settings["name"] = stripIdxFromName(entry[1]["name"]);
+          settings["id"] = entry[0];
+        }
+        return [entry[0], settings];
+      }),
     );
-    this.#plotData = this.generatePlotData();
+    if (this.hasNames) {
+      this.sequenceConfigByName = Object.entries(this.#sequenceConfig).reduce(
+        (cfg, entry) => {
+          cfg[entry[1]["name"]] = entry[1];
+          return cfg;
+        },
+        {},
+      );
+    }
+    this.#isUpToDate = false;
   }
 
   generatePlotData() {
@@ -81,7 +93,7 @@ class SequenceParser {
     let channelSequence;
     let isFork = seq["type"] === "Fork";
     if (isFork) {
-      channelSequence = [seq["paths"][this.#sequences[idx]["pathIdx"]]];
+      channelSequence = [seq["paths"][this.#sequenceConfig[idx]["pathIdx"]]];
     } else if (
       channelType === ChannelSequenceType.rf ||
       channelType === ChannelSequenceType.qubit_sequences
@@ -100,7 +112,8 @@ class SequenceParser {
     for (let i = 0; i < iterations; i++) {
       let iterationName = baseName;
       if (isLoop) iterationName += "[" + i + "]";
-      if (isFork) iterationName += "{" + this.#sequences[idx]["pathIdx"] + "}";
+      if (isFork)
+        iterationName += "{" + this.#sequenceConfig[idx]["pathIdx"] + "}";
       if (iterationName.length > 0) data["names"].at(-1).push(iterationName);
       for (let event of channelSequence) {
         if (typeof event === "object") {
@@ -229,7 +242,40 @@ class SequenceParser {
   }
 
   get plotData() {
+    if (!this.#isUpToDate) {
+      this.#plotData = this.generatePlotData();
+      this.#isUpToDate = true;
+    }
     return this.#plotData;
+  }
+
+  get sequenceConfig() {
+    if (this.hasNames) {
+      return this.sequenceConfigByName;
+    } else {
+      return this.#sequenceConfig;
+    }
+  }
+
+  /**
+   * Pass and objects describing the wanted change for the sequenceState
+   *
+   * @param {object} sequenceStateChanges describes the changes in sequenceState.
+   *        It has to be of the structure:
+   *          {
+   *            id: { key: newValue, ... },
+   *            ...
+   *          }
+   * @param {object} setStateHook the setSequenceState hook of the React component that's visualising the sequence
+   */
+  setSequenceConfig(sequenceStateChanges, setStateHook) {
+    this.#isUpToDate = false;
+    for (const [id, change] of Object.entries(sequenceStateChanges)) {
+      for (const [key, value] of Object.entries(change)) {
+        // This will automatically change sequenceConfigByName as well (they reference the same objects)
+        this.#sequenceConfig[id][key] = value;
+      }
+    }
   }
 }
 
