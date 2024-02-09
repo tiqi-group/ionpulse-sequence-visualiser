@@ -76,6 +76,13 @@ function createLayout(n_channels) {
   const individual_RF_height = 70;
   const pad = 0;
 
+  const margin = {
+    b: 100,
+    l: 100,
+    r: 100,
+    t: 100,
+  };
+
   let n_RF_channels = n_channels["RF"];
   let n_TTL_channels = n_channels["PMT"] + n_channels["TTL"];
 
@@ -95,8 +102,9 @@ function createLayout(n_channels) {
   let normalised_pad = pad / total_height;
 
   let the_layout = {
-    width: 1100,
-    height: total_height,
+    width: 1100 + margin.l + margin.r,
+    height: total_height + margin.t + margin.b,
+    margin: margin,
     grid: grid_params,
     xaxis: {
       hola: 1,
