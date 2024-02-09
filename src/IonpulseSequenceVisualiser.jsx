@@ -7,43 +7,19 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   channelDescription,
   ionpulseSequence,
 }) {
-  let sequenceParser = new SequenceParser(ionpulseSequence);
+  const [sequenceConfig, setSequenceConfig] = useState({});
 
-  const [sequenceConfig, setSequenceConfig] = useState(() => {
-    if (sequenceParser.hasNames) {
-      return Object.entries(sequenceParser.sequenceConfig).reduce(
-        (cfg, entry) => {
-          cfg[entry[1]["name"]] = entry[1];
-          return cfg;
-        },
-        {},
-      );
-    } else {
-      return sequenceParser.sequenceConfig;
-    }
-  });
+  let sequenceParser = new SequenceParser(ionpulseSequence, sequenceConfig);
 
-  const sequenceConfigKeys = Object.keys(sequenceConfig);
-  const newConfigKeys = Object.keys(sequenceParser.sequenceConfig);
-  const configKeysUnion = new Set(sequenceConfigKeys.concat(newConfigKeys));
-
-  if (configKeysUnion.size !== sequenceConfigKeys.length) {
-    let newSequenceConfig = {
-      ...sequenceConfig,
-      ...sequenceParser.sequenceConfig,
-    };
-    setSequenceConfig(newSequenceConfig);
-  }
-
-  function updateSequenceConfig(newSequenceConfig) {
-    setSequenceConfig(newSequenceConfig);
+  function updateSequenceConfig(updater) {
+    setSequenceConfig(updater);
   }
 
   return (
     <SequenceVisualiser
       channelDescription={channelDescription}
       sequenceData={sequenceParser.plotData}
-      sequenceConfig={sequenceConfig}
+      sequenceConfig={sequenceParser.sequenceConfig}
       setSequenceConfig={updateSequenceConfig}
     />
   );

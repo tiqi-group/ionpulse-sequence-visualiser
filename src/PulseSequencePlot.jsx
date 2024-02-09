@@ -72,9 +72,9 @@ function compileEventName(eventNames) {
 
 function createLayout(n_channels) {
   // PMT channels are treated as TTL channels here
-  let individual_TTL_height = 40;
-  let individual_RF_height = 70;
-  let pad = 0;
+  const individual_TTL_height = 40;
+  const individual_RF_height = 70;
+  const pad = 0;
 
   let n_RF_channels = n_channels["RF"];
   let n_TTL_channels = n_channels["PMT"] + n_channels["TTL"];

@@ -5,6 +5,10 @@ const ChannelSequenceType = {
   qubit: "qubit_sequences",
 };
 
+const N_RF_CHANNELS = 32;
+const N_TTL_CHANNELS = 32;
+const N_PMT_CHANNELS = 8;
+
 function stripIdxFromName(name) {
   if (name.startsWith("[")) {
     name = name.substring(name.search("]") + 2, name.length);
@@ -17,20 +21,35 @@ class SequenceParser {
   #sequenceConfig;
   #plotData;
   #isUpToDate;
-  constructor(main) {
-    this.#main = main;
+  constructor(ionpulseSequence, externalConfig) {
+    this.#main = ionpulseSequence;
     this.hasNames =
-      main["Sequence"].length > 0 && Object.hasOwn(main["Sequence"][0], "name");
+      this.#main["Sequence"].length > 0 &&
+      Object.hasOwn(this.#main["Sequence"][0], "name");
     this.#sequenceConfig = Object.fromEntries(
-      [...main["Sequence"].entries()].map((entry) => {
-        let settings = { display: "full" };
-        if (entry[1]["type"] === "Fork") {
-          settings["pathIdx"] = 0;
-        }
+      [...this.#main["Sequence"].entries()].map((entry) => {
+        let settings = {};
+        let extConfigEntry;
         if (this.hasNames) {
           settings["name"] = stripIdxFromName(entry[1]["name"]);
           settings["id"] = entry[0];
+          extConfigEntry = externalConfig[settings["name"]];
+        } else {
+          extConfigEntry = externalConfig[entry[0]];
         }
+        settings["display"] =
+          extConfigEntry !== undefined &&
+          Object.hasOwn(extConfigEntry, "display")
+            ? extConfigEntry["display"]
+            : "full";
+        if (entry[1]["type"] === "Fork") {
+          settings["pathIdx"] =
+            extConfigEntry !== undefined &&
+            Object.hasOwn(extConfigEntry, "pathIdx")
+              ? extConfigEntry["pathIdx"]
+              : 0;
+        }
+        settings["ch_mask"] = entry[1]["ch_mask"];
         return [entry[0], settings];
       }),
     );
@@ -68,7 +87,7 @@ class SequenceParser {
       );
       plotData["RF" + rf_idx]["names"].pop();
     }
-    for (let i = -8; i < 32; i++) {
+    for (let i = -N_PMT_CHANNELS; i < N_TTL_CHANNELS; i++) {
       let data = {
         values: [0],
         time: [0],
@@ -109,6 +128,39 @@ class SequenceParser {
     let isLoop = seq["type"] === "Loop";
     let iterations = isLoop ? seq["iterations"] : 1;
     if (isLoop) loopIteration *= iterations;
+
+    const storeTime = (key) => {
+      if (!Object.hasOwn(this.#sequenceConfig[idx], "refChannel")) {
+        this.#sequenceConfig[idx]["refChannel"] = {
+          channelType: channelType,
+          channelIdx: channelIdx,
+        };
+      }
+      if (
+        this.#sequenceConfig[idx]["refChannel"]["channelType"] ===
+          channelType &&
+        this.#sequenceConfig[idx]["refChannel"]["channelIdx"] === channelIdx
+      ) {
+        if (!Object.hasOwn(this.#sequenceConfig[idx], key)) {
+          this.#sequenceConfig[idx][key] = [];
+        }
+        this.#sequenceConfig[idx][key].push(data["time"].at(-1));
+      } else {
+        console.assert(
+          this.#sequenceConfig[idx][key].includes(data["time"].at(-1)),
+          key +
+            " on channel " +
+            channelIdx +
+            " don't match for Sequence " +
+            idx +
+            ". " +
+            data["time"].at(-1) +
+            " is not in " +
+            this.#sequenceConfig[idx][key],
+        );
+      }
+    };
+    storeTime("startTime");
     for (let i = 0; i < iterations; i++) {
       let iterationName = baseName;
       if (isLoop) iterationName += "[" + i + "]";
@@ -139,6 +191,7 @@ class SequenceParser {
       }
       if (iterationName.length > 0) data["names"].at(-1).pop();
     }
+    storeTime("endTime");
     return data;
   }
 
@@ -278,4 +331,4 @@ class SequenceParser {
   }
 }
 
-export { SequenceParser };
+export { SequenceParser, N_RF_CHANNELS };
