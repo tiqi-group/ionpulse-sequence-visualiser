@@ -112,7 +112,9 @@ const SequenceBlockPlot = function ({
   }
   layout.shapes = [];
 
-  for (const sequence of Object.values(sequenceConfig).slice(0, -1).reverse()) {
+  for (const [key, sequence] of Object.entries(sequenceConfig)
+    .slice(0, -1)
+    .reverse()) {
     let yDataPairs = [];
     let startYData;
     for (let rf_idx = N_RF_CHANNELS - 1; rf_idx >= 0; --rf_idx) {
@@ -130,13 +132,13 @@ const SequenceBlockPlot = function ({
       }
     }
     if (startYData === undefined) {
-      if (sequence["ch_mask"]["digital_io"]) {
+      if (sequence["ch_mask"]["digital_io"] && hasDigitalIo) {
         yDataPairs.push([(totalChannels - 1) / totalChannels, 1]);
       }
     } else {
       yDataPairs.push([
         startYData,
-        sequence["ch_mask"]["digital_io"]
+        sequence["ch_mask"]["digital_io"] && hasDigitalIo
           ? 1
           : (totalChannels - 1) / totalChannels,
       ]);
@@ -157,12 +159,67 @@ const SequenceBlockPlot = function ({
           y1: yData[1] - depthYShrink * (depth - 1) - yPad,
           fillcolor: typeToColor[sequence["type"]],
           opacity: 0.5,
+          label: {
+            text: Object.hasOwn(sequence, "name") ? sequence["name"] : key,
+            font: {
+              size: 10,
+            },
+            textangle: xData[1] - xData[0] < 20 ? 90 : 0,
+            textposition:
+              xData[1] - xData[0] < 20 ? "middle center" : "top center",
+            padding: 3,
+          },
+          sequenceKey: key,
         });
       }
     }
   }
+  const onClick = (event) => {
+    console.log("Event: ", event);
+    let deepestShape;
+    for (const shape of layout.shapes) {
+      if (
+        shape.x0 <= event.x &&
+        event.x <= shape.x1 &&
+        shape.y0 <= event.y &&
+        event.y <= shape.y1
+      ) {
+        if (deepestShape) {
+          if (
+            sequenceConfig[shape.sequenceKey]["depth"] >
+            sequenceConfig[deepestShape.sequenceKey]["depth"]
+          ) {
+            deepestShape = shape;
+          }
+        } else {
+          deepestShape = shape;
+        }
+      }
+    }
+    if (deepestShape) {
+      console.log("Found shape: ", deepestShape);
+      const configKey = Object.hasOwn(
+        sequenceConfig[deepestShape.sequenceKey],
+        "name",
+      )
+        ? sequenceConfig[deepestShape.sequenceKey]["name"]
+        : deepestShape.sequenceKey;
+      setSequenceConfig((oldConfig) => {
+        let newDisplay = sequenceConfig[deepestShape.sequenceKey]["display"];
+        newDisplay = newDisplay == "full" ? "hide" : "full";
+        oldConfig[configKey] = {
+          ...oldConfig[configKey],
+          display: newDisplay,
+        };
+      });
+    }
+  };
 
-  return <Plot data={data} layout={layout} />;
+  console.log("Block layout: ", layout);
+
+  return (
+    <Plot data={data} layout={layout} onClick={() => console.log("click")} />
+  );
 };
 
 export { SequenceBlockPlot };
