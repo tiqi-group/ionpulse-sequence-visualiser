@@ -404,6 +404,7 @@ const PulseSequencePlot = function SequencePlot({
       index++;
     }
   }
+  console.log("Pulse layout: ", layout_to_use);
 
   return (
     <Plot

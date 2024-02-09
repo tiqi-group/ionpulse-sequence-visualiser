@@ -4,17 +4,6 @@ import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
 import { SequenceBlockPlot } from "./SequenceBlockPlot";
 
-function getNumberOfEnabledChannels(channelEnabled) {
-  return Object.keys(channelEnabled).reduce(
-    (a, key) => {
-      a[key[0] === "R" ? key.substring(0, 2) : key.substring(0, 3)] +=
-        channelEnabled[key] == true;
-      return a;
-    },
-    { RF: 0, TTL: 0, PMT: 0 },
-  );
-}
-
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
   sequenceData,
@@ -23,7 +12,7 @@ const SequenceVisualiser = function SequenceVisualiser({
 }) {
   const [channelEnabled, setChannelEnabled] = useState(() => {
     return Object.keys(channelDescription).reduce((init, k) => {
-      init[k] = true;
+      init[k] = false;
       return init;
     }, {});
   });
@@ -37,7 +26,7 @@ const SequenceVisualiser = function SequenceVisualiser({
     let newChannelEnabled = { ...channelEnabled };
     for (const k of channelDescKeys) {
       if (!(k in channelEnabled)) {
-        newChannelEnabled[k] = true;
+        newChannelEnabled[k] = false;
       }
     }
     setChannelEnabled(newChannelEnabled);
@@ -77,6 +66,4 @@ const SequenceVisualiser = function SequenceVisualiser({
   );
 };
 
-export const TTL_HEIGHT = 40;
-export const RF_HEIGHT = 70;
-export { SequenceVisualiser, getNumberOfEnabledChannels };
+export { SequenceVisualiser };

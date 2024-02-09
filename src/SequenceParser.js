@@ -19,6 +19,7 @@ function stripIdxFromName(name) {
 class SequenceParser {
   #main;
   #sequenceConfig;
+  #mainSequenceConfig;
   #plotData;
   #isUpToDate;
   constructor(ionpulseSequence, externalConfig) {
@@ -50,9 +51,13 @@ class SequenceParser {
               : 0;
         }
         settings["ch_mask"] = entry[1]["ch_mask"];
+        settings["type"] = entry[1]["type"];
         return [entry[0], settings];
       }),
     );
+    this.#mainSequenceConfig =
+      this.#sequenceConfig[Object.keys(this.#sequenceConfig).length - 1];
+    this.#mainSequenceConfig["maxDepth"] = 0;
     if (this.hasNames) {
       this.nameToId = Object.entries(this.#sequenceConfig).reduce(
         (cfg, entry) => {
@@ -84,6 +89,7 @@ class SequenceParser {
         rf_idx,
         data,
         loopIteration,
+        0,
       );
       plotData["RF" + rf_idx]["names"].pop();
     }
@@ -101,13 +107,14 @@ class SequenceParser {
         i,
         data,
         loopIteration,
+        0,
       );
       plotData[name]["names"].pop();
     }
     return plotData;
   }
 
-  getDataForChannel(idx, channelType, channelIdx, data, loopIteration) {
+  getDataForChannel(idx, channelType, channelIdx, data, loopIteration, depth) {
     let seq = this.#main["Sequence"][idx];
     let channelSequence;
     let isFork = seq["type"] === "Fork";
@@ -145,6 +152,15 @@ class SequenceParser {
           this.#sequenceConfig[idx][key] = [];
         }
         this.#sequenceConfig[idx][key].push(data["time"].at(-1));
+        if (key === "startTime") {
+          if (!Object.hasOwn(this.#sequenceConfig[idx], "depth")) {
+            this.#sequenceConfig[idx]["depth"] = [];
+          }
+          this.#sequenceConfig[idx]["depth"].push(depth);
+          if (depth > this.#mainSequenceConfig["maxDepth"]) {
+            this.#mainSequenceConfig["maxDepth"] = depth;
+          }
+        }
       } else {
         console.assert(
           this.#sequenceConfig[idx][key].includes(data["time"].at(-1)),
@@ -186,6 +202,7 @@ class SequenceParser {
             channelIdx,
             data,
             loopIteration + i,
+            depth + 1,
           );
         }
       }

@@ -1,5 +1,13 @@
-import { getNumberOfEnabledChannels } from "./SequenceVisualiser";
-import { TTL_HEIGHT, RF_HEIGHT } from "./SequenceVisualiser";
+import Plot from "react-plotly.js";
+import { getNumberOfEnabledChannels, RF_HEIGHT } from "./PlotHelpers";
+import { blue, red, grey } from "@mui/material/colors";
+import { N_RF_CHANNELS } from "./SequenceParser";
+
+const typeToColor = {
+  Loop: blue[800],
+  LinearSequence: grey[500],
+  Fork: red[800],
+};
 
 const SequenceBlockPlot = function ({
   channelDescription,
@@ -11,9 +19,28 @@ const SequenceBlockPlot = function ({
   const hasDigitalIo = nChannels["TTL"] + nChannels["PMT"] > 0;
   const totalChannels = nChannels["RF"] + hasDigitalIo;
   const totalHeight = RF_HEIGHT * totalChannels;
+
+  const mainSequenceConfig = Object.hasOwn(sequenceConfig, "main")
+    ? sequenceConfig["main"]
+    : sequenceConfig[Object.keys(sequenceConfig).length - 1];
+
+  const depthYShrink = 1 / 2 / mainSequenceConfig["maxDepth"] / totalChannels; // is normalised
+  const xPad = 1;
+  const yPad = 0.02 / totalChannels;
+
+  const maxTime = mainSequenceConfig["endTime"].at(-1);
+
+  const margin = {
+    b: 100,
+    l: 100,
+    r: 100,
+    t: 100,
+  };
+
   let layout = {
-    width: 1100,
-    height: totalHeight,
+    width: 1100 + margin.l + margin.r,
+    height: totalHeight + margin.t + margin.b,
+    margin: margin,
     grid: {
       rows: totalChannels,
       columns: 1,
@@ -23,40 +50,82 @@ const SequenceBlockPlot = function ({
     },
   };
 
+  const yaxisInit = {
+    range: [-1, 1],
+    tickmode: "array",
+    tickvals: [0],
+    fixedrange: true,
+  };
+
+  let data = [];
+
   if (hasDigitalIo) {
-    layout["yaxisDIO"] = {};
-    layout["yaxisDIO"]["domain"] = [1, totalChannels - 1 / totalChannels];
-    layout["yaxisDIO"]["anchor"] = "x" + totalChannels - 1;
+    const yaxis = "yaxis";
+    layout[yaxis] = { ...yaxisInit };
+    layout[yaxis]["ticktext"] = ["Digital IO"];
+    layout[yaxis]["domain"] = [(totalChannels - 1) / totalChannels, 1];
+    layout[yaxis]["anchor"] = "x";
+    data.push({
+      x: [0, maxTime],
+      y: [0, 0],
+      yaxis: "y",
+      type: "scatter",
+      name: "Digital IO",
+      marker: { color: "green" },
+      showlegend: false,
+    });
   }
-  for (const [i, key] of Object.keys(channelEnabled).entries()) {
-    layout["yaxis" + key] = {};
-    layout["yaxis" + key]["domain"] = [
-      (totalChannels - 1 - i) / totalChannels,
-      (totalChannels - 1 - i - 1) / totalChannels,
-    ];
-    layout["yaxis" + key]["anchor"] = "x" + totalChannels - 1 - i - 1;
+
+  const channelToAxisIdx = [...Array(N_RF_CHANNELS).keys()].reduce(
+    ([o, axisIdx], idx) => {
+      if (channelEnabled["RF" + idx]) {
+        o["RF" + idx] = axisIdx;
+        return [o, axisIdx + 1];
+      }
+      return [o, axisIdx];
+    },
+    [{}, 0 + hasDigitalIo],
+  )[0];
+  for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
+    const key = "RF" + rf_idx;
+    if (channelEnabled[key]) {
+      const i = channelToAxisIdx[key];
+      const axisPostfix = i > 0 ? "" + (1 + i) : "";
+      const yaxis = "yaxis" + axisPostfix;
+      layout[yaxis] = { ...yaxisInit };
+      layout[yaxis]["ticktext"] = [key];
+      layout[yaxis]["domain"] = [
+        (totalChannels - i - 1) / totalChannels,
+        (totalChannels - i) / totalChannels,
+      ];
+      layout[yaxis]["anchor"] = "x" + axisPostfix;
+      data.push({
+        x: [0, maxTime],
+        y: [0, 0],
+        yaxis: "y" + axisPostfix,
+        type: "scatter",
+        name: key,
+        marker: { color: "blue" },
+        showlegend: false,
+      });
+    }
   }
   layout.shapes = [];
 
-  const nRFKeys = Object.keys(channelEnabled).reduce(
-    (acc, key) => acc + (key[0] === "R"),
-    0,
-  );
-  for (const sequence of Object.values(sequenceConfig).reverse()) {
+  for (const sequence of Object.values(sequenceConfig).slice(0, -1).reverse()) {
     let yDataPairs = [];
     let startYData;
-    for (let i = nRFKeys - 1; i >= 0; --i) {
-      if (!channelEnabled["RF" + i]) continue;
+    for (let rf_idx = N_RF_CHANNELS - 1; rf_idx >= 0; --rf_idx) {
+      const key = "RF" + rf_idx;
+      if (!channelEnabled[key]) continue;
+      const i = channelToAxisIdx[key];
 
       if (startYData === undefined) {
-        if ((1 << i) & sequence["ch_mask"]["rf"]) {
-          startYData = totalChannels - 1 - i - 1 / totalChannels;
+        if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
+          startYData = (totalChannels - i - 1) / totalChannels;
         }
-      } else if ((1 << i) & ~sequence["ch_mask"]["rf"]) {
-        yDataPairs.push([
-          startYData,
-          totalChannels - 1 - i - 1 / totalChannels,
-        ]);
+      } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
+        yDataPairs.push([startYData, (totalChannels - i - 1) / totalChannels]);
         startYData = undefined;
       }
     }
@@ -73,35 +142,27 @@ const SequenceBlockPlot = function ({
       ]);
     }
 
-    for (const xData of sequence["startTime"].map((val, i) => [
-      val,
-      sequence["endTime"][i],
+    for (const [xData, depth] of sequence["startTime"].map((val, i) => [
+      [val, sequence["endTime"][i]],
+      sequence["depth"][i],
     ])) {
       for (const yData of yDataPairs) {
         layout.shapes.push({
           type: "rect",
           xref: "x0",
           yref: "paper",
-          x0: xData[0],
-          x1: xData[1],
-          y0: yData[0],
-          y1: yData[1],
-          opacity: 0.7,
+          x0: xData[0] + xPad,
+          x1: xData[1] - xPad,
+          y0: yData[0] + depthYShrink * (depth - 1) + yPad,
+          y1: yData[1] - depthYShrink * (depth - 1) - yPad,
+          fillcolor: typeToColor[sequence["type"]],
+          opacity: 0.5,
         });
       }
     }
   }
 
-  return Object.keys(sequenceConfig).map((seq, i) => {
-    return (
-      <div key={seq}>
-        <h3>{seq}</h3>
-        {Object.entries(sequenceConfig[seq]).map((entry) => {
-          return <p key={seq + entry[0]}>{entry[0] + ": " + entry[1]}</p>;
-        })}
-      </div>
-    );
-  });
+  return <Plot data={data} layout={layout} />;
 };
 
 export { SequenceBlockPlot };
