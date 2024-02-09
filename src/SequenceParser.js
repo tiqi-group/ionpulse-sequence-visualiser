@@ -35,9 +35,9 @@ class SequenceParser {
       }),
     );
     if (this.hasNames) {
-      this.sequenceConfigByName = Object.entries(this.#sequenceConfig).reduce(
+      this.nameToId = Object.entries(this.#sequenceConfig).reduce(
         (cfg, entry) => {
-          cfg[entry[1]["name"]] = entry[1];
+          cfg[entry[1]["name"]] = entry[0];
           return cfg;
         },
         {},
@@ -251,29 +251,28 @@ class SequenceParser {
 
   get sequenceConfig() {
     if (this.hasNames) {
-      return this.sequenceConfigByName;
+      return Object.entries(this.nameToId).reduce((cfg, entry) => {
+        cfg[entry[0]] = this.#sequenceConfig[entry[1]];
+        return cfg;
+      }, {});
     } else {
       return this.#sequenceConfig;
     }
   }
 
-  /**
-   * Pass and objects describing the wanted change for the sequenceState
-   *
-   * @param {object} sequenceStateChanges describes the changes in sequenceState.
-   *        It has to be of the structure:
-   *          {
-   *            id: { key: newValue, ... },
-   *            ...
-   *          }
-   * @param {object} setStateHook the setSequenceState hook of the React component that's visualising the sequence
-   */
-  setSequenceConfig(sequenceStateChanges, setStateHook) {
+  set sequenceConfig(sequenceConfig) {
     this.#isUpToDate = false;
-    for (const [id, change] of Object.entries(sequenceStateChanges)) {
-      for (const [key, value] of Object.entries(change)) {
-        // This will automatically change sequenceConfigByName as well (they reference the same objects)
-        this.#sequenceConfig[id][key] = value;
+    for (const [key, value] of Object.entries(sequenceConfig)) {
+      if (this.hasNames) {
+        if (key in this.nameToId) {
+          key = this.nameToId[key]["id"];
+        } else continue;
+      }
+      if (key < this.#main["Sequence"].length) {
+        this.#sequenceConfig[key] = {
+          ...this.#sequenceConfig[key],
+          ...value,
+        };
       }
     }
   }

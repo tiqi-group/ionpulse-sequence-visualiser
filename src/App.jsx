@@ -2,12 +2,10 @@ import { useState, useEffect } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
-import { SequenceVisualiser } from "./SequenceVisualiser";
+import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 
 import settings from "../settings";
 import { socket } from "./socket";
-
-import { SequenceParser } from "./SequenceParser.js";
 
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
@@ -32,7 +30,7 @@ function App() {
     };
     return init;
   });
-  const [sequenceParser, setSequenceParser] = useState(() => {
+  const [ionpulseSequence, setIonpulseSequence] = useState(() => {
     let init = {
       Freq: [],
       Phase: [],
@@ -56,7 +54,7 @@ function App() {
         },
       ],
     };
-    return new SequenceParser(init);
+    return init;
   });
   var libraryIp = settings["Library ip"];
   var libraryPort = settings["Library port"];
@@ -90,18 +88,18 @@ function App() {
     fetch(hardware_url + "/sequence")
       .then((response) => response.json())
       .then((data) => {
-        setSequenceParser(new SequenceParser(JSON.parse(data)));
+        setIonpulseSequence(JSON.parse(data));
       });
 
-    function updateSequenceParser(value) {
+    function updateIonpulseSequence(value) {
       // Extracting data from the notification
       if (value.data.name == "Hardware.sequence") {
-        setSequenceParser(new SequenceParser(JSON.parse(value.data.value)));
+        setIonpulseSequence(JSON.parse(value.data.value));
       }
     }
 
-    socket.on("notify", updateSequenceParser);
-    return () => socket.off("notify", updateSequenceParser);
+    socket.on("notify", updateIonpulseSequence);
+    return () => socket.off("notify", updateIonpulseSequence);
   }, []);
 
   return (
@@ -111,9 +109,9 @@ function App() {
         <Route
           path="/plot"
           element={
-            <SequenceVisualiser
+            <IonpulseSequenceVisualiser
               channelDescription={channelDescription}
-              sequenceParser={sequenceParser}
+              ionpulseSequence={ionpulseSequence}
             />
           }
         />

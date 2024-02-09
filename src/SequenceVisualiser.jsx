@@ -6,7 +6,9 @@ import { SequenceBlockPlot } from "./SequenceBlockPlot";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
-  sequenceParser,
+  sequenceData,
+  sequenceConfig,
+  setSequenceConfig,
 }) {
   const [channelEnabled, setChannelEnabled] = useState(() => {
     return Object.keys(channelDescription).reduce((init, k) => {
@@ -36,32 +38,6 @@ const SequenceVisualiser = function SequenceVisualiser({
     setChannelEnabled(newChannelEnabled);
   }
 
-  const [sequenceConfig, setSequenceConfig] = useState(() => {
-    if (sequenceParser.hasNames) {
-      return Object.entries(sequenceParser.sequenceConfig).reduce(
-        (cfg, entry) => {
-          cfg[entry[1]["name"]] = entry[1];
-          return cfg;
-        },
-        {},
-      );
-    } else {
-      return sequenceParser.sequenceConfig;
-    }
-  });
-
-  const sequenceConfigKeys = Object.keys(sequenceConfig);
-  const newConfigKeys = Object.keys(sequenceParser.sequenceConfig);
-  const configKeysUnion = new Set(sequenceConfigKeys.concat(newConfigKeys));
-
-  if (configKeysUnion.size !== sequenceConfigKeys.length) {
-    let newSequenceConfig = {
-      ...sequenceConfig,
-      ...sequenceParser.sequenceConfig,
-    };
-    setSequenceConfig(newSequenceConfig);
-  }
-
   return (
     <>
       <EnablingGroupOff
@@ -74,7 +50,7 @@ const SequenceVisualiser = function SequenceVisualiser({
           <PulseSequencePlot
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
-            sequenceData={sequenceParser.plotData}
+            sequenceData={sequenceData}
           />
         </div>
         <div className="col">
