@@ -333,14 +333,15 @@ class SequenceParser {
   set sequenceConfig(sequenceConfig) {
     this.#isUpToDate = false;
     for (const [key, value] of Object.entries(sequenceConfig)) {
+      let idKey = key;
       if (this.hasNames) {
         if (key in this.nameToId) {
-          key = this.nameToId[key]["id"];
+          idKey = this.nameToId[key]["id"];
         } else continue;
       }
-      if (key < this.#main["Sequence"].length) {
-        this.#sequenceConfig[key] = {
-          ...this.#sequenceConfig[key],
+      if (idKey < this.#main["Sequence"].length) {
+        this.#sequenceConfig[idKey] = {
+          ...this.#sequenceConfig[idKey],
           ...value,
         };
       }

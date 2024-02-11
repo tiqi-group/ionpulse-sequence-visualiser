@@ -1,4 +1,6 @@
-import Plot from "react-plotly.js";
+// import Plot from "react-plotly.js";
+import * as Plot from "@observablehq/plot";
+import { useRef, useEffect } from "react";
 import { getNumberOfEnabledChannels, RF_HEIGHT } from "./PlotHelpers";
 import { blue, red, grey } from "@mui/material/colors";
 import { N_RF_CHANNELS } from "./SequenceParser";
@@ -18,15 +20,14 @@ const SequenceBlockPlot = function ({
   const nChannels = getNumberOfEnabledChannels(channelEnabled);
   const hasDigitalIo = nChannels["TTL"] + nChannels["PMT"] > 0;
   const totalChannels = nChannels["RF"] + hasDigitalIo;
-  const totalHeight = RF_HEIGHT * totalChannels;
 
   const mainSequenceConfig = Object.hasOwn(sequenceConfig, "main")
     ? sequenceConfig["main"]
     : sequenceConfig[Object.keys(sequenceConfig).length - 1];
 
-  const depthYShrink = 1 / 2 / mainSequenceConfig["maxDepth"] / totalChannels; // is normalised
+  const depthYShrink = 1 / 2 / mainSequenceConfig["maxDepth"];
   const xPad = 1;
-  const yPad = 0.02 / totalChannels;
+  const yPad = 0.02;
 
   const maxTime = mainSequenceConfig["endTime"].at(-1);
 
@@ -34,47 +35,10 @@ const SequenceBlockPlot = function ({
     b: 100,
     l: 100,
     r: 100,
-    t: 100,
+    t: 160,
   };
-
-  let layout = {
-    width: 1100 + margin.l + margin.r,
-    height: totalHeight + margin.t + margin.b,
-    margin: margin,
-    grid: {
-      rows: totalChannels,
-      columns: 1,
-    },
-    xaxis: {
-      rangemode: "nonnegative",
-    },
-  };
-
-  const yaxisInit = {
-    range: [-1, 1],
-    tickmode: "array",
-    tickvals: [0],
-    fixedrange: true,
-  };
-
-  let data = [];
-
-  if (hasDigitalIo) {
-    const yaxis = "yaxis";
-    layout[yaxis] = { ...yaxisInit };
-    layout[yaxis]["ticktext"] = ["Digital IO"];
-    layout[yaxis]["domain"] = [(totalChannels - 1) / totalChannels, 1];
-    layout[yaxis]["anchor"] = "x";
-    data.push({
-      x: [0, maxTime],
-      y: [0, 0],
-      yaxis: "y",
-      type: "scatter",
-      name: "Digital IO",
-      marker: { color: "green" },
-      showlegend: false,
-    });
-  }
+  const plotHeight = RF_HEIGHT * totalChannels + margin.t + margin.b;
+  const plotWidth = 1000 + margin.l + margin.r;
 
   const channelToAxisIdx = [...Array(N_RF_CHANNELS).keys()].reduce(
     ([o, axisIdx], idx) => {
@@ -84,36 +48,23 @@ const SequenceBlockPlot = function ({
       }
       return [o, axisIdx];
     },
-    [{}, 0 + hasDigitalIo],
+    [{}, 0],
   )[0];
-  for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
-    const key = "RF" + rf_idx;
-    if (channelEnabled[key]) {
-      const i = channelToAxisIdx[key];
-      const axisPostfix = i > 0 ? "" + (1 + i) : "";
-      const yaxis = "yaxis" + axisPostfix;
-      layout[yaxis] = { ...yaxisInit };
-      layout[yaxis]["ticktext"] = [key];
-      layout[yaxis]["domain"] = [
-        (totalChannels - i - 1) / totalChannels,
-        (totalChannels - i) / totalChannels,
-      ];
-      layout[yaxis]["anchor"] = "x" + axisPostfix;
-      data.push({
-        x: [0, maxTime],
-        y: [0, 0],
-        yaxis: "y" + axisPostfix,
-        type: "scatter",
-        name: key,
-        marker: { color: "blue" },
-        showlegend: false,
-      });
+  const axisIdxToChannel = [
+    ...Array(N_RF_CHANNELS + hasDigitalIo).keys(),
+  ].reduce((arr, idx) => {
+    if (idx >= N_RF_CHANNELS) {
+      arr.push("Digital IO");
+    } else if (channelEnabled["RF" + idx]) {
+      arr.push("RF" + idx);
     }
-  }
-  layout.shapes = [];
+    return arr;
+  }, {});
+
+  let marks = [];
 
   for (const [key, sequence] of Object.entries(sequenceConfig)
-    .slice(0, -1)
+    .slice(0, -1) // exclude main sequence
     .reverse()) {
     let yDataPairs = [];
     let startYData;
@@ -124,60 +75,111 @@ const SequenceBlockPlot = function ({
 
       if (startYData === undefined) {
         if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
-          startYData = (totalChannels - i - 1) / totalChannels;
+          startYData = i;
         }
       } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
-        yDataPairs.push([startYData, (totalChannels - i - 1) / totalChannels]);
+        yDataPairs.push([startYData, i - 1]);
         startYData = undefined;
       }
     }
     if (startYData === undefined) {
       if (sequence["ch_mask"]["digital_io"] && hasDigitalIo) {
-        yDataPairs.push([(totalChannels - 1) / totalChannels, 1]);
+        yDataPairs.push([totalChannels - 1, totalChannels - 1]);
       }
     } else {
       yDataPairs.push([
         startYData,
-        sequence["ch_mask"]["digital_io"] && hasDigitalIo
-          ? 1
-          : (totalChannels - 1) / totalChannels,
+        (sequence["ch_mask"]["digital_io"] && hasDigitalIo) || !hasDigitalIo
+          ? totalChannels - 1
+          : totalChannels - 2,
       ]);
     }
-
+    console.log(sequence["name"], yDataPairs);
+    let sequenceBoxes = [];
     for (const [xData, depth] of sequence["startTime"].map((val, i) => [
       [val, sequence["endTime"][i]],
       sequence["depth"][i],
     ])) {
       for (const yData of yDataPairs) {
-        layout.shapes.push({
-          type: "rect",
-          xref: "x0",
-          yref: "paper",
-          x0: xData[0] + xPad,
-          x1: xData[1] - xPad,
-          y0: yData[0] + depthYShrink * (depth - 1) + yPad,
-          y1: yData[1] - depthYShrink * (depth - 1) - yPad,
-          fillcolor: typeToColor[sequence["type"]],
-          opacity: 0.5,
-          label: {
-            text: Object.hasOwn(sequence, "name") ? sequence["name"] : key,
-            font: {
-              size: 10,
-            },
-            textangle: xData[1] - xData[0] < 20 ? 90 : 0,
-            textposition:
-              xData[1] - xData[0] < 20 ? "middle center" : "top center",
-            padding: 3,
-          },
-          sequenceKey: key,
-        });
+        sequenceBoxes.push([
+          xData[0] + xPad,
+          xData[1] - xPad,
+          yData[0] - 1 / 2 + depthYShrink * (depth - 1) + yPad,
+          yData[1] + 1 / 2 - depthYShrink * (depth - 1) - yPad,
+        ]);
       }
     }
+    if (sequenceBoxes.length > 0) {
+      marks.push(
+        Plot.rect(sequenceBoxes, {
+          x1: "0",
+          x2: "1",
+          y1: "2",
+          y2: "3",
+          fill: typeToColor[sequence["type"]],
+        }),
+        Plot.text(
+          sequenceBoxes.map((entry) => {
+            return {
+              x: (entry[0] + entry[1]) / 2,
+              y: entry[2] - yPad,
+            };
+          }),
+          {
+            text: Object.hasOwn(sequence, "name") ? sequence["name"] : key,
+            x: "x",
+            y: "y",
+            lineAnchor: "top",
+            fill: "black",
+          },
+        ),
+      );
+    }
   }
+  marks.push(
+    Plot.ruleY(
+      axisIdxToChannel.map((channel, idx) => {
+        return {
+          axisIdx: idx,
+          color: idx == totalChannels - 1 && hasDigitalIo ? "green" : "blue",
+        };
+      }),
+      {
+        y: "axisIdx",
+        x1: -xPad,
+        x2: maxTime,
+        stroke: "color",
+      },
+    ),
+  );
+  marks.push(
+    Plot.ruleY([nChannels["RF"] - 1 / 2 - yPad], {
+      x1: -xPad,
+      x2: maxTime,
+    }),
+  );
+  marks.push(
+    Plot.text(
+      axisIdxToChannel.map((channel, idx) => {
+        return {
+          axisIdx: idx,
+          channel: channel,
+          color: idx == totalChannels - 1 && hasDigitalIo ? "green" : "blue",
+        };
+      }),
+      {
+        text: "channel",
+        x: -xPad - 5,
+        y: "axisIdx",
+        textAnchor: "end",
+        fill: "color",
+      },
+    ),
+  );
   const onClick = (event) => {
     console.log("Event: ", event);
     let deepestShape;
-    for (const shape of layout.shapes) {
+    for (const shape of []) {
       if (
         shape.x0 <= event.x &&
         event.x <= shape.x1 &&
@@ -215,11 +217,35 @@ const SequenceBlockPlot = function ({
     }
   };
 
-  console.log("Block layout: ", layout);
+  const plotRef = useRef();
 
-  return (
-    <Plot data={data} layout={layout} onClick={() => console.log("click")} />
-  );
+  const plotOptions = {
+    marginBottom: margin.b,
+    marginTop: margin.t,
+    marginLeft: margin.l,
+    marginRight: margin.r,
+    height: plotHeight,
+    width: plotWidth,
+    y: {
+      grid: true,
+      domain: [nChannels["RF"] - 1 / 2 + yPad, -1 / 2 - yPad - hasDigitalIo],
+      ticks: 0,
+    },
+    marks: marks,
+  };
+
+  // console.log(plotOptions);
+
+  useEffect(() => {
+    if (sequenceConfig === undefined) return;
+
+    const plot = Plot.plot(plotOptions);
+
+    plotRef.current.append(plot);
+    return () => plot.remove();
+  });
+
+  return <div ref={plotRef} />;
 };
 
 export { SequenceBlockPlot };
