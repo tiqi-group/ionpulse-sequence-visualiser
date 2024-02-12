@@ -133,7 +133,10 @@ class SequenceParser {
       baseName = stripIdxFromName(seq["name"]);
     }
     let isLoop = seq["type"] === "Loop";
-    let iterations = isLoop ? seq["iterations"] : 1;
+    let iterations =
+      isLoop && this.#sequenceConfig[idx]["display"] === "full"
+        ? seq["iterations"]
+        : 1;
     if (isLoop) loopIteration *= iterations;
 
     const storeTime = (key) => {

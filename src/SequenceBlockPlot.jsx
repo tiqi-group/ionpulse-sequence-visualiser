@@ -2,13 +2,15 @@
 import * as Plot from "@observablehq/plot";
 import { useRef, useEffect } from "react";
 import { getNumberOfEnabledChannels, RF_HEIGHT } from "./PlotHelpers";
-import { blue, red, grey } from "@mui/material/colors";
+import { blue, red, grey, green } from "@mui/material/colors";
 import { N_RF_CHANNELS } from "./SequenceParser";
 
+import * as d3 from "d3";
+
 const typeToColor = {
-  Loop: blue[800],
-  LinearSequence: grey[500],
-  Fork: red[800],
+  Loop: blue[500],
+  LinearSequence: green[200],
+  Fork: red[400],
 };
 
 const SequenceBlockPlot = function ({
@@ -26,6 +28,7 @@ const SequenceBlockPlot = function ({
     : sequenceConfig[Object.keys(sequenceConfig).length - 1];
 
   const depthYShrink = 1 / 2 / mainSequenceConfig["maxDepth"];
+  const depthXShrink = 2;
   const xPad = 1;
   const yPad = 0.02;
 
@@ -40,26 +43,34 @@ const SequenceBlockPlot = function ({
   const plotHeight = RF_HEIGHT * totalChannels + margin.t + margin.b;
   const plotWidth = 1000 + margin.l + margin.r;
 
-  const channelToAxisIdx = [...Array(N_RF_CHANNELS).keys()].reduce(
+  const channelToAxisIdx = [
+    ...Array(N_RF_CHANNELS + hasDigitalIo).keys(),
+  ].reduce(
     ([o, axisIdx], idx) => {
-      if (channelEnabled["RF" + idx]) {
+      if (idx >= N_RF_CHANNELS) {
+        o["Digital IO"] = -1;
+      } else if (channelEnabled["RF" + idx]) {
         o["RF" + idx] = axisIdx;
-        return [o, axisIdx + 1];
+        ++axisIdx;
+      }
+      return [o, axisIdx];
+    },
+    [{}, 0],
+  )[0]; // Discard axisIdx counter
+  const axisIdxToChannel = [
+    ...Array(N_RF_CHANNELS + hasDigitalIo).keys(),
+  ].reduce(
+    ([o, axisIdx], idx) => {
+      if (idx >= N_RF_CHANNELS) {
+        o[-1] = "Digital IO";
+      } else if (channelEnabled["RF" + idx]) {
+        o[axisIdx] = "RF" + idx;
+        ++axisIdx;
       }
       return [o, axisIdx];
     },
     [{}, 0],
   )[0];
-  const axisIdxToChannel = [
-    ...Array(N_RF_CHANNELS + hasDigitalIo).keys(),
-  ].reduce((arr, idx) => {
-    if (idx >= N_RF_CHANNELS) {
-      arr.push("Digital IO");
-    } else if (channelEnabled["RF" + idx]) {
-      arr.push("RF" + idx);
-    }
-    return arr;
-  }, {});
 
   let marks = [];
 
@@ -68,7 +79,10 @@ const SequenceBlockPlot = function ({
     .reverse()) {
     let yDataPairs = [];
     let startYData;
-    for (let rf_idx = N_RF_CHANNELS - 1; rf_idx >= 0; --rf_idx) {
+    if (sequence["ch_mask"]["digital_io"] && hasDigitalIo) {
+      startYData = channelToAxisIdx["Digital IO"];
+    }
+    for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
       const key = "RF" + rf_idx;
       if (!channelEnabled[key]) continue;
       const i = channelToAxisIdx[key];
@@ -82,19 +96,10 @@ const SequenceBlockPlot = function ({
         startYData = undefined;
       }
     }
-    if (startYData === undefined) {
-      if (sequence["ch_mask"]["digital_io"] && hasDigitalIo) {
-        yDataPairs.push([totalChannels - 1, totalChannels - 1]);
-      }
-    } else {
-      yDataPairs.push([
-        startYData,
-        (sequence["ch_mask"]["digital_io"] && hasDigitalIo) || !hasDigitalIo
-          ? totalChannels - 1
-          : totalChannels - 2,
-      ]);
+    if (startYData !== undefined) {
+      yDataPairs.push([startYData, nChannels["RF"] - 1]);
     }
-    console.log(sequence["name"], yDataPairs);
+
     let sequenceBoxes = [];
     for (const [xData, depth] of sequence["startTime"].map((val, i) => [
       [val, sequence["endTime"][i]],
@@ -102,8 +107,8 @@ const SequenceBlockPlot = function ({
     ])) {
       for (const yData of yDataPairs) {
         sequenceBoxes.push([
-          xData[0] + xPad,
-          xData[1] - xPad,
+          xData[0] + xPad + depthXShrink * (depth - 1), // -1 because we ignore main sequence
+          xData[1] - xPad - depthXShrink * (depth - 1),
           yData[0] - 1 / 2 + depthYShrink * (depth - 1) + yPad,
           yData[1] + 1 / 2 - depthYShrink * (depth - 1) - yPad,
         ]);
@@ -111,26 +116,61 @@ const SequenceBlockPlot = function ({
     }
     if (sequenceBoxes.length > 0) {
       marks.push(
-        Plot.rect(sequenceBoxes, {
-          x1: "0",
-          x2: "1",
-          y1: "2",
-          y2: "3",
-          fill: typeToColor[sequence["type"]],
-        }),
+        on(
+          Plot.rect(sequenceBoxes, {
+            ariaDescription:
+              "Rectangle plot of sequence " +
+              (Object.hasOwn(sequence, "name") ? sequence["name"] : key),
+            x1: "0",
+            x2: "1",
+            y1: "2",
+            y2: "3",
+            fill:
+              sequence["display"] === "full"
+                ? typeToColor[sequence["type"]]
+                : grey[300],
+          }),
+          {
+            pointerenter: function (event, { mark }) {
+              mark
+                .style("cursor", "pointer")
+                .style("stroke", red[800])
+                .style("stroke-width", "3px");
+            },
+            pointerout: function (event, { mark }) {
+              mark.style("cursor", "pointer").style("stroke", null);
+            },
+            click: function (event, { mark }) {
+              const configKey = Object.hasOwn(sequence, "name")
+                ? sequence["name"]
+                : key;
+              setSequenceConfig((cfg) => {
+                if (Object.hasOwn(cfg, configKey)) {
+                  cfg[configKey]["display"] =
+                    cfg[configKey]["display"] === "full" ? "hide" : "full";
+                } else {
+                  cfg[configKey] = { display: "hide" };
+                }
+                return cfg;
+              });
+            },
+          },
+        ),
         Plot.text(
           sequenceBoxes.map((entry) => {
             return {
               x: (entry[0] + entry[1]) / 2,
-              y: entry[2] - yPad,
+              y: entry[2] + 2 * yPad,
+              name: Object.hasOwn(sequence, "name") ? sequence["name"] : key,
             };
           }),
           {
-            text: Object.hasOwn(sequence, "name") ? sequence["name"] : key,
+            text: "name",
             x: "x",
             y: "y",
             lineAnchor: "top",
             fill: "black",
+            pointerEvents: "none",
           },
         ),
       );
@@ -138,10 +178,10 @@ const SequenceBlockPlot = function ({
   }
   marks.push(
     Plot.ruleY(
-      axisIdxToChannel.map((channel, idx) => {
+      Object.keys(axisIdxToChannel).map((axisIdx) => {
         return {
-          axisIdx: idx,
-          color: idx == totalChannels - 1 && hasDigitalIo ? "green" : "blue",
+          axisIdx: axisIdx,
+          color: axisIdxToChannel[axisIdx] == "Digital IO" ? "green" : "blue",
         };
       }),
       {
@@ -160,11 +200,11 @@ const SequenceBlockPlot = function ({
   );
   marks.push(
     Plot.text(
-      axisIdxToChannel.map((channel, idx) => {
+      Object.keys(axisIdxToChannel).map((axisIdx) => {
         return {
-          axisIdx: idx,
-          channel: channel,
-          color: idx == totalChannels - 1 && hasDigitalIo ? "green" : "blue",
+          axisIdx: axisIdx,
+          channel: axisIdxToChannel[axisIdx],
+          color: axisIdxToChannel[axisIdx] == "Digital IO" ? "green" : "blue",
         };
       }),
       {
@@ -176,46 +216,6 @@ const SequenceBlockPlot = function ({
       },
     ),
   );
-  const onClick = (event) => {
-    console.log("Event: ", event);
-    let deepestShape;
-    for (const shape of []) {
-      if (
-        shape.x0 <= event.x &&
-        event.x <= shape.x1 &&
-        shape.y0 <= event.y &&
-        event.y <= shape.y1
-      ) {
-        if (deepestShape) {
-          if (
-            sequenceConfig[shape.sequenceKey]["depth"] >
-            sequenceConfig[deepestShape.sequenceKey]["depth"]
-          ) {
-            deepestShape = shape;
-          }
-        } else {
-          deepestShape = shape;
-        }
-      }
-    }
-    if (deepestShape) {
-      console.log("Found shape: ", deepestShape);
-      const configKey = Object.hasOwn(
-        sequenceConfig[deepestShape.sequenceKey],
-        "name",
-      )
-        ? sequenceConfig[deepestShape.sequenceKey]["name"]
-        : deepestShape.sequenceKey;
-      setSequenceConfig((oldConfig) => {
-        let newDisplay = sequenceConfig[deepestShape.sequenceKey]["display"];
-        newDisplay = newDisplay == "full" ? "hide" : "full";
-        oldConfig[configKey] = {
-          ...oldConfig[configKey],
-          display: newDisplay,
-        };
-      });
-    }
-  };
 
   const plotRef = useRef();
 
@@ -234,8 +234,6 @@ const SequenceBlockPlot = function ({
     marks: marks,
   };
 
-  // console.log(plotOptions);
-
   useEffect(() => {
     if (sequenceConfig === undefined) return;
 
@@ -245,7 +243,50 @@ const SequenceBlockPlot = function ({
     return () => plot.remove();
   });
 
-  return <div ref={plotRef} />;
+  return <div style={{ width: plotWidth, height: plotHeight }} ref={plotRef} />;
 };
+
+// See https://observablehq.com/@fil/plot-onclick-experimental-plugin
+// TODO revise with Plot’s render transform (0.6.10)
+function on(mark, listeners = {}) {
+  const render = mark.render;
+  mark.render = function (facet, { x, y }, channels) {
+    // 🌶 I'd like to be allowed to read the facet
+    // …  mutable debug = fx.domain()??
+
+    // 🌶 dat[i] may or may not be the data used for the current mark element, depending on transforms
+    // (at this stage we only have access to the materialized channels we requested)
+    // but in simple cases it works
+    const data = this.data;
+
+    // 🌶 since a point or band scale doesn't have an inverse, create one from its domain and range
+    if (x && x.invert === undefined)
+      x.invert = d3.scaleQuantize(x.range(), x.domain());
+    if (y && y.invert === undefined)
+      y.invert = d3.scaleQuantize(y.range(), y.domain());
+
+    const g = render.apply(this, arguments);
+    const r = d3.select(g).selectChildren();
+    for (const [type, callback] of Object.entries(listeners)) {
+      r.on(type, function (event, i) {
+        const p = d3.pointer(event, g);
+        callback(event, {
+          type,
+          p,
+          mark: r,
+          i,
+          facet,
+          data,
+          ...(x && { x: x.invert(p[0]) }),
+          ...(y && { y: y.invert(p[1]) }),
+          ...(x && channels.x2 && { x2: x.invert(channels.x2[i]) }),
+          ...(y && channels.y2 && { y2: y.invert(channels.y2[i]) }),
+        });
+      });
+    }
+    return g;
+  };
+  return mark;
+}
 
 export { SequenceBlockPlot };
