@@ -6,7 +6,8 @@ import { SequenceBlockPlot } from "./SequenceBlockPlot";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
-  sequenceData,
+  pulseSequenceData,
+  sequenceBlockData,
   sequenceConfig,
   setSequenceConfig,
 }) {
@@ -50,13 +51,14 @@ const SequenceVisualiser = function SequenceVisualiser({
           <PulseSequencePlot
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
-            sequenceData={sequenceData}
+            sequenceData={pulseSequenceData}
           />
         </div>
         <div className="col">
           <SequenceBlockPlot
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
+            sequenceBlockData={sequenceBlockData}
             sequenceConfig={sequenceConfig}
             setSequenceConfig={setSequenceConfig}
           />

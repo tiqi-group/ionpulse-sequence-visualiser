@@ -18,8 +18,9 @@ function stripIdxFromName(name) {
 
 class SequenceParser {
   #main;
+  #sequenceBlockData;
+  #mainSequenceBlockData;
   #sequenceConfig;
-  #mainSequenceConfig;
   #plotData;
   #isUpToDate;
   constructor(ionpulseSequence, externalConfig) {
@@ -27,46 +28,31 @@ class SequenceParser {
     this.hasNames =
       this.#main["Sequence"].length > 0 &&
       Object.hasOwn(this.#main["Sequence"][0], "name");
-    this.#sequenceConfig = Object.fromEntries(
-      [...this.#main["Sequence"].entries()].map((entry) => {
-        let settings = {};
-        let extConfigEntry;
-        if (this.hasNames) {
-          settings["name"] = stripIdxFromName(entry[1]["name"]);
-          settings["id"] = entry[0];
-          extConfigEntry = externalConfig[settings["name"]];
-        } else {
-          extConfigEntry = externalConfig[entry[0]];
-        }
-        settings["display"] =
-          extConfigEntry !== undefined &&
-          Object.hasOwn(extConfigEntry, "display")
-            ? extConfigEntry["display"]
-            : "full";
-        if (entry[1]["type"] === "Fork") {
-          settings["pathIdx"] =
-            extConfigEntry !== undefined &&
-            Object.hasOwn(extConfigEntry, "pathIdx")
-              ? extConfigEntry["pathIdx"]
-              : 0;
-        }
-        settings["ch_mask"] = entry[1]["ch_mask"];
-        settings["type"] = entry[1]["type"];
-        return [entry[0], settings];
-      }),
-    );
-    this.#mainSequenceConfig =
-      this.#sequenceConfig[Object.keys(this.#sequenceConfig).length - 1];
-    this.#mainSequenceConfig["maxDepth"] = 0;
     if (this.hasNames) {
-      this.nameToId = Object.entries(this.#sequenceConfig).reduce(
-        (cfg, entry) => {
-          cfg[entry[1]["name"]] = entry[0];
-          return cfg;
-        },
-        {},
-      );
+      this.nameToId = this.#main["Sequence"].reduce((cfg, val, i) => {
+        cfg[val["name"]] = i;
+        return cfg;
+      }, {});
     }
+    this.#sequenceConfig = [];
+    this.#sequenceBlockData = this.#main["Sequence"].map((entry, i) => {
+      let settings = {};
+      const name = this.hasNames ? stripIdxFromName(entry["name"]) : i;
+      settings["name"] = name;
+
+      this.#sequenceConfig.push({
+        display: "full",
+        paths: [],
+        ...externalConfig[name],
+      });
+
+      settings["calls"] = [];
+      settings["ch_mask"] = entry["ch_mask"];
+      settings["type"] = entry["type"];
+      return settings;
+    });
+    this.#mainSequenceBlockData = this.#sequenceBlockData.at(-1);
+    this.#mainSequenceBlockData["maxDepth"] = 0;
     this.#isUpToDate = false;
   }
 
@@ -115,11 +101,30 @@ class SequenceParser {
   }
 
   getDataForChannel(idx, channelType, channelIdx, data, loopIteration, depth) {
-    let seq = this.#main["Sequence"][idx];
+    const seq = this.#main["Sequence"][idx];
     let channelSequence;
     let isFork = seq["type"] === "Fork";
+
+    if (!this.#sequenceBlockData[idx]["refChannel"]) {
+      this.#sequenceBlockData[idx]["refChannel"] = {
+        channelType: channelType,
+        channelIdx: channelIdx,
+      };
+    }
     if (isFork) {
-      channelSequence = [seq["paths"][this.#sequenceConfig[idx]["pathIdx"]]];
+      if (
+        this.#sequenceConfig[idx]["paths"].length <=
+        this.#sequenceBlockData[idx]["calls"].length
+      ) {
+        this.#sequenceConfig[idx]["paths"].push(0);
+      }
+      channelSequence = [
+        seq["paths"][
+          this.#sequenceConfig[idx]["paths"][
+            this.#sequenceBlockData[idx]["calls"].length
+          ]
+        ],
+      ];
     } else if (
       channelType === ChannelSequenceType.rf ||
       channelType === ChannelSequenceType.qubit_sequences
@@ -129,8 +134,8 @@ class SequenceParser {
       channelSequence = seq[channelType];
     }
     let baseName = "";
-    if (!seq["name"].endsWith("main")) {
-      baseName = stripIdxFromName(seq["name"]);
+    if (!this.#sequenceBlockData[idx]["name"] !== "main") {
+      baseName = this.#sequenceBlockData[idx]["name"];
     }
     let isLoop = seq["type"] === "Loop";
     let iterations =
@@ -139,34 +144,30 @@ class SequenceParser {
         : 1;
     if (isLoop) loopIteration *= iterations;
 
-    const storeTime = (key) => {
-      if (!Object.hasOwn(this.#sequenceConfig[idx], "refChannel")) {
-        this.#sequenceConfig[idx]["refChannel"] = {
-          channelType: channelType,
-          channelIdx: channelIdx,
-        };
-      }
+    const storeTime = (key, iterationName) => {
       if (
-        this.#sequenceConfig[idx]["refChannel"]["channelType"] ===
+        this.#sequenceBlockData[idx]["refChannel"]["channelType"] ===
           channelType &&
-        this.#sequenceConfig[idx]["refChannel"]["channelIdx"] === channelIdx
+        this.#sequenceBlockData[idx]["refChannel"]["channelIdx"] === channelIdx
       ) {
-        if (!Object.hasOwn(this.#sequenceConfig[idx], key)) {
-          this.#sequenceConfig[idx][key] = [];
-        }
-        this.#sequenceConfig[idx][key].push(data["time"].at(-1));
         if (key === "startTime") {
-          if (!Object.hasOwn(this.#sequenceConfig[idx], "depth")) {
-            this.#sequenceConfig[idx]["depth"] = [];
+          this.#sequenceBlockData[idx]["calls"].push({
+            startTime: data["time"].at(-1),
+            depth: depth,
+            name: iterationName,
+          });
+          if (depth > this.#mainSequenceBlockData["maxDepth"]) {
+            this.#mainSequenceBlockData["maxDepth"] = depth;
           }
-          this.#sequenceConfig[idx]["depth"].push(depth);
-          if (depth > this.#mainSequenceConfig["maxDepth"]) {
-            this.#mainSequenceConfig["maxDepth"] = depth;
-          }
+        } else {
+          this.#sequenceBlockData[idx]["calls"].at(-1)[key] =
+            data["time"].at(-1);
         }
       } else {
         console.assert(
-          this.#sequenceConfig[idx][key].includes(data["time"].at(-1)),
+          this.#sequenceBlockData[idx]["calls"].some((call) => {
+            return call[key] == data["time"].at(-1);
+          }),
           key +
             " on channel " +
             channelIdx +
@@ -175,17 +176,29 @@ class SequenceParser {
             ". " +
             data["time"].at(-1) +
             " is not in " +
-            this.#sequenceConfig[idx][key],
+            this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
         );
+        if (
+          !this.#sequenceBlockData[idx]["calls"].some((call) => {
+            return call[key] == data["time"].at(-1);
+          })
+        ) {
+          console.log(this.#sequenceBlockData[idx]);
+        }
       }
     };
-    storeTime("startTime");
     for (let i = 0; i < iterations; i++) {
       let iterationName = baseName;
       if (isLoop) iterationName += "[" + i + "]";
       if (isFork)
-        iterationName += "{" + this.#sequenceConfig[idx]["pathIdx"] + "}";
+        iterationName +=
+          "{" +
+          this.#sequenceConfig[idx]["paths"][
+            this.#sequenceBlockData[idx]["calls"].length - 1
+          ] +
+          "}";
       if (iterationName.length > 0) data["names"].at(-1).push(iterationName);
+      storeTime("startTime", iterationName);
       for (let event of channelSequence) {
         if (typeof event === "object") {
           event = event[0];
@@ -210,8 +223,8 @@ class SequenceParser {
         }
       }
       if (iterationName.length > 0) data["names"].at(-1).pop();
+      storeTime("endTime");
     }
-    storeTime("endTime");
     return data;
   }
 
@@ -322,33 +335,8 @@ class SequenceParser {
     return this.#plotData;
   }
 
-  get sequenceConfig() {
-    if (this.hasNames) {
-      return Object.entries(this.nameToId).reduce((cfg, entry) => {
-        cfg[entry[0]] = this.#sequenceConfig[entry[1]];
-        return cfg;
-      }, {});
-    } else {
-      return this.#sequenceConfig;
-    }
-  }
-
-  set sequenceConfig(sequenceConfig) {
-    this.#isUpToDate = false;
-    for (const [key, value] of Object.entries(sequenceConfig)) {
-      let idKey = key;
-      if (this.hasNames) {
-        if (key in this.nameToId) {
-          idKey = this.nameToId[key]["id"];
-        } else continue;
-      }
-      if (idKey < this.#main["Sequence"].length) {
-        this.#sequenceConfig[idKey] = {
-          ...this.#sequenceConfig[idKey],
-          ...value,
-        };
-      }
-    }
+  get sequenceBlockData() {
+    return this.#sequenceBlockData;
   }
 }
 

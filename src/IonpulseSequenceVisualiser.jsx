@@ -18,8 +18,9 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   return (
     <SequenceVisualiser
       channelDescription={channelDescription}
-      sequenceData={sequenceParser.plotData}
-      sequenceConfig={sequenceParser.sequenceConfig}
+      pulseSequenceData={sequenceParser.plotData}
+      sequenceBlockData={sequenceParser.sequenceBlockData}
+      sequenceConfig={sequenceConfig}
       setSequenceConfig={updateSequenceConfig}
     />
   );
