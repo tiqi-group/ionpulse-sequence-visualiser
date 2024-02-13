@@ -150,11 +150,11 @@ const SequenceBlockPlot = function ({
             },
           ),
           Plot.text(
-            sequenceBoxes.map((entry) => {
+            sequenceBoxes.map((entry, i) => {
               return {
                 x: (entry[0] + entry[1]) / 2,
                 y: entry[2] + 2 * yPad,
-                name: sequence["name"],
+                name: sequence["calls"][i]["name"],
               };
             }),
             {
