@@ -39,6 +39,23 @@ const SequenceVisualiser = function SequenceVisualiser({
     setChannelEnabled(newChannelEnabled);
   }
 
+  const xDomains = sequenceBlockData.slice(0, -1).reduce(
+    (domain, seq, i) => {
+      if (sequenceConfig[i] && sequenceConfig[i]["display"] == "hide") {
+        if (seq["type"] === "Loop") {
+        } else {
+          for (const call of seq["calls"]) {
+            const startIdx = domain.findIndex((val) => val > call["startTime"]);
+            const endIdx = domain.findIndex((val) => val > call["endTime"]);
+            domainStart = domain.slice(0, startIdx);
+          }
+        }
+      }
+      return domain;
+    },
+    [0, sequenceBlockData.at(-1)["calls"].at(-1)["endTime"]],
+  );
+
   return (
     <>
       <EnablingGroupOff

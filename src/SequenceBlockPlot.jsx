@@ -98,26 +98,26 @@ const SequenceBlockPlot = function ({
         yDataPairs.push([startYData, nChannels["RF"] - 1]);
       }
 
-      let sequenceBoxes = [];
+      let blockData = [];
       for (const call of sequence["calls"]) {
         for (const yData of yDataPairs) {
-          sequenceBoxes.push([
-            call["startTime"] + xPad + depthXShrink * (call["depth"] - 1), // -1 because we ignore main sequence
-            call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
-            yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
-            yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
-          ]);
+          blockData.push({
+            x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1), // -1 because we ignore main sequence
+            x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
+            y1: yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
+            y2: yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
+          });
         }
       }
-      if (sequenceBoxes.length > 0) {
+      if (blockData.length > 0) {
         marks.push(
           on(
-            Plot.rect(sequenceBoxes, {
+            Plot.rect(blockData, {
               ariaDescription: "Rectangle plot of sequence " + sequence["name"],
-              x1: "0",
-              x2: "1",
-              y1: "2",
-              y2: "3",
+              x1: "x1",
+              x2: "x2",
+              y1: "y1",
+              y2: "y2",
               fill:
                 !sequenceConfig[sequence["name"]] ||
                 sequenceConfig[sequence["name"]]["display"] === "full"
@@ -150,10 +150,10 @@ const SequenceBlockPlot = function ({
             },
           ),
           Plot.text(
-            sequenceBoxes.map((entry, i) => {
+            blockData.map((entry, i) => {
               return {
-                x: (entry[0] + entry[1]) / 2,
-                y: entry[2] + 2 * yPad,
+                x: (entry["x1"] + entry["x2"]) / 2,
+                y: entry["y1"] + 2 * yPad,
                 name: sequence["calls"][i]["name"],
               };
             }),
