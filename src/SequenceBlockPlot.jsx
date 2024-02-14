@@ -17,6 +17,9 @@ const SequenceBlockPlot = function ({
   channelDescription,
   channelEnabled,
   sequenceBlockData,
+  timeDomain,
+  plotWidth,
+  margin,
   sequenceConfig,
   setSequenceConfig,
 }) {
@@ -31,14 +34,8 @@ const SequenceBlockPlot = function ({
 
   const maxTime = sequenceBlockData.at(-1)["calls"].at(-1)["endTime"];
 
-  const margin = {
-    b: 100,
-    l: 100,
-    r: 100,
-    t: 160,
-  };
   const plotHeight = RF_HEIGHT * totalChannels + margin.t + margin.b;
-  const plotWidth = 1100 + margin.l + margin.r;
+  // const plotWidth = 1100 + margin.l + margin.r;
 
   const channelToAxisIdx = [
     ...Array(N_RF_CHANNELS + hasDigitalIo).keys(),
@@ -100,13 +97,18 @@ const SequenceBlockPlot = function ({
 
       let blockData = [];
       for (const call of sequence["calls"]) {
-        for (const yData of yDataPairs) {
-          blockData.push({
-            x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1), // -1 because we ignore main sequence
-            x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
-            y1: yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
-            y2: yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
-          });
+        if (
+          call["startTime"] < timeDomain[1] &&
+          call["endTime"] > timeDomain[0]
+        ) {
+          for (const yData of yDataPairs) {
+            blockData.push({
+              x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1), // -1 because we ignore main sequence
+              x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
+              y1: yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
+              y2: yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
+            });
+          }
         }
       }
       if (blockData.length > 0) {
@@ -224,6 +226,9 @@ const SequenceBlockPlot = function ({
       domain: [nChannels["RF"] - 1 / 2 + yPad, -1 / 2 - yPad - hasDigitalIo],
       ticks: 0,
     },
+    x: {
+      domain: timeDomain,
+    },
     marks: marks,
   };
 
@@ -236,7 +241,7 @@ const SequenceBlockPlot = function ({
     return () => plot.remove();
   });
 
-  return <div style={{ width: plotWidth, height: plotHeight }} ref={plotRef} />;
+  return <div style={{ height: plotHeight }} ref={plotRef} />;
 };
 
 // See https://observablehq.com/@fil/plot-onclick-experimental-plugin

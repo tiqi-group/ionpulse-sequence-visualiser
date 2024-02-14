@@ -39,22 +39,79 @@ const SequenceVisualiser = function SequenceVisualiser({
     setChannelEnabled(newChannelEnabled);
   }
 
+  const minimumSequenceTime = 20;
+  const totalTime = sequenceBlockData.at(-1)["calls"].at(-1)["endTime"];
   const xDomains = sequenceBlockData.slice(0, -1).reduce(
-    (domain, seq, i) => {
-      if (sequenceConfig[i] && sequenceConfig[i]["display"] == "hide") {
+    (domain, seq) => {
+      if (
+        sequenceConfig[seq["name"]] &&
+        sequenceConfig[seq["name"]]["display"] == "hide"
+      ) {
+        let excluded_calls = seq["calls"];
         if (seq["type"] === "Loop") {
-        } else {
-          for (const call of seq["calls"]) {
-            const startIdx = domain.findIndex((val) => val > call["startTime"]);
-            const endIdx = domain.findIndex((val) => val > call["endTime"]);
-            domainStart = domain.slice(0, startIdx);
+          const loopStartIndices = seq["calls"].reduce((indices, call, i) => {
+            if (call["name"].substring(seq["name"].length) === "[0]") {
+              indices.push(i);
+            }
+            return indices;
+          }, []);
+          excluded_calls = loopStartIndices.map(
+            (callIndex, i, loopStartIndices) => {
+              const endTime =
+                i < loopStartIndices.length - 1
+                  ? seq["calls"][loopStartIndices[i + 1]]["startTime"]
+                  : seq["calls"].at(-1)["endTime"];
+              return {
+                startTime: seq["calls"][callIndex + 1]["startTime"],
+                endTime: endTime,
+              };
+            },
+          );
+        }
+        for (const call of excluded_calls) {
+          const startTime = Math.max(call["startTime"], minimumSequenceTime);
+          // >= to make sure we merge with subsequent time domain
+          const startIdx = domain.findIndex((val) => val >= startTime);
+          let domainStart = domain.slice(0, startIdx);
+          // Check if startIdx is odd (i.e. index of an end time)
+          if (startIdx % 2 == 1) {
+            // Push startTime because it now ends the previous domain (current call is hidden)
+            domainStart.push(startTime);
           }
+          console.assert(domainStart.length % 2 == 0); // domainStart has to contain pairs of start and end time
+          const endIdx = domain.findIndex((val) => val > call["endTime"]);
+          // If endIdx is even, the sequence ends during an already excluded slot
+          // and we don't have to start a new time domain
+          let domainEnd = endIdx % 2 == 1 ? [call["endTime"]] : [];
+          if (endIdx >= 0) {
+            domainEnd = domainEnd.concat(domain.slice(endIdx));
+          }
+          console.assert(domainEnd.length % 2 == 0);
+          domain = domainStart.concat(domainEnd);
         }
       }
       return domain;
     },
-    [0, sequenceBlockData.at(-1)["calls"].at(-1)["endTime"]],
+    [0, totalTime],
   );
+  const maxTimePad = 10;
+  // Transform linear array of length 2n to array of pairs of length n
+  const timeDomains = xDomains.reduce((domains, entry, i, timeDomains) => {
+    if (i % 2 == 0) {
+      const timePad =
+        i == 0 ? 0 : Math.min(maxTimePad, (entry - timeDomains[i - 1]) / 2);
+      domains.push([entry - timePad]);
+    } else {
+      const timePad =
+        i == timeDomains.length - 1
+          ? Math.min(maxTimePad, totalTime - entry)
+          : Math.min(maxTimePad, (timeDomains[i + 1] - entry) / 2);
+      domains.at(-1).push(entry + timePad);
+    }
+    return domains;
+  }, []);
+
+  const totalWidth = 1200;
 
   return (
     <>
@@ -72,13 +129,45 @@ const SequenceVisualiser = function SequenceVisualiser({
           />
         </div>
         <div className="col">
-          <SequenceBlockPlot
-            channelDescription={channelDescription}
-            channelEnabled={channelEnabled}
-            sequenceBlockData={sequenceBlockData}
-            sequenceConfig={sequenceConfig}
-            setSequenceConfig={setSequenceConfig}
-          />
+          <div style={{ width: totalWidth + "px", position: "relative" }}>
+            {timeDomains.map((timeDomain, i, timeDomains) => {
+              const margin = {
+                b: 100,
+                t: 160,
+                l: i == 0 ? 50 : 0,
+                r: i == timeDomains.length - 1 ? 10 : 0,
+              };
+              const elementWidth =
+                margin.l +
+                margin.r +
+                (totalWidth * (timeDomain[1] - timeDomain[0])) / totalTime;
+              return (
+                <div
+                  key={"subplot[" + timeDomain + "]"}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left:
+                      -margin.l +
+                      (timeDomain[0] * totalWidth) / totalTime +
+                      "px",
+                    width: elementWidth + "px",
+                  }}
+                >
+                  <SequenceBlockPlot
+                    channelDescription={channelDescription}
+                    channelEnabled={channelEnabled}
+                    sequenceBlockData={sequenceBlockData}
+                    timeDomain={timeDomain}
+                    plotWidth={elementWidth}
+                    margin={margin}
+                    sequenceConfig={sequenceConfig}
+                    setSequenceConfig={setSequenceConfig}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </>
