@@ -16,7 +16,7 @@ function App() {
         type: "single_pass",
         central_frequency: 100,
         order: 1,
-        dds_channels: i,
+        dds_channels: [i],
         group: "RF",
       };
       init["TTL" + i] = {
@@ -59,21 +59,17 @@ function App() {
   var libraryIp = settings["Library ip"];
   var libraryPort = settings["Library port"];
 
-  function updateChannelSettings(description) {
-    let newSettings = {};
-    Object.assign(newSettings, description["RFs"]);
-    for (const key in newSettings) {
-      newSettings[key].group = "RF";
-    }
-    for (const group of ["PMT", "TTL"]) {
+  function updateChannelDescription(description) {
+    let newDescription = {};
+    for (const group of ["RF", "TTL", "PMT"]) {
       for (const [key, value] of Object.entries(description[group + "s"])) {
-        newSettings[key] = {
-          name: value,
+        newDescription[key] = {
+          ...value,
           group: group,
         };
       }
     }
-    setChannelDescription(newSettings);
+    setChannelDescription(newDescription);
   }
 
   useEffect(() => {
@@ -82,7 +78,7 @@ function App() {
     fetch(hardware_url + "/description")
       .then((response) => response.json())
       .then((data) => {
-        updateChannelSettings(JSON.parse(data));
+        updateChannelDescription(JSON.parse(data));
       });
 
     fetch(hardware_url + "/sequence")

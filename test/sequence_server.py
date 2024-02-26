@@ -66,20 +66,25 @@ if __name__ == "__main__":
         d = dict()
         d["RFs"] = dict()
         for i in range(n_rfs):
-            d["RFs"][f"RF{i}"] = {"name": f"RF{i}",
-                                  "type": "single pass",
-                                  "central_frequency": 100,
-                                  "order": 1,
-                                  "dds_channels":[i]
-                                  }
+            d["RFs"][f"RF{i}"] = {
+                    "name": f"RF {i}",
+                    "type": "single pass",
+                    "central_frequency": 100,
+                    "order": 1,
+                    "dds_channels":[i]
+                    }
 
         d["TTLs"] = dict()
         for i in range(n_ttls):
-            d["TTLs"][f"TTL{i}"] = f"TTL{i}"
+            d["TTLs"][f"TTL{i}"] = {
+                    "name": f"TTL {i}"
+                    }
 
         d["PMTs"] = dict()
         for i in range(n_pmts):
-            d["PMTs"][f"PMT{i}"] = f"PMT{i}"
+            d["PMTs"][f"PMT{i}"] = {
+                    "name": f"PMT {i}"
+                    }
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
