@@ -56,12 +56,10 @@ function App() {
     for (const key in newSettings) {
       newSettings[key].group = "RF";
     }
-    for (const group of ["PMT", "TTL"]) {
+    for (const group of ["RF", "TTL", "PMT"]) {
       for (const [key, value] of Object.entries(description[group + "s"])) {
-        newSettings[key] = {
-          name: value,
-          group: group,
-        };
+        newSettings[key] = { ...value };
+        newSettings[key].group = group;
       }
     }
     setChannelDescription(newSettings);
