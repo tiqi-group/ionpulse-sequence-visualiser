@@ -42,9 +42,9 @@ test("Plot page renders", () => {
   expect(screen.getByText(/Channels to display/)).toBeDefined();
   const rf0_enable = screen.getByText("RF0");
   // console.log(rf0_enable)
-  expect(rf0_enable.ariaPressed).toBe("true");
-  fireEvent.click(screen.getByText("RF0"));
   expect(rf0_enable.ariaPressed).toBe("false");
   fireEvent.click(screen.getByText("RF0"));
   expect(rf0_enable.ariaPressed).toBe("true");
+  fireEvent.click(screen.getByText("RF0"));
+  expect(rf0_enable.ariaPressed).toBe("false");
 });
