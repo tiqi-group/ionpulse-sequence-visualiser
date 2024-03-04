@@ -70,7 +70,7 @@ function compileEventName(eventNames) {
   return compiledEventNames;
 }
 
-function createLayout(n_channels) {
+function createLayout(n_channels, xLimits) {
   // PMT channels are treated as TTL channels here
   const individual_TTL_height = 40;
   const individual_RF_height = 70;
@@ -107,7 +107,7 @@ function createLayout(n_channels) {
     margin: margin,
     grid: grid_params,
     xaxis: {
-      hola: 1,
+      range: xLimits,
       rangemode: "nonnegative",
       //fixedrange: true
     },
@@ -260,9 +260,24 @@ const PulseSequencePlot = function SequencePlot({
     { RF: 0, TTL: 0, PMT: 0 },
   );
 
+  console.log(sequenceData);
+
+  let xLimits = [0, 0];
+  for (const [channel, data] of Object.entries(sequenceData)) {
+    if (channelEnabled[channel]) {
+      xLimits[1] = Math.max(xLimits[1], data["timeDomain"].at(-1));
+    }
+  }
+  xLimits[0] = xLimits[1];
+  for (const [channel, data] of Object.entries(sequenceData)) {
+    if (channelEnabled[channel]) {
+      xLimits[0] = Math.min(xLimits[0], data["timeDomain"].at(0));
+    }
+  }
+
   let data = [];
   let index = 1;
-  let layout_to_use = createLayout(n_channels);
+  let layout_to_use = createLayout(n_channels, xLimits);
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
 
@@ -353,7 +368,10 @@ const PulseSequencePlot = function SequencePlot({
       layout_to_use["yaxis" + index].title.text = channelYDataType[channel];
       layout_to_use["yaxis" + index].range =
         RF_yaxis_ranges[channelYDataType[channel]];
-      layout_to_use["xaxis" + index] = xAxisParams;
+      layout_to_use["xaxis" + index] = {
+        ...xAxisParams,
+        range: xLimits,
+      };
 
       let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
 
@@ -367,7 +385,10 @@ const PulseSequencePlot = function SequencePlot({
       amp_to_add.yaxis = "y" + index;
 
       layout_to_use["yaxis" + index].title.text = "amp";
-      layout_to_use["xaxis" + index] = xAxisParams;
+      layout_to_use["xaxis" + index] = {
+        ...xAxisParams,
+        range: xLimits,
+      };
       let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;

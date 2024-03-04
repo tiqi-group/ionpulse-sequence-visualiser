@@ -8,8 +8,8 @@ import { N_RF_CHANNELS } from "./SequenceParser";
 import * as d3 from "d3";
 
 const typeToColor = {
-  Loop: blue[500],
-  LinearSequence: green[300],
+  Loop: [blue[500], blue[300], grey[300]],
+  LinearSequence: [green[300], green[100], grey[300]],
   Fork: red[400],
 };
 
@@ -123,8 +123,10 @@ const SequenceBlockPlot = function ({
               fill:
                 !sequenceConfig[sequence["name"]] ||
                 sequenceConfig[sequence["name"]]["display"] === "full"
-                  ? typeToColor[sequence["type"]]
-                  : grey[300],
+                  ? typeToColor[sequence["type"]][0]
+                  : sequenceConfig[sequence["name"]]["display"] === "minimized"
+                    ? typeToColor[sequence["type"]][1]
+                    : typeToColor[sequence["type"]][2],
             }),
             {
               pointerenter: function (event, { mark }) {
@@ -141,10 +143,12 @@ const SequenceBlockPlot = function ({
                   if (Object.hasOwn(cfg, sequence["name"])) {
                     cfg[sequence["name"]]["display"] =
                       cfg[sequence["name"]]["display"] === "full"
-                        ? "hide"
-                        : "full";
+                        ? "minimized"
+                        : cfg[sequence["name"]]["display"] === "minimized"
+                          ? "hide"
+                          : "full";
                   } else {
-                    cfg[sequence["name"]] = { display: "hide" };
+                    cfg[sequence["name"]] = { display: "minimized" };
                   }
                   return cfg;
                 });

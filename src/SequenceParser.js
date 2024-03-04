@@ -66,7 +66,8 @@ class SequenceParser {
         phase: [0],
         amp: [0],
         time: [0],
-        names: [[""], []],
+        names: [["start"], []],
+        timeDomain: [0],
       };
       let loopIteration = 0;
       plotData["RF" + rf_idx] = this.getDataForChannel(
@@ -76,14 +77,18 @@ class SequenceParser {
         data,
         loopIteration,
         0,
+        true,
       );
+      if (plotData["RF" + rf_idx]["timeDomain"].length % 2 == 1)
+        plotData["RF" + rf_idx]["timeDomain"].pop();
       plotData["RF" + rf_idx]["names"].pop();
     }
     for (let i = -N_PMT_CHANNELS; i < N_TTL_CHANNELS; i++) {
       let data = {
         values: [0],
         time: [0],
-        names: [[""], []],
+        names: [["start"], []],
+        timeDomain: [0],
       };
       let loopIteration = 0;
       let name = i < 0 ? "PMT" + (8 + i) : "TTL" + i;
@@ -94,13 +99,24 @@ class SequenceParser {
         data,
         loopIteration,
         0,
+        true,
       );
+      if (plotData[name]["timeDomain"].length % 2 == 1)
+        plotData[name]["timeDomain"].pop();
       plotData[name]["names"].pop();
     }
     return plotData;
   }
 
-  getDataForChannel(idx, channelType, channelIdx, data, loopIteration, depth) {
+  getDataForChannel(
+    idx,
+    channelType,
+    channelIdx,
+    data,
+    loopIteration,
+    depth,
+    recordEvents,
+  ) {
     const seq = this.#main["Sequence"][idx];
     let channelSequence;
     let isFork = seq["type"] === "Fork";
@@ -151,7 +167,7 @@ class SequenceParser {
       ) {
         if (key === "startTime") {
           this.#sequenceBlockData[idx]["calls"].push({
-            startTime: data["time"].at(-1),
+            startTime: data["timeDomain"].at(-1),
             depth: depth,
             name: iterationName,
           });
@@ -160,12 +176,12 @@ class SequenceParser {
           }
         } else {
           this.#sequenceBlockData[idx]["calls"].at(-1)[key] =
-            data["time"].at(-1);
+            data["timeDomain"].at(-1);
         }
       } else {
         console.assert(
           this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return call[key] == data["time"].at(-1);
+            return call[key] == data["timeDomain"].at(-1);
           }),
           key +
             " on channel " +
@@ -173,13 +189,13 @@ class SequenceParser {
             " don't match for Sequence " +
             idx +
             ". " +
-            data["time"].at(-1) +
+            data["timeDomain"].at(-1) +
             " is not in " +
             this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
         );
         if (
           !this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return call[key] == data["time"].at(-1);
+            return call[key] == data["timeDomain"].at(-1);
           })
         ) {
           console.log(this.#sequenceBlockData[idx]);
@@ -198,6 +214,16 @@ class SequenceParser {
           "}";
       if (iterationName.length > 0) data["names"].at(-1).push(iterationName);
       storeTime("startTime", iterationName);
+      let recordEventsLocal =
+        recordEvents &&
+        (this.#sequenceConfig[idx]["display"] == "full" ||
+          (this.#sequenceConfig[idx]["display"] == "minimized" &&
+            i == 0 &&
+            this.sequenceBlockData[idx]["calls"].length == 1));
+      if (data["timeDomain"].length % 2 == recordEventsLocal) {
+        // If it's even and not record or if it's odd and record
+        data["timeDomain"].push(data["timeDomain"].at(-1));
+      }
       for (let event of channelSequence) {
         if (typeof event === "object") {
           event = event[0];
@@ -209,6 +235,7 @@ class SequenceParser {
             channelIdx,
             data,
             loopIteration + i,
+            recordEventsLocal,
           );
         } else {
           data = this.getDataForChannel(
@@ -218,6 +245,7 @@ class SequenceParser {
             data,
             loopIteration + i,
             depth + 1,
+            recordEventsLocal,
           );
         }
       }
@@ -227,7 +255,15 @@ class SequenceParser {
     return data;
   }
 
-  getParamValue(type, idx, channelType, channelIdx, data, loopIteration) {
+  getParamValue(
+    type,
+    idx,
+    channelType,
+    channelIdx,
+    data,
+    loopIteration,
+    recordEvents,
+  ) {
     if (typeof idx === "object") {
       idx = idx[0];
     }
@@ -248,15 +284,27 @@ class SequenceParser {
       value = value[loopIteration % param.value.length];
     }
     if (type === "time") {
-      data[type].push(data[type].at(-1) + value);
-    } else {
-      data[type].push(value);
+      data["timeDomain"][data["timeDomain"].length - 1] += value;
+    }
+    if (recordEvents) {
+      if (type === "time") {
+        data[type].push(data["timeDomain"].at(-1));
+      } else {
+        data[type].push(value);
+      }
     }
 
     return data;
   }
 
-  getEventDataForChannel(idx, channelType, channelIdx, data, loopIteration) {
+  getEventDataForChannel(
+    idx,
+    channelType,
+    channelIdx,
+    data,
+    loopIteration,
+    recordEvents,
+  ) {
     let event = this.#main["Event"][idx];
     console.assert(
       channelType === ChannelSequenceType.rf
@@ -280,6 +328,7 @@ class SequenceParser {
             channelIdx,
             data,
             loopIteration,
+            recordEvents,
           );
         }
         break;
@@ -291,9 +340,12 @@ class SequenceParser {
           channelIdx,
           data,
           loopIteration,
+          recordEvents,
         );
-        for (let type of ["freq", "phase", "amp"]) {
-          data[type].push(data[type].at(-1));
+        if (recordEvents) {
+          for (let type of ["freq", "phase", "amp"]) {
+            data[type].push(data[type].at(-1));
+          }
         }
         break;
       case "TtlEdge":
@@ -304,22 +356,25 @@ class SequenceParser {
           channelIdx,
           data,
           loopIteration,
+          recordEvents,
         );
-        if (channelIdx < 0) {
-          channelIdx += 8;
-          let mask = 1 << channelIdx;
-          data["values"].push(
-            (data["values"][-1] &
-              ((event["pmts_to_change"] & mask) === 0 ? 0 : 1)) |
-              ((event["pmts"] & mask) === 0 ? 0 : 1),
-          );
-        } else {
-          let mask = 1 << channelIdx;
-          data["values"].push(
-            (data["values"][-1] &
-              ((event["ttls_to_change"] & mask) === 0 ? 0 : 1)) |
-              ((event["ttl_target"] & mask) === 0 ? 0 : 1),
-          );
+        if (recordEvents) {
+          if (channelIdx < 0) {
+            channelIdx += 8;
+            let mask = 1 << channelIdx;
+            data["values"].push(
+              (data["values"][-1] &
+                ((event["pmts_to_change"] & mask) === 0 ? 0 : 1)) |
+                ((event["pmts"] & mask) === 0 ? 0 : 1),
+            );
+          } else {
+            let mask = 1 << channelIdx;
+            data["values"].push(
+              (data["values"][-1] &
+                ((event["ttls_to_change"] & mask) === 0 ? 0 : 1)) |
+                ((event["ttl_target"] & mask) === 0 ? 0 : 1),
+            );
+          }
         }
         break;
     }
