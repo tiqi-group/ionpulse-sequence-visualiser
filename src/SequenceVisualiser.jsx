@@ -128,7 +128,7 @@ const SequenceVisualiser = function SequenceVisualiser({
             sequenceData={pulseSequenceData}
           />
         </div>
-        <div className="col">
+        <div className="col" style={{ marginLeft: "100px" }}>
           <div style={{ width: totalWidth + "px", position: "relative" }}>
             {timeDomains.map((timeDomain, i, timeDomains) => {
               const margin = {
