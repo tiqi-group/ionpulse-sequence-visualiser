@@ -107,6 +107,7 @@ const SequenceBlockPlot = function ({
               x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
               y1: yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
               y2: yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
+              name: call["name"],
             });
           }
         }
@@ -156,11 +157,11 @@ const SequenceBlockPlot = function ({
             },
           ),
           Plot.text(
-            blockData.map((entry, i) => {
+            blockData.map((entry) => {
               return {
                 x: (entry["x1"] + entry["x2"]) / 2,
                 y: entry["y1"] + 2 * yPad,
-                name: sequence["calls"][i]["name"],
+                name: entry["name"],
               };
             }),
             {
