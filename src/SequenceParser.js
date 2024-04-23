@@ -394,4 +394,64 @@ class SequenceParser {
   }
 }
 
+function expandToWaveform(sequenceData) {
+  // time is in units of us so sampling rate of 10 equal 10 MSPS
+  const samplingRate = 10;
+  let nSamples = 0;
+  for (let i = 0; i < sequenceData["time"].length - 1; i++) {
+    let a = i === 0 ? 0 : sequenceData["amp"][i - 1];
+    if (a === 0) {
+      nSamples += 2;
+    } else {
+      const segmentSamples = Math.ceil(sequenceData["time"][i] * samplingRate);
+      nSamples += segmentSamples;
+    }
+  }
+
+  const time = new Array(nSamples).fill(0);
+  const value = new Array(nSamples).fill(0);
+  let currentIdx = 0;
+  for (let i = 0; i < sequenceData["time"].length - 1; i++) {
+    const duration = sequenceData["time"][i];
+    // Unfold waveforms
+    let f, p, a, t;
+    if (i === 0) {
+      f = 0;
+      p = 0;
+      a = 0;
+      t = 0;
+    } else {
+      f = sequenceData["freq"][i - 1];
+      p = sequenceData["phase"][i - 1];
+      a = sequenceData["amp"][i - 1];
+      t = time[currentIdx - 1];
+    }
+
+    if (a === 0) {
+      // console.log(`Expanding ${0} amplitude from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}`);
+      time[currentIdx] = t;
+      time[currentIdx + 1] = t + duration;
+      value[currentIdx] = 0;
+      value[currentIdx + 1] = 0;
+      currentIdx += 2;
+    } else {
+      const segmentSamples = Math.ceil(duration * samplingRate);
+      // console.log(`Expanding ${segmentSamples} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
+      // Optionally use relative time
+      const segmentTime = Array.from(
+        { length: segmentSamples },
+        (_, idx) => t + idx * (duration / segmentSamples),
+      );
+      segmentTime.forEach((timeVal, idx) => {
+        time[currentIdx + idx] = timeVal;
+        value[currentIdx + idx] =
+          a * Math.cos(2 * Math.PI * (f * 0.001 * timeVal + p / 360));
+      });
+      currentIdx += segmentSamples;
+    }
+  }
+
+  return [time, value];
+}
+
 export { SequenceParser, N_RF_CHANNELS };

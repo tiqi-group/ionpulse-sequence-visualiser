@@ -21,35 +21,24 @@ let RF_amp_yaxis_params = {
   },
 };
 
-let RF_freq_yaxis_params = {
-  range: [0, 500],
-  fixedrange: true,
-  title: {
-    text: "a",
-    font: {
-      family: "Courier New, monospace",
-      size: 14,
-      color: "#7f7f7f",
-    },
-  },
+const RF_yaxis_ranges = {
+  freq: [0, 500],
+  phase: [-360, 360],
+  sample: [-120, 120],
+};
+
+const RF_freq_yaxis_params = {
+  ...RF_amp_yaxis_params,
+  range: RF_yaxis_ranges["freq"],
 };
 
 let RF_phase_yaxis_params = {
-  range: [-360, 360],
-  fixedrange: true,
-  title: {
-    text: "a",
-    font: {
-      family: "Courier New, monospace",
-      size: 14,
-      color: "#7f7f7f",
-    },
-  },
+  ...RF_amp_yaxis_params,
+  range: RF_yaxis_ranges["phase"],
 };
-
-let RF_yaxis_ranges = {
-  freq: [0, 500],
-  phase: [-360, 360],
+let RF_sample_yaxis_params = {
+  ...RF_amp_yaxis_params,
+  range: RF_yaxis_ranges["sample"],
 };
 
 let xAxisParams = {
@@ -70,7 +59,7 @@ function compileEventName(eventNames) {
   return compiledEventNames;
 }
 
-function createLayout(n_channels, xLimits) {
+function createLayout(n_channels, xLimits, channelYDataType) {
   // PMT channels are treated as TTL channels here
   const individual_TTL_height = 40;
   const individual_RF_height = 70;
@@ -113,32 +102,46 @@ function createLayout(n_channels, xLimits) {
     },
   };
 
-  for (let i = 1; i < n_RF_channels + 1; i++) {
-    let j = 2 * i + n_TTL_channels;
-    let starting_at = n_TTL_channels * normalised_TTL_height;
-    the_layout["yaxis" + (j - 1)] = structuredClone(RF_freq_yaxis_params);
-    the_layout["yaxis" + (j - 1)].domain = [
-      1 - starting_at - (2 * i - 1) * normalised_RF_height,
-      1 - starting_at - (2 * i - 2) * normalised_RF_height,
+  let j = 0;
+  const total_TTL_height = n_TTL_channels * normalised_TTL_height;
+  const baseIdx = n_TTL_channels + 1;
+  for (let i = 0; i < n_RF_channels; i++) {
+    if (channelYDataType === "freq") {
+      the_layout["yaxis" + (baseIdx + j)] =
+        structuredClone(RF_freq_yaxis_params);
+    } else if (channelYDataType === "phase") {
+      the_layout["yaxis" + (baseIdx + j)] = structuredClone(
+        RF_phase_yaxis_params,
+      );
+    } else {
+      the_layout["yaxis" + (baseIdx + j)] = structuredClone(
+        RF_sample_yaxis_params,
+      );
+    }
+    the_layout["yaxis" + (baseIdx + j)].domain = [
+      1 - total_TTL_height - (j + 1) * normalised_RF_height,
+      1 - total_TTL_height - j * normalised_RF_height,
     ];
-    the_layout["yaxis" + (j - 1)].anchor = "x" + (j - 1);
+    the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
+    j++;
+    the_layout["yaxis" + (baseIdx + j)] = structuredClone(RF_amp_yaxis_params);
 
-    the_layout["yaxis" + j] = structuredClone(RF_amp_yaxis_params);
-    the_layout["yaxis" + j].domain = [
-      1 - starting_at - 2 * i * normalised_RF_height,
-      1 - starting_at - (2 * i - 1) * normalised_RF_height,
+    the_layout["yaxis" + (baseIdx + j)].domain = [
+      1 - total_TTL_height - (j + 1) * normalised_RF_height,
+      1 - total_TTL_height - j * normalised_RF_height,
     ];
-    the_layout["yaxis" + j].anchor = "x" + j;
+    the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
+    j++;
   }
 
-  for (let i = 1; i < n_TTL_channels + 1; i++) {
-    the_layout["yaxis" + i] = structuredClone(TTL_yaxis_params);
-    the_layout["yaxis" + i].domain = [
+  for (let i = 0; i < n_TTL_channels; i++) {
+    const axisIdx = i + 1;
+    the_layout["yaxis" + axisIdx] = structuredClone(TTL_yaxis_params);
+    the_layout["yaxis" + axisIdx].domain = [
+      1 - (i + 1) * normalised_TTL_height,
       1 - i * normalised_TTL_height,
-      1 - (i - 1) * normalised_TTL_height,
     ];
-    //the_layout["yaxis" + (i)].domain = [1,0.3];
-    the_layout["yaxis" + i].anchor = "x" + i;
+    the_layout["yaxis" + axisIdx].anchor = "x" + axisIdx;
   }
   return the_layout;
 }
@@ -195,6 +198,11 @@ let data_templates = {
   phase: data_template_phase,
   PMT: data_template_PMT,
   TTL: data_template_TTL,
+  sample: {
+    ...data_template_freq,
+    maker: { color: "green" },
+    fill: "none",
+  },
 };
 
 let title_template = {
@@ -246,6 +254,8 @@ const PulseSequencePlot = function SequencePlot({
     if (newChannelYDataType[channel] == "freq") {
       newChannelYDataType[channel] = "phase";
     } else if (newChannelYDataType[channel] == "phase") {
+      newChannelYDataType[channel] = "sample";
+    } else {
       newChannelYDataType[channel] = "freq";
     }
     setChannelYDataType(newChannelYDataType);
@@ -277,7 +287,7 @@ const PulseSequencePlot = function SequencePlot({
 
   let data = [];
   let index = 1;
-  let layout_to_use = createLayout(n_channels, xLimits);
+  let layout_to_use = createLayout(n_channels, xLimits, channelYDataType);
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
 
