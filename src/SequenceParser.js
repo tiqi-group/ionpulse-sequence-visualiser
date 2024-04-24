@@ -403,7 +403,9 @@ function expandToWaveform(sequenceData) {
     if (a === 0) {
       nSamples += 2;
     } else {
-      const segmentSamples = Math.ceil(sequenceData["time"][i] * samplingRate);
+      const segmentSamples = Math.ceil(
+        (sequenceData["time"][i + 1] - sequenceData["time"][i]) * samplingRate,
+      );
       nSamples += segmentSamples;
     }
   }
@@ -412,25 +414,24 @@ function expandToWaveform(sequenceData) {
   const value = new Array(nSamples).fill(0);
   let currentIdx = 0;
   for (let i = 0; i < sequenceData["time"].length - 1; i++) {
-    const duration = sequenceData["time"][i];
+    const duration = sequenceData["time"][i + 1] - sequenceData["time"][i];
     // Unfold waveforms
     let f, p, a, t;
     if (i === 0) {
       f = 0;
       p = 0;
       a = 0;
-      t = 0;
     } else {
-      f = sequenceData["freq"][i - 1];
-      p = sequenceData["phase"][i - 1];
-      a = sequenceData["amp"][i - 1];
-      t = time[currentIdx - 1];
+      f = sequenceData["freq"][i];
+      p = sequenceData["phase"][i];
+      a = sequenceData["amp"][i];
     }
+    t = sequenceData["time"][i];
 
     if (a === 0) {
       // console.log(`Expanding ${0} amplitude from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}`);
       time[currentIdx] = t;
-      time[currentIdx + 1] = t + duration;
+      time[currentIdx + 1] = sequenceData["time"][i + 1];
       value[currentIdx] = 0;
       value[currentIdx + 1] = 0;
       currentIdx += 2;
@@ -454,4 +455,4 @@ function expandToWaveform(sequenceData) {
   return [time, value];
 }
 
-export { SequenceParser, N_RF_CHANNELS };
+export { SequenceParser, N_RF_CHANNELS, expandToWaveform };

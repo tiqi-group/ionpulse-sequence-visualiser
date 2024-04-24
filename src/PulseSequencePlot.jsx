@@ -1,5 +1,6 @@
 import Plot from "react-plotly.js";
 import { useState } from "react";
+import { expandToWaveform } from "./SequenceParser";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -124,14 +125,17 @@ function createLayout(n_channels, xLimits, channelYDataType) {
     ];
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
-    the_layout["yaxis" + (baseIdx + j)] = structuredClone(RF_amp_yaxis_params);
+    if (channelYDataType !== "sample") {
+      the_layout["yaxis" + (baseIdx + j)] =
+        structuredClone(RF_amp_yaxis_params);
 
-    the_layout["yaxis" + (baseIdx + j)].domain = [
-      1 - total_TTL_height - (j + 1) * normalised_RF_height,
-      1 - total_TTL_height - j * normalised_RF_height,
-    ];
-    the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
-    j++;
+      the_layout["yaxis" + (baseIdx + j)].domain = [
+        1 - total_TTL_height - (j + 1) * normalised_RF_height,
+        1 - total_TTL_height - j * normalised_RF_height,
+      ];
+      the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
+      j++;
+    }
   }
 
   for (let i = 0; i < n_TTL_channels; i++) {
@@ -199,8 +203,12 @@ let data_templates = {
   PMT: data_template_PMT,
   TTL: data_template_TTL,
   sample: {
-    ...data_template_freq,
-    maker: { color: "green" },
+    type: "scatter",
+    mode: "lines",
+    marker: {
+      color: "green",
+      size: 2,
+    },
     fill: "none",
   },
 };
@@ -269,8 +277,6 @@ const PulseSequencePlot = function SequencePlot({
     },
     { RF: 0, TTL: 0, PMT: 0 },
   );
-
-  console.log(sequenceData);
 
   let xLimits = [0, 0];
   for (const [channel, data] of Object.entries(sequenceData)) {
@@ -363,16 +369,23 @@ const PulseSequencePlot = function SequencePlot({
       data.push(PMT_to_add);
     }
 
+  let channel_idx = 0;
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
-      let object_to_add = Object.assign(
-        {},
-        data_templates[channelYDataType[channel]],
-      );
-      object_to_add.x = value.time;
-      object_to_add.y = value[channelYDataType[channel]];
-      object_to_add.text = compileEventName(value.names);
-      object_to_add.name = "";
+      let object_to_add = {
+        ...data_templates[channelYDataType[channel]],
+      };
+      if (channelYDataType[channel] === "sample") {
+        const waveform = expandToWaveform(value);
+
+        object_to_add.x = waveform[0];
+        object_to_add.y = waveform[1];
+      } else {
+        object_to_add.x = value.time;
+        object_to_add.y = value[channelYDataType[channel]];
+        object_to_add.text = compileEventName(value.names);
+      }
+      object_to_add.name = channel;
       object_to_add.yaxis = "y" + index;
 
       layout_to_use["yaxis" + index].title.text = channelYDataType[channel];
@@ -384,22 +397,28 @@ const PulseSequencePlot = function SequencePlot({
       };
 
       let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
 
       data.push(object_to_add);
       index++;
 
-      let amp_to_add = Object.assign({}, data_templates.amp);
-      amp_to_add.x = value.time;
-      amp_to_add.y = value.amp;
-      amp_to_add.text = compileEventName(value.names);
-      amp_to_add.yaxis = "y" + index;
+      if (channelYDataType[channel] !== "sample") {
+        let amp_to_add = Object.assign({}, data_templates.amp);
+        amp_to_add.x = value.time;
+        amp_to_add.y = value.amp;
+        amp_to_add.text = compileEventName(value.names);
+        amp_to_add.yaxis = "y" + index;
 
-      layout_to_use["yaxis" + index].title.text = "amp";
-      layout_to_use["xaxis" + index] = {
-        ...xAxisParams,
-        range: xLimits,
-      };
-      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+        layout_to_use["yaxis" + index].title.text = "amp";
+        layout_to_use["xaxis" + index] = {
+          ...xAxisParams,
+          range: xLimits,
+        };
+        annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+        data.push(amp_to_add);
+        index++;
+      }
+
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
@@ -414,13 +433,9 @@ const PulseSequencePlot = function SequencePlot({
         textangle: -90,
         captureevents: true,
       };
-      let channel_idx = 0;
-      if (index % 2 == 0) {
-        channel_idx = index / 2;
-      } else {
-        channel_idx = (index - 1) / 2;
-      }
-      if (channel_idx % 2 == 0) {
+      layout_to_use.annotations.push(annotation_to_add);
+
+      if (channel_idx % 2 == 1) {
         let shape_to_add = {
           type: "rect",
           xref: "paper",
@@ -438,9 +453,7 @@ const PulseSequencePlot = function SequencePlot({
         };
         layout_to_use.shapes.push(shape_to_add);
       }
-      layout_to_use.annotations.push(annotation_to_add);
-      data.push(amp_to_add);
-      index++;
+      channel_idx++;
     }
   }
 
