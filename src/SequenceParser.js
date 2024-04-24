@@ -181,7 +181,10 @@ class SequenceParser {
       } else {
         console.assert(
           this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return call[key] == data["timeDomain"].at(-1);
+            return (
+              Math.abs(call[key] - data["timeDomain"].at(-1)) <=
+              100 * Number.EPSILON
+            );
           }),
           key +
             " on channel " +
@@ -399,7 +402,7 @@ function expandToWaveform(sequenceData) {
   const samplingRate = 10;
   let nSamples = 0;
   for (let i = 0; i < sequenceData["time"].length - 1; i++) {
-    let a = i === 0 ? 0 : sequenceData["amp"][i - 1];
+    let a = sequenceData["amp"][i];
     if (a === 0) {
       nSamples += 2;
     } else {
@@ -417,15 +420,9 @@ function expandToWaveform(sequenceData) {
     const duration = sequenceData["time"][i + 1] - sequenceData["time"][i];
     // Unfold waveforms
     let f, p, a, t;
-    if (i === 0) {
-      f = 0;
-      p = 0;
-      a = 0;
-    } else {
-      f = sequenceData["freq"][i];
-      p = sequenceData["phase"][i];
-      a = sequenceData["amp"][i];
-    }
+    f = sequenceData["freq"][i];
+    p = sequenceData["phase"][i];
+    a = sequenceData["amp"][i];
     t = sequenceData["time"][i];
 
     if (a === 0) {

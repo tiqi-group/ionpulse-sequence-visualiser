@@ -246,7 +246,7 @@ if __name__ == "__main__":
     _seq += sbc_loop
     _seq += state_prep
     _seq.sync()
-    if True:
+    if False:
         _seq += pi_2_unit_1
         _seq += pi_2_unit_2
         _seq += ms12

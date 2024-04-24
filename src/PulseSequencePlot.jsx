@@ -15,7 +15,7 @@ let RF_amp_yaxis_params = {
   title: {
     text: "a",
     font: {
-      family: "Courier New, monospace",
+      // family: "Courier New, monospace",
       size: 14,
       color: "#7f7f7f",
     },
@@ -68,7 +68,7 @@ function createLayout(n_channels, xLimits, channelYDataType) {
 
   const margin = {
     b: 100,
-    l: 100,
+    l: 200,
     r: 100,
     t: 100,
   };
@@ -100,6 +100,7 @@ function createLayout(n_channels, xLimits, channelYDataType) {
       range: xLimits,
       rangemode: "nonnegative",
       //fixedrange: true
+      title: "time / μs",
     },
   };
 
@@ -193,10 +194,10 @@ let data_template_amp = {
   fill: "tozeroy",
 };
 
-let data_template_phase = structuredClone(data_template_freq);
+const data_template_phase = structuredClone(data_template_freq);
 data_template_phase.marker.color = "orange";
 
-let data_templates = {
+const data_templates = {
   freq: data_template_freq,
   amp: data_template_amp,
   phase: data_template_phase,
@@ -209,17 +210,23 @@ let data_templates = {
       color: "green",
       size: 2,
     },
+    showlegend: false,
     fill: "none",
   },
 };
 
-let title_template = {
-  text: "Ch",
-  font: {
-    family: "Courier New, monospace",
-    size: 18,
-    color: "#7f7f7f",
-  },
+const wavelength_colours = {
+  397: "blue",
+  729: "red",
+  854: "rgb(80%,0,0)",
+  866: "rgb(75%,0,0)",
+};
+
+const axis_titles = {
+  freq: "f / MHz",
+  phase: "p / °",
+  amp: "a / %",
+  sample: "rf / %",
 };
 
 const PulseSequencePlot = function SequencePlot({
@@ -372,23 +379,30 @@ const PulseSequencePlot = function SequencePlot({
   let channel_idx = 0;
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
-      let object_to_add = {
-        ...data_templates[channelYDataType[channel]],
-      };
+      let object_to_add = structuredClone(
+        data_templates[channelYDataType[channel]],
+      );
       if (channelYDataType[channel] === "sample") {
         const waveform = expandToWaveform(value);
-
         object_to_add.x = waveform[0];
         object_to_add.y = waveform[1];
+        console.log(waveform);
+
+        for (const [wavelength, colour] of Object.entries(wavelength_colours)) {
+          if (channelDescription[channel].name.includes(wavelength)) {
+            object_to_add["marker"]["color"] = colour;
+          }
+        }
       } else {
         object_to_add.x = value.time;
         object_to_add.y = value[channelYDataType[channel]];
         object_to_add.text = compileEventName(value.names);
       }
-      object_to_add.name = channel;
+      object_to_add.name = channelDescription[channel].name;
       object_to_add.yaxis = "y" + index;
 
-      layout_to_use["yaxis" + index].title.text = channelYDataType[channel];
+      layout_to_use["yaxis" + index].title.text =
+        axis_titles[channelYDataType[channel]];
       layout_to_use["yaxis" + index].range =
         RF_yaxis_ranges[channelYDataType[channel]];
       layout_to_use["xaxis" + index] = {
@@ -409,7 +423,7 @@ const PulseSequencePlot = function SequencePlot({
         amp_to_add.text = compileEventName(value.names);
         amp_to_add.yaxis = "y" + index;
 
-        layout_to_use["yaxis" + index].title.text = "amp";
+        layout_to_use["yaxis" + index].title.text = axis_titles["amp"];
         layout_to_use["xaxis" + index] = {
           ...xAxisParams,
           range: xLimits,
@@ -430,7 +444,7 @@ const PulseSequencePlot = function SequencePlot({
         y: annotation_position,
         text: channelDescription[channel].name,
         showarrow: false,
-        textangle: -90,
+        // textangle: -90,
         captureevents: true,
       };
       layout_to_use.annotations.push(annotation_to_add);

@@ -25,6 +25,8 @@ from ionpulse_sequence_generator import (
 )
 from typing import List, Dict, Any
 
+min_time = 1.3
+
 def channel_map_to_rf_mask(channel_map: Dict[Any, int], keys: List[str]) -> int:
     rf_channel_mask = 0
     for key in keys:
@@ -96,19 +98,20 @@ def state_init(name: str, channel_map: Dict[str, int], n_qubits: int = 3) -> Lin
         ChannelMask(rf=rf_ch_mask, digital_io=True, qubit=(1 << n_qubits) - 1),
         auto_channel_mask=False,
     )
+    time = 8
 
-    _seq += RFEdge.fromvalues("397 sig on", channel_map["397"], 200, 0, 100, 2)
-    _seq += RFEdge.fromvalues("state init 397 sig off", channel_map["397"], 200, 0, 0, 48)
+    _seq += RFEdge.fromvalues("397 sig on", channel_map["397"], 200, 0, 100, min_time)
+    _seq += RFEdge.fromvalues("state init 397 sig off", channel_map["397"], 200, 0, 0, time)
     # _seq += RFEdge.fromvalues("pi/2 DP on", channel_map["DP"], 120, 0, 30, 2)
 
-    _seq += RFEdge.fromvalues("866 on", channel_map["866"], 200, 0, 100, 2)
-    _seq += RFEdge.fromvalues("state init 866 off", channel_map["866"], 200, 0, 0, 48)
+    _seq += RFEdge.fromvalues("866 on", channel_map["866"], 200, 0, 100, min_time)
+    _seq += RFEdge.fromvalues("state init 866 off", channel_map["866"], 200, 0, 0, time)
 
-    _seq += RFEdge.fromvalues("854 on", channel_map["854"], 200, 0, 100, 2)
-    _seq += RFEdge.fromvalues("state init 854 off", channel_map["854"], 200, 0, 0, 48)
+    _seq += RFEdge.fromvalues("854 on", channel_map["854"], 200, 0, 100, min_time)
+    _seq += RFEdge.fromvalues("state init 854 off", channel_map["854"], 200, 0, 0, time)
 
-    _seq += TtlEdge("TTL init", 2, 0x12170000)
-    _seq += TtlEdge("TTL init off", 48, 0x00000000)
+    _seq += TtlEdge("TTL init", min_time, 0x12170000)
+    _seq += TtlEdge("TTL init off", time, 0x00000000)
 
     # for idx in range(n_qubits):
     #    _seq += QubitEdge.fromvalues("init bare", idx, 33, 0, 2)
@@ -169,8 +172,10 @@ def sbc(
     rf_ch_mask = channel_map_to_rf_mask(channel_map["729"][unit_idx], ["DP", "SP1", "SP2"])
     rsb_channel = ChannelMask(rf=rf_ch_mask)
     rsb_time = Time(
-        name_prefix + "time", rsb_channel, [2 + k * 2 for k in range(n_loops)]
+        name_prefix + "time", rsb_channel, [4 + k * 2 for k in range(n_loops)]
     )
+
+    use_sp_aoms = "SP1" in channel_map["729"][unit_idx]
 
     _seq = Loop(
         "sbc " + name,
@@ -184,21 +189,22 @@ def sbc(
     )
     _seq += state_init
     _seq.sync()
-    _seq += RFEdge.fromvalues(name_prefix + "DP on", channel_map["729"][unit_idx]["DP"], 120, 0, 100, 4)
-    _seq += RFEdge.fromvalues(name_prefix + "DP off", channel_map["729"][unit_idx]["DP"], 120, 0, 0, rsb_time)
-    _seq += RFWait.fromvalues(name_prefix + "DP wait", channel_map["729"][unit_idx]["DP"], 4)
+    _seq += RFEdge.fromvalues(name_prefix + "DP on", channel_map["729"][unit_idx]["DP"], 250, 0, 100, min_time*(1+use_sp_aoms))
+    _seq += RFEdge.fromvalues(name_prefix + "DP off", channel_map["729"][unit_idx]["DP"], 250, 0, 0, rsb_time)
+    if use_sp_aoms:
+        _seq += RFWait.fromvalues(name_prefix + "DP wait", channel_map["729"][unit_idx]["DP"], 4)
     # _seq += QubitEdge.fromvalues(name_prefix + "pad", channel_map["729"][unit_idx]["DP"] // 3, 30, 0, 4)
     # _seq += QubitEdge.fromvalues(
     #    name_prefix + "rsb", channel_map["729"][unit_idx]["DP"] // 3, 33, 0, rsb_time._value
     # )
     # _seq += QubitWait.fromvalues(name_prefix + "end", channel_map["729"][unit_idx]["DP"] // 3, 4)
 
-    if "SP1" in channel_map["729"][unit_idx]:
+    if use_sp_aoms:
         _seq += RFEdge.fromvalues(
-            name_prefix + "sp car on", channel_map["729"][unit_idx]["SP1"], 79, 0, 100, 2
+            name_prefix + "sp car on", channel_map["729"][unit_idx]["SP1"], 79, 0, 100, min_time
         )
         _seq += RFWait.fromvalues(name_prefix + "sp wait 1", channel_map["729"][unit_idx]["SP1"], rsb_time)
-        _seq += RFPulse.fromvalues("pulse", channel_map["729"][unit_idx]["SP1"], 80, 0, 0, 2)
+        _seq += RFPulse.fromvalues("pulse", channel_map["729"][unit_idx]["SP1"], 80, 0, 0, min_time)
         # _seq += RFWait.fromvalues(name_prefix+"sp wait 2", channel_map["729"][unit_idx]["SP1"], 70)
 
     # if "SP2" in channel_map["729"][unit_idx]:
