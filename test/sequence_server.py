@@ -16,7 +16,6 @@ if __name__ == "__main__":
     parser.add_argument("--plot", required=False, default="ionpulse_seq_plot.json")
     parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     args = parser.parse_args()
-    plot_json_filename = args.plot
 
     protocols = ["http://"]
     hosts = ["localhost"]
@@ -44,21 +43,36 @@ if __name__ == "__main__":
     # wrap with a WSGI application
     app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app, socketio_path='ws/socket.io')
 
+    def get_channel_name(channel_map, i):
+        for key in channel_map:
+            if channel_map[key] == i:
+                return key
+
+            if isinstance(channel_map[key], list):
+                for map_idx, sub_map in enumerate(channel_map[key]):
+                    for sub_key in sub_map:
+                        if sub_map[sub_key] == i:
+                            return f"{key} Unit {map_idx} {sub_key}"
+        return f"RF {i}"
+
     @app.route("/Hardware/description")
     def description() -> str:
         n_ttls = 32
         n_rfs = 32
         n_pmts = 8
+        channel_index_to_name = {}
         try:
-            with open(plot_json_filename) as f:
+            with open(args.file) as f:
                 data = f.read()
                 if len(data) > 0:
                     try:
                         seq = json.loads(data)
-                        ch_keys = list(seq.keys())
-                        n_ttls = len([s for s in ch_keys if "TTL" in s])
-                        n_rfs = len([s for s in ch_keys if "RF" in s])
-                        n_pmts = len([s for s in ch_keys if "PMT" in s])
+                        main_seq = seq["Sequence"][-1]
+                        n_ttls = 32 if main_seq["ch_mask"]["digital_io"] else 0
+                        n_pmts = 8 if main_seq["ch_mask"]["digital_io"] else 0
+                        n_rfs = main_seq["ch_mask"]["rf"].bit_count()
+                        for i in range(n_rfs):
+                            channel_index_to_name[i] = get_channel_name(seq["Header"]["channel_map"], i)
                     except:
                         pass
         except:
@@ -67,7 +81,7 @@ if __name__ == "__main__":
         d["RFs"] = dict()
         for i in range(n_rfs):
             d["RFs"][f"RF{i}"] = {
-                    "name": f"RF {i}",
+                    "name": channel_index_to_name[i],
                     "type": "single pass",
                     "central_frequency": 100,
                     "order": 1,
@@ -88,18 +102,6 @@ if __name__ == "__main__":
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
-
-    @app.route("/Hardware/scope_sequence")
-    def scope_sequence() -> str:
-        try:
-            with open(plot_json_filename) as f:
-                data = json.load(f)
-            # Double dump to return a properly escaped string
-            return json.dumps(json.dumps(data))
-        except:
-            pass
-
-        return ""
 
     @app.route("/Hardware/sequence")
     def sequence() -> str:
@@ -148,8 +150,8 @@ if __name__ == "__main__":
             self.safe_emit()
             return super().on_created(event)
 
-    files = [plot_json_filename, args.file]
-    file_types = ["scope_sequence", "sequence"]
+    files = [args.file]
+    file_types = ["sequence"]
     observer = Observer()
     handlers = []
     for file, file_type in zip(files, file_types):

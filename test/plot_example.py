@@ -212,12 +212,29 @@ if __name__ == "__main__":
     parser.add_argument("--sbcloops", help="Number of SBC loops", default=5)
     args = parser.parse_args()
 
-    state_prep = state_init("", 6)
-    sbc_loop = sbc("0", 0, state_prep, n_loops=int(args.sbcloops))
-    pi_2_unit_1 = pi_2("unit 1", 0, True)
-    pi_2_unit_2 = pi_2("unit 2", 3)
-    ms12 = ms_1_2("1 2", 0, 3)
-    final_readout_seq = readout("final readout sequence", 6, 0)
+    channel_map = {
+            "397": 6,
+            "866": 7,
+            "854": 8,
+            "729": [
+                {"DP": 0},
+                {"DP": 3}
+            ],
+            "ttl": True
+            }
+
+    if False:
+        channel_map["729"][0]["SP1"] = 1
+        channel_map["729"][0]["SP2"] = 2
+        channel_map["729"][1]["SP1"] = 4
+        channel_map["729"][1]["SP2"] = 5
+
+    state_prep = state_init("", channel_map)
+    sbc_loop = sbc("0", channel_map, 0, state_prep, n_loops=int(args.sbcloops))
+    pi_2_unit_1 = pi_2("unit 1", channel_map, 0)
+    pi_2_unit_2 = pi_2("unit 2", channel_map | {"ttl": False}, 1)
+    ms12 = ms_1_2("1 2", channel_map, [0, 1])
+    final_readout_seq = readout("final readout sequence", channel_map, 0)
 
     all_channels = (1 << 16) - 1
     _seq = LinearSequence(
@@ -229,14 +246,15 @@ if __name__ == "__main__":
     _seq += sbc_loop
     _seq += state_prep
     _seq.sync()
-    _seq += pi_2_unit_1
-    _seq += pi_2_unit_2
-    _seq += ms12
-    _seq += pi_2_unit_1
-    _seq += pi_2_unit_2
-    _seq.sync()
-    _seq += final_readout_seq
-    _seq.sync()
+    if True:
+        _seq += pi_2_unit_1
+        _seq += pi_2_unit_2
+        _seq += ms12
+        _seq += pi_2_unit_1
+        _seq += pi_2_unit_2
+        _seq.sync()
+        _seq += final_readout_seq
+        _seq.sync()
 
     with open("ionpulse_seq_plot.json", "w") as f:
         json.dump(generate_simplified_json(_seq), f)
@@ -247,6 +265,10 @@ if __name__ == "__main__":
         name="sequence_description",
         value="Test Sequence for Library Visualiser"
     )
+    header.add_field(
+            name="channel_map",
+            value= channel_map
+            )
     header.shot_channel_names = ["Signal", "Background"]
     header.shot_channel_plot_index = [0, 0]
     header.readout_channel_names = [
