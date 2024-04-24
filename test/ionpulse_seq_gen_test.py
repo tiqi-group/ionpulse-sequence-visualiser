@@ -308,26 +308,27 @@ if __name__ == "__main__":
     _seq += final_readout_seq
     _seq.sync()
 
-    Header.add_field(
+    header = Header()
+    header.add_field(
         name="sequence_description",
         value="Test Sequence for Ionpulse Sequence Generator",
     )
 
-    Header._shot_channel_names = ["Signal", "Background"]
-    Header._shot_channel_plot_index = [0, 0]
-    Header._readout_channel_names = [
+    header.shot_channel_names = ["Signal", "Background"]
+    header.shot_channel_plot_index = [0, 0]
+    header.readout_channel_names = [
         "Raw",
         "Background Corrected",
         "Fork - Raw",
         "Fork - Background Corrected",
     ]
-    Header._readout_postprocessing_method = [
+    header.readout_postprocessing_method = [
         ReadoutPostprocessingMethod.SUM,
         ReadoutPostprocessingMethod.AVERAGE,
         ReadoutPostprocessingMethod.NONE,
         ReadoutPostprocessingMethod.NONE,
     ]
-    Header._readout_channel_plot_index = [0, 1, -1, -1]
+    header.readout_channel_plot_index = [0, 1, -1, -1]
     PIDParameter(
         "PID RF CH 0",
         ChannelIndex.RF(0),
@@ -342,8 +343,8 @@ if __name__ == "__main__":
         False,
     )
     # set the debug level to print everything for debugging
-    Header._debug_level = 0
+    header.debug_level = 0
 
-    _seq.save_to_json_file("ionpulse_seq.json")
+    _seq.save_to_json_file("ionpulse_seq.json", header)
     # _seq.save_to_msgpack_file("ionpulse_seq.pack")
     # clear_all()
