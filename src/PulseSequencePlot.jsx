@@ -1,6 +1,7 @@
 import Plot from "react-plotly.js";
 import { useState } from "react";
 import { expandToWaveform } from "./SequenceParser";
+import { Stack, Form, Accordion } from "react-bootstrap";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -60,11 +61,15 @@ function compileEventName(eventNames) {
   return compiledEventNames;
 }
 
-function createLayout(n_channels, xLimits, channelYDataType) {
+function createLayout(
+  numberOfAxes,
+  xLimits,
+  channelYDataType,
+  rfAxisHeight,
+  ttlAxisHeight,
+  pad,
+) {
   // PMT channels are treated as TTL channels here
-  const individual_TTL_height = 40;
-  const individual_RF_height = 70;
-  const pad = 0;
 
   const margin = {
     b: 100,
@@ -73,27 +78,23 @@ function createLayout(n_channels, xLimits, channelYDataType) {
     t: 100,
   };
 
-  let n_RF_channels = n_channels["RF"];
-  let n_TTL_channels = n_channels["PMT"] + n_channels["TTL"];
+  const numberRFAxes = numberOfAxes["RF"];
+  const numberTTLAxes = numberOfAxes["PMT"] + numberOfAxes["TTL"];
 
-  let grid_params = {
-    rows: 2 * n_RF_channels + n_TTL_channels,
+  const grid_params = {
+    rows: numberRFAxes + numberTTLAxes,
     columns: 1,
     //pattern: "independent",
     //sharedxaxes: true
   };
 
-  let TTL_height = n_TTL_channels * (individual_TTL_height + pad);
-  let RF_height = 2 * n_RF_channels * (individual_RF_height + pad) - pad;
-  //let total_height = TTL_height + RF_height;
-  let total_height = TTL_height + RF_height;
-  let normalised_TTL_height = individual_TTL_height / total_height;
-  let normalised_RF_height = individual_RF_height / total_height;
-  let normalised_pad = pad / total_height;
+  const totalTTLHeight = numberTTLAxes * (ttlAxisHeight + pad);
+  const totalRFHeight = numberRFAxes * (rfAxisHeight + pad) - pad;
+  const totalHeight = totalTTLHeight + totalRFHeight;
 
   let the_layout = {
-    width: 1100 + margin.l + margin.r,
-    height: total_height + margin.t + margin.b,
+    width: 1000 + margin.l + margin.r,
+    height: totalHeight + margin.t + margin.b,
     margin: margin,
     grid: grid_params,
     xaxis: {
@@ -105,9 +106,8 @@ function createLayout(n_channels, xLimits, channelYDataType) {
   };
 
   let j = 0;
-  const total_TTL_height = n_TTL_channels * normalised_TTL_height;
-  const baseIdx = n_TTL_channels + 1;
-  for (let i = 0; i < n_RF_channels; i++) {
+  const baseIdx = numberTTLAxes + 1;
+  for (let i = 0; i < numberRFAxes; i++) {
     if (channelYDataType === "freq") {
       the_layout["yaxis" + (baseIdx + j)] =
         structuredClone(RF_freq_yaxis_params);
@@ -121,8 +121,8 @@ function createLayout(n_channels, xLimits, channelYDataType) {
       );
     }
     the_layout["yaxis" + (baseIdx + j)].domain = [
-      1 - total_TTL_height - (j + 1) * normalised_RF_height,
-      1 - total_TTL_height - j * normalised_RF_height,
+      (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
+      (totalRFHeight - j * (pad + rfAxisHeight)) / totalHeight,
     ];
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
@@ -131,20 +131,20 @@ function createLayout(n_channels, xLimits, channelYDataType) {
         structuredClone(RF_amp_yaxis_params);
 
       the_layout["yaxis" + (baseIdx + j)].domain = [
-        1 - total_TTL_height - (j + 1) * normalised_RF_height,
-        1 - total_TTL_height - j * normalised_RF_height,
+        (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
+        (totalRFHeight - j * (pad + rfAxisHeight)) / totalHeight,
       ];
       the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
       j++;
     }
   }
 
-  for (let i = 0; i < n_TTL_channels; i++) {
+  for (let i = 0; i < numberTTLAxes; i++) {
     const axisIdx = i + 1;
     the_layout["yaxis" + axisIdx] = structuredClone(TTL_yaxis_params);
     the_layout["yaxis" + axisIdx].domain = [
-      1 - (i + 1) * normalised_TTL_height,
-      1 - i * normalised_TTL_height,
+      (totalHeight - i * (pad + ttlAxisHeight) - ttlAxisHeight) / totalHeight,
+      (totalHeight - i * (pad + ttlAxisHeight)) / totalHeight,
     ];
     the_layout["yaxis" + axisIdx].anchor = "x" + axisIdx;
   }
@@ -245,6 +245,10 @@ const PulseSequencePlot = function SequencePlot({
     return init;
   });
 
+  const [individualRFHeight, setIndividualRFHeight] = useState(70);
+  const [individualTTLHeight, setIndividualTTLHeight] = useState(40);
+  const [axisPad, setAxisPad] = useState(10);
+
   const channelYDataTypeKeys = Object.keys(channelYDataType);
   const channelDescKeys = Object.keys(channelDescription);
   const allKeys = channelYDataTypeKeys.concat(channelDescKeys);
@@ -277,9 +281,15 @@ const PulseSequencePlot = function SequencePlot({
   }
 
   sequenceData = filter(sequenceData, Object.keys(channelDescription));
-  let n_channels = Object.keys(channelDescription).reduce(
+  let numberOfAxes = Object.keys(channelDescription).reduce(
     (a, key) => {
-      a[channelDescription[key].group] += channelEnabled[key] == true;
+      a[channelDescription[key].group] +=
+        channelEnabled[key] == true
+          ? channelDescription[key].group === "RF" &&
+            channelYDataType[key] !== "sample"
+            ? 2
+            : 1
+          : 0;
       return a;
     },
     { RF: 0, TTL: 0, PMT: 0 },
@@ -300,7 +310,14 @@ const PulseSequencePlot = function SequencePlot({
 
   let data = [];
   let index = 1;
-  let layout_to_use = createLayout(n_channels, xLimits, channelYDataType);
+  let layout_to_use = createLayout(
+    numberOfAxes,
+    xLimits,
+    channelYDataType,
+    individualRFHeight,
+    individualTTLHeight,
+    axisPad,
+  );
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
 
@@ -386,7 +403,7 @@ const PulseSequencePlot = function SequencePlot({
         const waveform = expandToWaveform(value);
         object_to_add.x = waveform[0];
         object_to_add.y = waveform[1];
-        console.log(waveform);
+        // console.log(waveform);
 
         for (const [wavelength, colour] of Object.entries(wavelength_colours)) {
           if (channelDescription[channel].name.includes(wavelength)) {
@@ -472,11 +489,50 @@ const PulseSequencePlot = function SequencePlot({
   }
 
   return (
-    <Plot
-      data={data}
-      layout={layout_to_use}
-      onClickAnnotation={onClickAnnotation}
-    />
+    <Stack>
+      <Plot
+        data={data}
+        layout={layout_to_use}
+        onClickAnnotation={onClickAnnotation}
+      />
+      <Accordion defaultActiveKey="">
+        <Accordion.Item eventKey="0">
+          <Accordion.Header>Plot style control</Accordion.Header>
+          <Accordion.Body>
+            <Form.Label>TTL height: {individualTTLHeight} px</Form.Label>
+            <Form.Range
+              aria-label="TTL height"
+              min={10}
+              step={1}
+              max={200}
+              defaultValue={individualTTLHeight}
+              onChange={(e) => {
+                setIndividualTTLHeight(Number(e.target.value));
+              }}
+            />
+            <Form.Label>RF height: {individualRFHeight} px</Form.Label>
+            <Form.Range
+              aria-label="RF height"
+              min={10}
+              step={1}
+              max={200}
+              defaultValue={individualRFHeight}
+              onChange={(e) => {
+                setIndividualRFHeight(Number(e.target.value));
+              }}
+            />
+            <Form.Label>Axis pad: {axisPad} px</Form.Label>
+            <Form.Range
+              aria-label="axis pad height"
+              defaultValue={axisPad}
+              onChange={(e) => {
+                setAxisPad(Number(e.target.value));
+              }}
+            />
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
+    </Stack>
   );
 };
 

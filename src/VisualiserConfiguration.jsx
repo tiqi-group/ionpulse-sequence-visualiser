@@ -1,33 +1,11 @@
 import React, { memo } from "react";
-import { styled } from "@mui/material/styles";
-import { green, grey } from "@mui/material/colors";
-import { Grid, Box, Paper, ToggleButton } from "@mui/material";
-
-const Item = styled(Paper)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === "dark" ? "#1A2027" : "#fff",
-  ...theme.typography.body2,
-  padding: theme.spacing(1),
-  textAlign: "center",
-  color: theme.palette.text.secondary,
-}));
-
-const enableChannelStyle = {
-  fontSize: 14,
-  textAlign: "center",
-  lineHeight: "50px",
-  height: "50px",
-};
-const style_enabled = {
-  ...enableChannelStyle,
-  color: green[900],
-  backgroundColor: "white",
-};
-
-const style_disabled = {
-  ...enableChannelStyle,
-  color: grey[900],
-  backgroundColor: grey[200],
-};
+import {
+  Container,
+  ToggleButton,
+  ButtonGroup,
+  Row,
+  Col,
+} from "react-bootstrap";
 
 const EnableChannel = memo(function EnableChannel({
   channelName,
@@ -36,22 +14,20 @@ const EnableChannel = memo(function EnableChannel({
   onClick,
 }) {
   return (
-    // <div className="col" style={isEnabled ? style_enabled : style_disabled}>
-    //   <React.Fragment>
-    //     <p onClick={() => onClick({ name: channelName })}>{displayName}</p>
-    //   </React.Fragment>
-    // </div>
-
-    <ToggleButton
-      className="col"
-      value="check"
-      selected={isEnabled}
-      onChange={() => {
-        onClick({ name: channelName });
-      }}
-    >
-      {displayName}
-    </ToggleButton>
+    <ButtonGroup className="mb-1">
+      <ToggleButton
+        id={channelName}
+        type="checkbox"
+        variant="outline-primary"
+        value="1"
+        checked={isEnabled}
+        onClick={() => {
+          onClick({ name: channelName });
+        }}
+      >
+        {displayName}
+      </ToggleButton>
+    </ButtonGroup>
   );
 });
 
@@ -80,25 +56,17 @@ const EnablingGroup = memo(function EnablingGroup({
           />,
         );
       } else {
-        cols.push(<div className="col" key={"enableCol" + elementKey}></div>);
+        cols.push(<Col key={"enableCol" + elementKey}></Col>);
       }
     }
     return (
-      <div className="container" key={"enablerRow" + row}>
-        <div className="row justify-content-center">{cols}</div>
-      </div>
+      <Row key={"enableRow" + row} xs={1} sm={3} md={3}>
+        {cols}
+      </Row>
     );
   });
 
-  return (
-    <div>
-      <Box sx={{ flexGrow: 1 }}>
-        <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
-          {rows}
-        </Grid>
-      </Box>
-    </div>
-  );
+  return <Container>{rows}</Container>;
 });
 
 export { EnablingGroup };

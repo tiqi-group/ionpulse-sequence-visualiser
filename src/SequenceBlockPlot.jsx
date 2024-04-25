@@ -2,15 +2,26 @@
 import * as Plot from "@observablehq/plot";
 import { useRef, useEffect } from "react";
 import { getNumberOfEnabledChannels, RF_HEIGHT } from "./PlotHelpers";
-import { blue, red, grey, green } from "@mui/material/colors";
 import { N_RF_CHANNELS } from "./SequenceParser";
 
 import * as d3 from "d3";
 
 const typeToColor = {
-  Loop: [blue[500], blue[300], grey[300]],
-  LinearSequence: [green[300], green[100], grey[300]],
-  Fork: red[400],
+  Loop: [
+    "color-mix(in srgb, var(--bs-blue) 70%, white)",
+    "color-mix(in srgb, var(--bs-blue) 40%, white)",
+    "var(--bs-gray-300)",
+  ],
+  LinearSequence: [
+    "color-mix(in srgb, var(--bs-green) 70%, white)",
+    "color-mix(in srgb, var(--bs-green) 40%, white)",
+    "var(--bs-gray-300)",
+  ],
+  Fork: [
+    "color-mix(in srgb, var(--bs-red) 70%, white)",
+    "color-mix(in srgb, var(--bs-red) 40%, white)",
+    "var(--bs-gray-300)",
+  ],
 };
 
 const SequenceBlockPlot = function ({
@@ -133,7 +144,7 @@ const SequenceBlockPlot = function ({
               pointerenter: function (event, { mark }) {
                 mark
                   .style("cursor", "pointer")
-                  .style("stroke", red[800])
+                  .style("stroke", "var(--bs-red)")
                   .style("stroke-width", "3px");
               },
               pointerout: function (event, { mark }) {

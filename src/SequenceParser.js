@@ -198,7 +198,10 @@ class SequenceParser {
         );
         if (
           !this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return call[key] == data["timeDomain"].at(-1);
+            return (
+              Math.abs(call[key] - data["timeDomain"].at(-1)) <=
+              100 * Number.EPSILON
+            );
           })
         ) {
           console.log(this.#sequenceBlockData[idx]);

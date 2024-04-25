@@ -3,6 +3,7 @@ import { useState } from "react";
 import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
 import { SequenceBlockPlot } from "./SequenceBlockPlot";
+import { Container, Row, Col } from "react-bootstrap";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
@@ -111,24 +112,24 @@ const SequenceVisualiser = function SequenceVisualiser({
     return domains;
   }, []);
 
-  const totalWidth = 1200;
+  const totalWidth = 1000;
 
   return (
-    <>
+    <Container>
       <EnablingGroupOff
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
         handleEnableChange={handleEnableChange}
       />
-      <div className="row">
-        <div className="col">
+      <Row>
+        <Col>
           <PulseSequencePlot
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
             sequenceData={pulseSequenceData}
           />
-        </div>
-        <div className="col" style={{ marginLeft: "100px" }}>
+        </Col>
+        <Col style={{ marginLeft: "100px" }}>
           <div style={{ width: totalWidth + "px", position: "relative" }}>
             {timeDomains.map((timeDomain, i, timeDomains) => {
               const margin = {
@@ -168,9 +169,9 @@ const SequenceVisualiser = function SequenceVisualiser({
               );
             })}
           </div>
-        </div>
-      </div>
-    </>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

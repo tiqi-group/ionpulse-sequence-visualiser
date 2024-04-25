@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@emotion/react": "*",
-    "@emotion/styled": "*",
-    "@mui/material": "*",
     "@observablehq/plot": "^0.6.13",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "bootstrap": "^5.3.1",
