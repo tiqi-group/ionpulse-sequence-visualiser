@@ -115,7 +115,7 @@ const SequenceVisualiser = function SequenceVisualiser({
   const totalWidth = 1000;
 
   return (
-    <Container>
+    <div class="mx-3">
       <EnablingGroupOff
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
@@ -123,55 +123,28 @@ const SequenceVisualiser = function SequenceVisualiser({
       />
       <Row>
         <Col>
+          <h2>Pulse sequence plot</h2>
           <PulseSequencePlot
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
             sequenceData={pulseSequenceData}
           />
         </Col>
-        <Col style={{ marginLeft: "100px" }}>
-          <div style={{ width: totalWidth + "px", position: "relative" }}>
-            {timeDomains.map((timeDomain, i, timeDomains) => {
-              const margin = {
-                b: 100,
-                t: 160,
-                l: i == 0 ? 50 : 0,
-                r: i == timeDomains.length - 1 ? 10 : 0,
-              };
-              const elementWidth =
-                margin.l +
-                margin.r +
-                (totalWidth * (timeDomain[1] - timeDomain[0])) / totalTime;
-              return (
-                <div
-                  key={"subplot[" + timeDomain + "]"}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left:
-                      -margin.l +
-                      (timeDomain[0] * totalWidth) / totalTime +
-                      "px",
-                    width: elementWidth + "px",
-                  }}
-                >
-                  <SequenceBlockPlot
-                    channelDescription={channelDescription}
-                    channelEnabled={channelEnabled}
-                    sequenceBlockData={sequenceBlockData}
-                    timeDomain={timeDomain}
-                    plotWidth={elementWidth}
-                    margin={margin}
-                    sequenceConfig={sequenceConfig}
-                    setSequenceConfig={setSequenceConfig}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        <Col>
+          <h2>Sequence block plot</h2>
+          <SequenceBlockPlot
+            channelDescription={channelDescription}
+            channelEnabled={channelEnabled}
+            sequenceBlockData={sequenceBlockData}
+            timeDomain={[xDomains[0], xDomains.at(-1)]}
+            plotWidth={totalWidth}
+            margin={{ t: 100, b: 40, l: 100, r: 0 }}
+            sequenceConfig={sequenceConfig}
+            setSequenceConfig={setSequenceConfig}
+          />
         </Col>
       </Row>
-    </Container>
+    </div>
   );
 };
 

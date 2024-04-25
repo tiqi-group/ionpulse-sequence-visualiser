@@ -17,10 +17,15 @@ let RF_amp_yaxis_params = {
     text: "a",
     font: {
       // family: "Courier New, monospace",
-      size: 14,
-      color: "#7f7f7f",
+      size: 16,
+      // color: "gray",
     },
+    standoff: 0,
   },
+  tickfont: {
+    size: 16,
+  },
+  nticks: 3,
 };
 
 const RF_yaxis_ranges = {
@@ -45,6 +50,20 @@ let RF_sample_yaxis_params = {
 
 let xAxisParams = {
   rangemode: "nonnegative",
+};
+
+const annotationDefault = {
+  xanchor: "right",
+  yanchor: "middle",
+  xref: "paper",
+  yref: "paper",
+  x: -0.08,
+  showarrow: false,
+  // textangle: -90,
+  captureevents: false,
+  font: {
+    size: 18,
+  },
 };
 
 function compileEventName(eventNames) {
@@ -72,10 +91,10 @@ function createLayout(
   // PMT channels are treated as TTL channels here
 
   const margin = {
-    b: 100,
-    l: 200,
-    r: 100,
-    t: 100,
+    b: 40,
+    l: 220,
+    r: 0,
+    t: 40,
   };
 
   const numberRFAxes = numberOfAxes["RF"];
@@ -93,7 +112,7 @@ function createLayout(
   const totalHeight = totalTTLHeight + totalRFHeight;
 
   let the_layout = {
-    width: 1000 + margin.l + margin.r,
+    width: 960 + margin.l + margin.r,
     height: totalHeight + margin.t + margin.b,
     margin: margin,
     grid: grid_params,
@@ -101,7 +120,16 @@ function createLayout(
       range: xLimits,
       rangemode: "nonnegative",
       //fixedrange: true
-      title: "time / μs",
+      title: {
+        text: "time / μs",
+        font: {
+          size: 20,
+        },
+        standoff: 0,
+      },
+      tickfont: {
+        size: 16,
+      },
     },
   };
 
@@ -342,16 +370,9 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        xanchor: "right",
-        yanchor: "middle",
-        xref: "paper",
-        yref: "paper",
-        x: -0.01,
+        ...annotationDefault,
         y: annotation_position,
         text: channelDescription[channel].name,
-        showarrow: false,
-        //textangle: -90,
-        //captureevents: true
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -375,16 +396,9 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        xanchor: "right",
-        yanchor: "middle",
-        xref: "paper",
-        yref: "paper",
-        x: -0.01,
+        ...annotationDefault,
         y: annotation_position,
         text: channel,
-        showarrow: false,
-        //textangle: -90,
-        //captureevents: true
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -453,15 +467,9 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        xanchor: "right",
-        yanchor: "middle",
-        xref: "paper",
-        yref: "paper",
-        x: -0.05,
+        ...annotationDefault,
         y: annotation_position,
         text: channelDescription[channel].name,
-        showarrow: false,
-        // textangle: -90,
         captureevents: true,
       };
       layout_to_use.annotations.push(annotation_to_add);
@@ -489,13 +497,8 @@ const PulseSequencePlot = function SequencePlot({
   }
 
   return (
-    <Stack>
-      <Plot
-        data={data}
-        layout={layout_to_use}
-        onClickAnnotation={onClickAnnotation}
-      />
-      <Accordion defaultActiveKey="">
+    <>
+      <Accordion defaultActiveKey="" flush={true}>
         <Accordion.Item eventKey="0">
           <Accordion.Header>Plot style control</Accordion.Header>
           <Accordion.Body>
@@ -532,7 +535,12 @@ const PulseSequencePlot = function SequencePlot({
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
-    </Stack>
+      <Plot
+        data={data}
+        layout={layout_to_use}
+        onClickAnnotation={onClickAnnotation}
+      />
+    </>
   );
 };
 
