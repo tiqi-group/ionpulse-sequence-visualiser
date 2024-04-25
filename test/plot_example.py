@@ -6,6 +6,7 @@ import json
 import argparse
 
 from ionpulse_sequence_generator import (
+        RFWait,
         Sequence,
         LinearSequence,
         ChannelMask,
@@ -255,6 +256,8 @@ if __name__ == "__main__":
         _seq.sync()
         _seq += final_readout_seq
         _seq.sync()
+    _seq += RFWait.fromvalues("EndWait", 0, 1.3)
+    _seq.sync()
 
     with open("ionpulse_seq_plot.json", "w") as f:
         json.dump(generate_simplified_json(_seq), f)
