@@ -36,7 +36,7 @@ const RF_freq_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "f / MHz",
-    standoff: 2,
+    standoff: 4,
   },
   range: RF_yaxis_ranges["freq"],
   nticks: 3,
@@ -58,7 +58,7 @@ const RF_amp_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "a / %",
-    standoff: 2,
+    standoff: 4,
   },
   range: RF_yaxis_ranges["amp"],
   nticks: 3,
@@ -199,7 +199,7 @@ function createLayout(
   for (let i = 0; i < numberTTLAxes; i++) {
     const axisIdx = i + 1;
     the_layout["yaxis" + axisIdx] = {
-      TTL_yaxis_params,
+      ...TTL_yaxis_params,
     };
     the_layout["yaxis" + axisIdx].domain = [
       (totalHeight - i * (pad + ttlAxisHeight) - ttlAxisHeight) / totalHeight,
@@ -487,8 +487,6 @@ const PulseSequencePlot = function SequencePlot({
         }
       }
 
-      layout_to_use["yaxis" + index].range =
-        RF_yaxis_ranges[channelYDataType[channel]];
       layout_to_use["xaxis" + index] = {
         ...xAxisParams,
         range: xLimits,
