@@ -10,11 +10,9 @@ let TTL_yaxis_params = {
   fixedrange: true,
 };
 
-let RF_amp_yaxis_params = {
-  range: [0, 120],
+const RF_yaxis_params = {
   fixedrange: true,
   title: {
-    text: "a",
     font: {
       // family: "Courier New, monospace",
       size: 16,
@@ -25,27 +23,56 @@ let RF_amp_yaxis_params = {
   tickfont: {
     size: 16,
   },
-  nticks: 3,
 };
 
 const RF_yaxis_ranges = {
   freq: [0, 500],
-  phase: [-360, 360],
+  phase: [-200, 200],
   sample: [-120, 120],
 };
 
 const RF_freq_yaxis_params = {
-  ...RF_amp_yaxis_params,
+  ...RF_yaxis_params,
+  title: {
+    ...RF_yaxis_params["title"],
+    text: "f / MHz",
+    standoff: 2,
+  },
   range: RF_yaxis_ranges["freq"],
+  nticks: 3,
 };
 
-let RF_phase_yaxis_params = {
-  ...RF_amp_yaxis_params,
+const RF_phase_yaxis_params = {
+  ...RF_yaxis_params,
+  title: {
+    ...RF_yaxis_params["title"],
+    text: "p / °",
+    standoff: 0,
+  },
+  tickvals: [-180, 0, 180],
   range: RF_yaxis_ranges["phase"],
 };
-let RF_sample_yaxis_params = {
-  ...RF_amp_yaxis_params,
+
+const RF_amp_yaxis_params = {
+  ...RF_yaxis_params,
+  title: {
+    ...RF_yaxis_params["title"],
+    text: "a / %",
+    standoff: 2,
+  },
+  range: RF_yaxis_ranges["amp"],
+  nticks: 3,
+};
+
+const RF_sample_yaxis_params = {
+  ...RF_yaxis_params,
+  title: {
+    ...RF_yaxis_params["title"],
+    text: "rf / %",
+    standoff: 0,
+  },
   range: RF_yaxis_ranges["sample"],
+  nticks: 3,
 };
 
 let xAxisParams = {
@@ -130,7 +157,7 @@ function createLayout(
         standoff: 0,
       },
       tickfont: {
-        size: 16,
+        size: 18,
       },
     },
   };
@@ -138,17 +165,18 @@ function createLayout(
   let j = 0;
   const baseIdx = numberTTLAxes + 1;
   for (let i = 0; i < numberRFAxes; i++) {
-    if (channelYDataType === "freq") {
-      the_layout["yaxis" + (baseIdx + j)] =
-        structuredClone(RF_freq_yaxis_params);
-    } else if (channelYDataType === "phase") {
-      the_layout["yaxis" + (baseIdx + j)] = structuredClone(
-        RF_phase_yaxis_params,
-      );
+    if (channelYDataType["RF" + i] === "freq") {
+      the_layout["yaxis" + (baseIdx + j)] = {
+        ...RF_freq_yaxis_params,
+      };
+    } else if (channelYDataType["RF" + i] === "phase") {
+      the_layout["yaxis" + (baseIdx + j)] = {
+        ...RF_phase_yaxis_params,
+      };
     } else {
-      the_layout["yaxis" + (baseIdx + j)] = structuredClone(
-        RF_sample_yaxis_params,
-      );
+      the_layout["yaxis" + (baseIdx + j)] = {
+        ...RF_sample_yaxis_params,
+      };
     }
     the_layout["yaxis" + (baseIdx + j)].domain = [
       (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
@@ -156,9 +184,8 @@ function createLayout(
     ];
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
-    if (channelYDataType !== "sample") {
-      the_layout["yaxis" + (baseIdx + j)] =
-        structuredClone(RF_amp_yaxis_params);
+    if (channelYDataType["RF" + i] !== "sample") {
+      the_layout["yaxis" + (baseIdx + j)] = { ...RF_amp_yaxis_params };
 
       the_layout["yaxis" + (baseIdx + j)].domain = [
         (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
@@ -171,7 +198,9 @@ function createLayout(
 
   for (let i = 0; i < numberTTLAxes; i++) {
     const axisIdx = i + 1;
-    the_layout["yaxis" + axisIdx] = structuredClone(TTL_yaxis_params);
+    the_layout["yaxis" + axisIdx] = {
+      TTL_yaxis_params,
+    };
     the_layout["yaxis" + axisIdx].domain = [
       (totalHeight - i * (pad + ttlAxisHeight) - ttlAxisHeight) / totalHeight,
       (totalHeight - i * (pad + ttlAxisHeight)) / totalHeight,
@@ -256,13 +285,6 @@ const ampFillColour = {
   729: "rgb(100%,20%,20%)",
   854: "rgb(80%,20%,20%)",
   866: "rgb(75%,20%,20%)",
-};
-
-const axis_titles = {
-  freq: "f / MHz",
-  phase: "p / °",
-  amp: "a / %",
-  sample: "rf / %",
 };
 
 const PulseSequencePlot = function SequencePlot({
@@ -465,8 +487,6 @@ const PulseSequencePlot = function SequencePlot({
         }
       }
 
-      layout_to_use["yaxis" + index].title.text =
-        axis_titles[channelYDataType[channel]];
       layout_to_use["yaxis" + index].range =
         RF_yaxis_ranges[channelYDataType[channel]];
       layout_to_use["xaxis" + index] = {
@@ -493,7 +513,6 @@ const PulseSequencePlot = function SequencePlot({
           }
         }
 
-        layout_to_use["yaxis" + index].title.text = axis_titles["amp"];
         layout_to_use["xaxis" + index] = {
           ...xAxisParams,
           range: xLimits,
