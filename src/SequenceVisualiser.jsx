@@ -115,7 +115,7 @@ const SequenceVisualiser = function SequenceVisualiser({
   const totalWidth = 1000;
 
   return (
-    <div class="mx-3">
+    <div className="mx-3">
       <EnablingGroupOff
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}

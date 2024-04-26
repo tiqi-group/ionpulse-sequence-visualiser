@@ -1,7 +1,7 @@
 import Plot from "react-plotly.js";
 import { useState } from "react";
 import { expandToWaveform } from "./SequenceParser";
-import { Stack, Form, Accordion } from "react-bootstrap";
+import { ToggleButton, Form, Accordion } from "react-bootstrap";
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -57,7 +57,7 @@ const annotationDefault = {
   yanchor: "middle",
   xref: "paper",
   yref: "paper",
-  x: -0.08,
+  x: -0.07,
   showarrow: false,
   // textangle: -90,
   captureevents: false,
@@ -80,6 +80,13 @@ function compileEventName(eventNames) {
   return compiledEventNames;
 }
 
+const margin = {
+  b: 40,
+  l: 230,
+  r: 0,
+  t: 40,
+};
+
 function createLayout(
   numberOfAxes,
   xLimits,
@@ -89,13 +96,6 @@ function createLayout(
   pad,
 ) {
   // PMT channels are treated as TTL channels here
-
-  const margin = {
-    b: 40,
-    l: 220,
-    r: 0,
-    t: 40,
-  };
 
   const numberRFAxes = numberOfAxes["RF"];
   const numberTTLAxes = numberOfAxes["PMT"] + numberOfAxes["TTL"];
@@ -114,7 +114,9 @@ function createLayout(
   let the_layout = {
     width: 960 + margin.l + margin.r,
     height: totalHeight + margin.t + margin.b,
-    margin: margin,
+    margin: {
+      ...margin,
+    },
     grid: grid_params,
     xaxis: {
       range: xLimits,
@@ -210,7 +212,7 @@ let data_template_freq = {
   mode: "lines+markers",
   marker: { color: "red" },
   showlegend: false,
-  fill: "tozeroy",
+  fill: "none",
 };
 
 let data_template_amp = {
@@ -243,11 +245,17 @@ const data_templates = {
   },
 };
 
-const wavelength_colours = {
+const wavelengthColours = {
   397: "blue",
   729: "red",
-  854: "rgb(80%,0,0)",
-  866: "rgb(75%,0,0)",
+  854: "rgb(70%,0,0)",
+  866: "rgb(60%,0,0)",
+};
+const ampFillColour = {
+  397: "rgba(0%,0%,100%,80%)",
+  729: "rgb(100%,20%,20%)",
+  854: "rgb(80%,20%,20%)",
+  866: "rgb(75%,20%,20%)",
 };
 
 const axis_titles = {
@@ -276,6 +284,7 @@ const PulseSequencePlot = function SequencePlot({
   const [individualRFHeight, setIndividualRFHeight] = useState(70);
   const [individualTTLHeight, setIndividualTTLHeight] = useState(40);
   const [axisPad, setAxisPad] = useState(10);
+  const [isAnnotation90, setIsAnnotation90] = useState(true);
 
   const channelYDataTypeKeys = Object.keys(channelYDataType);
   const channelDescKeys = Object.keys(channelDescription);
@@ -346,6 +355,10 @@ const PulseSequencePlot = function SequencePlot({
     individualTTLHeight,
     axisPad,
   );
+  if (isAnnotation90) {
+    layout_to_use["margin"]["l"] = margin["l"] - 120;
+    console.log(layout_to_use);
+  }
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
 
@@ -354,7 +367,9 @@ const PulseSequencePlot = function SequencePlot({
       channelDescription[channel].group === "TTL" &&
       channelEnabled[channel]
     ) {
-      let TTL_to_add = Object.assign({}, data_template_TTL);
+      let TTL_to_add = {
+        ...data_templates["TTL"],
+      };
       TTL_to_add.x = value.time;
       TTL_to_add.y = value.values;
       //object_to_add.xaxis = "x" + index;
@@ -373,6 +388,10 @@ const PulseSequencePlot = function SequencePlot({
         ...annotationDefault,
         y: annotation_position,
         text: channelDescription[channel].name,
+        textangle: isAnnotation90 ? -90 : 0,
+        x: isAnnotation90
+          ? annotationDefault["x"]
+          : annotationDefault["x"] - axisPad / 100,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -386,7 +405,9 @@ const PulseSequencePlot = function SequencePlot({
       channelDescription[channel].group === "PMT" &&
       channelEnabled[channel]
     ) {
-      let PMT_to_add = Object.assign({}, data_template_PMT);
+      let PMT_to_add = {
+        ...data_templates["PMT"],
+      };
       PMT_to_add.x = value.time;
       PMT_to_add.y = value.values;
       PMT_to_add.text = compileEventName(value.names);
@@ -399,6 +420,7 @@ const PulseSequencePlot = function SequencePlot({
         ...annotationDefault,
         y: annotation_position,
         text: channel,
+        textangle: isAnnotation90 ? -90 : 0,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -417,9 +439,8 @@ const PulseSequencePlot = function SequencePlot({
         const waveform = expandToWaveform(value);
         object_to_add.x = waveform[0];
         object_to_add.y = waveform[1];
-        // console.log(waveform);
 
-        for (const [wavelength, colour] of Object.entries(wavelength_colours)) {
+        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
           if (channelDescription[channel].name.includes(wavelength)) {
             object_to_add["marker"]["color"] = colour;
           }
@@ -428,9 +449,21 @@ const PulseSequencePlot = function SequencePlot({
         object_to_add.x = value.time;
         object_to_add.y = value[channelYDataType[channel]];
         object_to_add.text = compileEventName(value.names);
+
+        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
+          if (channelDescription[channel].name.includes(wavelength)) {
+            object_to_add["marker"]["color"] = colour;
+          }
+        }
       }
       object_to_add.name = channelDescription[channel].name;
       object_to_add.yaxis = "y" + index;
+
+      for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
+        if (channelDescription[channel].name.includes(wavelength)) {
+          object_to_add["marker"]["color"] = colour;
+        }
+      }
 
       layout_to_use["yaxis" + index].title.text =
         axis_titles[channelYDataType[channel]];
@@ -448,11 +481,17 @@ const PulseSequencePlot = function SequencePlot({
       index++;
 
       if (channelYDataType[channel] !== "sample") {
-        let amp_to_add = Object.assign({}, data_templates.amp);
+        let amp_to_add = structuredClone(data_templates["amp"]);
         amp_to_add.x = value.time;
         amp_to_add.y = value.amp;
         amp_to_add.text = compileEventName(value.names);
         amp_to_add.yaxis = "y" + index;
+
+        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
+          if (channelDescription[channel].name.includes(wavelength)) {
+            amp_to_add["marker"]["color"] = colour;
+          }
+        }
 
         layout_to_use["yaxis" + index].title.text = axis_titles["amp"];
         layout_to_use["xaxis" + index] = {
@@ -471,6 +510,10 @@ const PulseSequencePlot = function SequencePlot({
         y: annotation_position,
         text: channelDescription[channel].name,
         captureevents: true,
+        textangle: isAnnotation90 ? -90 : 0,
+        x: isAnnotation90
+          ? annotationDefault["x"]
+          : annotationDefault["x"] - 0.03,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -532,6 +575,16 @@ const PulseSequencePlot = function SequencePlot({
                 setAxisPad(Number(e.target.value));
               }}
             />
+            <ToggleButton
+              id={"ButtonAnnotation90"}
+              type="checkbox"
+              value="1"
+              variant="outline-secondary"
+              checked={isAnnotation90}
+              onChange={(e) => setIsAnnotation90(!isAnnotation90)}
+            >
+              Rotate Axes annotations
+            </ToggleButton>
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
