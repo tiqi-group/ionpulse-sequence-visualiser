@@ -67,6 +67,8 @@ class SequenceParser {
         amp: [0],
         time: [0],
         names: [["start"], []],
+        // Array of times that alternatingly mark start and end of a time domain for
+        // plotting.
         timeDomain: [0],
       };
       let loopIteration = 0;

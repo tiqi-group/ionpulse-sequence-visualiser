@@ -115,17 +115,20 @@ const margin = {
 };
 
 function createLayout(
-  numberOfAxes,
+  enabledKeys,
   xLimits,
   channelYDataType,
   rfAxisHeight,
   ttlAxisHeight,
   pad,
 ) {
-  // PMT channels are treated as TTL channels here
+  let numberRFAxes = 0;
+  for (const key of enabledKeys["RF"]) {
+    numberRFAxes += channelYDataType[key] === "sample" ? 1 : 2;
+  }
 
-  const numberRFAxes = numberOfAxes["RF"];
-  const numberTTLAxes = numberOfAxes["PMT"] + numberOfAxes["TTL"];
+  // PMT channels are treated as TTL channels here
+  const numberTTLAxes = enabledKeys["PMT"].length + enabledKeys["TTL"].length;
 
   const grid_params = {
     rows: numberRFAxes + numberTTLAxes,
@@ -165,11 +168,11 @@ function createLayout(
   let j = 0;
   const baseIdx = numberTTLAxes + 1;
   for (let i = 0; i < numberRFAxes; i++) {
-    if (channelYDataType["RF" + i] === "freq") {
+    if (channelYDataType[enabledKeys["RF"][i]] === "freq") {
       the_layout["yaxis" + (baseIdx + j)] = {
         ...RF_freq_yaxis_params,
       };
-    } else if (channelYDataType["RF" + i] === "phase") {
+    } else if (channelYDataType[enabledKeys["RF"][i]] === "phase") {
       the_layout["yaxis" + (baseIdx + j)] = {
         ...RF_phase_yaxis_params,
       };
@@ -184,7 +187,7 @@ function createLayout(
     ];
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
-    if (channelYDataType["RF" + i] !== "sample") {
+    if (channelYDataType[enabledKeys["RF"][i]] !== "sample") {
       the_layout["yaxis" + (baseIdx + j)] = { ...RF_amp_yaxis_params };
 
       the_layout["yaxis" + (baseIdx + j)].domain = [
@@ -303,8 +306,8 @@ const PulseSequencePlot = function SequencePlot({
     return init;
   });
 
-  const [individualRFHeight, setIndividualRFHeight] = useState(70);
-  const [individualTTLHeight, setIndividualTTLHeight] = useState(40);
+  const [individualRFHeight, setIndividualRFHeight] = useState(75);
+  const [individualTTLHeight, setIndividualTTLHeight] = useState(45);
   const [axisPad, setAxisPad] = useState(10);
   const [isAnnotation90, setIsAnnotation90] = useState(true);
 
@@ -336,22 +339,19 @@ const PulseSequencePlot = function SequencePlot({
     } else {
       newChannelYDataType[channel] = "freq";
     }
+
     setChannelYDataType(newChannelYDataType);
   }
 
   sequenceData = filter(sequenceData, Object.keys(channelDescription));
-  let numberOfAxes = Object.keys(channelDescription).reduce(
-    (a, key) => {
-      a[channelDescription[key].group] +=
-        channelEnabled[key] == true
-          ? channelDescription[key].group === "RF" &&
-            channelYDataType[key] !== "sample"
-            ? 2
-            : 1
-          : 0;
-      return a;
+  const enabledKeys = Object.keys(channelDescription).reduce(
+    (enabledKeys, key) => {
+      if (channelEnabled[key] == true) {
+        enabledKeys[channelDescription[key].group].push(key);
+      }
+      return enabledKeys;
     },
-    { RF: 0, TTL: 0, PMT: 0 },
+    { RF: [], TTL: [], PMT: [] },
   );
 
   let xLimits = [0, 0];
@@ -370,7 +370,7 @@ const PulseSequencePlot = function SequencePlot({
   let data = [];
   let index = 1;
   let layout_to_use = createLayout(
-    numberOfAxes,
+    enabledKeys,
     xLimits,
     channelYDataType,
     individualRFHeight,
@@ -379,7 +379,6 @@ const PulseSequencePlot = function SequencePlot({
   );
   if (isAnnotation90) {
     layout_to_use["margin"]["l"] = margin["l"] - 120;
-    console.log(layout_to_use);
   }
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
