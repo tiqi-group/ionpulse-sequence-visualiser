@@ -49,6 +49,7 @@ class SequenceParser {
       settings["calls"] = [];
       settings["ch_mask"] = entry["ch_mask"];
       settings["type"] = entry["type"];
+      settings["display"] = this.#sequenceConfig[i]["display"];
       return settings;
     });
     this.#mainSequenceBlockData = this.#sequenceBlockData.at(-1);
@@ -81,8 +82,9 @@ class SequenceParser {
         0,
         true,
       );
-      if (plotData["RF" + rf_idx]["timeDomain"].length % 2 == 1)
+      if (plotData["RF" + rf_idx]["timeDomain"].length % 2 == 1) {
         plotData["RF" + rf_idx]["timeDomain"].pop();
+      }
       plotData["RF" + rf_idx]["names"].pop();
     }
     for (let i = -N_PMT_CHANNELS; i < N_TTL_CHANNELS; i++) {
@@ -103,8 +105,9 @@ class SequenceParser {
         0,
         true,
       );
-      if (plotData[name]["timeDomain"].length % 2 == 1)
+      if (plotData[name]["timeDomain"].length % 2 == 1) {
         plotData[name]["timeDomain"].pop();
+      }
       plotData[name]["names"].pop();
     }
     return plotData;

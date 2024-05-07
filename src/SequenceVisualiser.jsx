@@ -128,6 +128,7 @@ const SequenceVisualiser = function SequenceVisualiser({
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
             sequenceData={pulseSequenceData}
+            sequenceBlockData={sequenceBlockData}
           />
         </Col>
         <Col>

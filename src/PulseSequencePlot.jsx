@@ -1,6 +1,6 @@
 import Plot from "react-plotly.js";
 import { useState } from "react";
-import { expandToWaveform } from "./SequenceParser";
+import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
 import { ToggleButton, Form, Accordion } from "react-bootstrap";
 
 let TTL_yaxis_params = {
@@ -294,6 +294,7 @@ const PulseSequencePlot = function SequencePlot({
   channelDescription,
   channelEnabled,
   sequenceData,
+  sequenceBlockData,
 }) {
   const [channelYDataType, setChannelYDataType] = useState(() => {
     let init = {};
@@ -555,6 +556,55 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
+  // Create Loop/Fork annotations (repeat and branch indicators)
+  sequenceBlockData.reduce((shapes, sequence) => {
+    if (sequence["type"] !== "Loop" || sequence["display"] !== "minimized")
+      return shapes;
+
+    let yDataPairs = [];
+    let startYData;
+    if (
+      sequence["ch_mask"]["digital_io"] &&
+      (enabledKeys["TTL"].length || enabledKeys["PMT"])
+    ) {
+      startYData = 0;
+    }
+    const axisIdxFirstRF =
+      enabledKeys["TTL"].length + enabledKeys["PMT"].length;
+    for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
+      const key = "RF" + rf_idx;
+      if (!channelEnabled[key]) continue;
+      if (startYData === undefined) {
+        if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
+          startYData = axisIdxFirstRF + rf_idx;
+        }
+      } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
+        yDataPairs.push([startYData, axisIdxFirstRF - rf_idx - 1]);
+        startYData = undefined;
+      }
+    }
+
+    for (const yDataPair of yDataPairs) {
+      shapes.push({
+        type: "rect",
+        xref: "paper",
+        yref: "paper",
+        x0: 0,
+        y0: yDataPair[0],
+        x1: 1,
+        y1: yDataPair[1],
+        fillcolor: "var(--bs-blue)",
+        opacity: 0.7,
+        line: {
+          width: 0,
+        },
+        layer: "below",
+      });
+    }
+
+    return shapes;
+  }, []);
+
   return (
     <>
       <Accordion defaultActiveKey="" flush={true}>
@@ -597,7 +647,7 @@ const PulseSequencePlot = function SequencePlot({
               value="1"
               variant="outline-secondary"
               checked={isAnnotation90}
-              onChange={(e) => setIsAnnotation90(!isAnnotation90)}
+              onChange={() => setIsAnnotation90(!isAnnotation90)}
             >
               Rotate Axes annotations
             </ToggleButton>
