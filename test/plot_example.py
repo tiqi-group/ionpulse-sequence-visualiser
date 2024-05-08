@@ -244,6 +244,8 @@ if __name__ == "__main__":
         auto_channel_mask=False,
     )
 
+    _seq += RFWait.fromvalues("StartWait", 0, 1.3)
+    _seq.sync()
     _seq += sbc_loop
     _seq += state_prep
     _seq.sync()

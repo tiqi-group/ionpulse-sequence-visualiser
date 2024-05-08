@@ -557,53 +557,81 @@ const PulseSequencePlot = function SequencePlot({
   }
 
   // Create Loop/Fork annotations (repeat and branch indicators)
-  sequenceBlockData.reduce((shapes, sequence) => {
-    if (sequence["type"] !== "Loop" || sequence["display"] !== "minimized")
-      return shapes;
 
-    let yDataPairs = [];
-    let startYData;
-    if (
-      sequence["ch_mask"]["digital_io"] &&
-      (enabledKeys["TTL"].length || enabledKeys["PMT"])
-    ) {
-      startYData = 0;
-    }
-    const axisIdxFirstRF =
-      enabledKeys["TTL"].length + enabledKeys["PMT"].length;
-    for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
-      const key = "RF" + rf_idx;
-      if (!channelEnabled[key]) continue;
-      if (startYData === undefined) {
-        if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
-          startYData = axisIdxFirstRF + rf_idx;
-        }
-      } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
-        yDataPairs.push([startYData, axisIdxFirstRF - rf_idx - 1]);
-        startYData = undefined;
+  const loopData = sequenceBlockData.reduce(
+    (loopData, sequence) => {
+      if (sequence["type"] !== "Loop" || sequence["display"] !== "minimized")
+        return loopData;
+
+      // Create array of pairs with axis indices
+      // Note that the index 1 is the axis with the largest y value
+      let yDataPairs = [];
+      let startYData;
+      if (
+        sequence["ch_mask"]["digital_io"] &&
+        (enabledKeys["TTL"].length || enabledKeys["PMT"])
+      ) {
+        startYData = 1;
       }
-    }
+      let axisIdx = enabledKeys["TTL"].length + enabledKeys["PMT"].length + 1;
+      for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
+        const key = "RF" + rf_idx;
+        if (!channelEnabled[key]) continue;
+        if (startYData === undefined) {
+          if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
+            startYData = axisIdx;
+          }
+        } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
+          yDataPairs.push([startYData, axisIdx - 1]);
+          startYData = undefined;
+        }
+        axisIdx += channelYDataType === "sample" ? 1 : 2;
+      }
+      if (startYData !== undefined) {
+        yDataPairs.push([startYData, axisIdx - 1]);
+      }
 
-    for (const yDataPair of yDataPairs) {
-      shapes.push({
-        type: "rect",
-        xref: "paper",
-        yref: "paper",
-        x0: 0,
-        y0: yDataPair[0],
-        x1: 1,
-        y1: yDataPair[1],
-        fillcolor: "var(--bs-blue)",
-        opacity: 0.7,
-        line: {
-          width: 0,
-        },
-        layer: "below",
-      });
-    }
+      const yOvershoot = 0.01;
 
-    return shapes;
-  }, []);
+      for (const yDataPair of yDataPairs) {
+        loopData["shapes"].push({
+          type: "line",
+          xref: "x",
+          yref: "paper",
+          x0: sequence["calls"][0]["startTime"],
+          y0: layout_to_use["yaxis" + yDataPair[1]]["domain"][0] - yOvershoot,
+          x1: sequence["calls"][0]["startTime"],
+          y1: layout_to_use["yaxis" + yDataPair[0]]["domain"][1] + yOvershoot,
+          opacity: 0.7,
+          line: {
+            width: 2,
+          },
+          layer: "above",
+        });
+        loopData["shapes"].push({
+          type: "line",
+          xref: "x",
+          yref: "paper",
+          x0: sequence["calls"][0]["endTime"],
+          y0: layout_to_use["yaxis" + yDataPair[1]]["domain"][0] - yOvershoot,
+          x1: sequence["calls"][0]["endTime"],
+          y1: layout_to_use["yaxis" + yDataPair[0]]["domain"][1] + yOvershoot,
+          opacity: 0.7,
+          line: {
+            width: 2,
+          },
+          layer: "above",
+        });
+      }
+
+      return loopData;
+    },
+    { shapes: [], annotations: [] },
+  );
+  layout_to_use.shapes = layout_to_use.shapes.concat(loopData["shapes"]);
+  layout_to_use.annotations = layout_to_use.annotations.concat(
+    loopData["annotations"],
+  );
 
   return (
     <>
