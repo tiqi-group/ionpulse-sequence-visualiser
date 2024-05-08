@@ -49,6 +49,7 @@ class SequenceParser {
       settings["calls"] = [];
       settings["ch_mask"] = entry["ch_mask"];
       settings["type"] = entry["type"];
+      settings["iterations"] = entry["iterations"];
       settings["display"] = this.#sequenceConfig[i]["display"];
       return settings;
     });

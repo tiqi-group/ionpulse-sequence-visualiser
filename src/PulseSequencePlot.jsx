@@ -79,7 +79,7 @@ let xAxisParams = {
   rangemode: "nonnegative",
 };
 
-const annotationDefault = {
+const axisAnnotationDefault = {
   xanchor: "right",
   yanchor: "middle",
   xref: "paper",
@@ -407,13 +407,13 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        ...annotationDefault,
+        ...axisAnnotationDefault,
         y: annotation_position,
         text: channelDescription[channel].name,
         textangle: isAnnotation90 ? -90 : 0,
         x: isAnnotation90
-          ? annotationDefault["x"]
-          : annotationDefault["x"] - axisPad / 100,
+          ? axisAnnotationDefault["x"]
+          : axisAnnotationDefault["x"] - axisPad / 100,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -439,7 +439,7 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        ...annotationDefault,
+        ...axisAnnotationDefault,
         y: annotation_position,
         text: channel,
         textangle: isAnnotation90 ? -90 : 0,
@@ -523,14 +523,14 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position =
         (annotation_position_1 + annotation_position_2) / 2;
       let annotation_to_add = {
-        ...annotationDefault,
+        ...axisAnnotationDefault,
         y: annotation_position,
         text: channelDescription[channel].name,
         captureevents: true,
         textangle: isAnnotation90 ? -90 : 0,
         x: isAnnotation90
-          ? annotationDefault["x"]
-          : annotationDefault["x"] - 0.03,
+          ? axisAnnotationDefault["x"]
+          : axisAnnotationDefault["x"] - 0.03,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -585,7 +585,7 @@ const PulseSequencePlot = function SequencePlot({
           yDataPairs.push([startYData, axisIdx - 1]);
           startYData = undefined;
         }
-        axisIdx += channelYDataType === "sample" ? 1 : 2;
+        axisIdx += channelYDataType[key] === "sample" ? 1 : 2;
       }
       if (startYData !== undefined) {
         yDataPairs.push([startYData, axisIdx - 1]);
@@ -594,14 +594,18 @@ const PulseSequencePlot = function SequencePlot({
       const yOvershoot = 0.01;
 
       for (const yDataPair of yDataPairs) {
+        const y0 =
+          layout_to_use["yaxis" + yDataPair[1]]["domain"][0] - yOvershoot;
+        const y1 =
+          layout_to_use["yaxis" + yDataPair[0]]["domain"][1] + yOvershoot;
         loopData["shapes"].push({
           type: "line",
           xref: "x",
           yref: "paper",
           x0: sequence["calls"][0]["startTime"],
-          y0: layout_to_use["yaxis" + yDataPair[1]]["domain"][0] - yOvershoot,
+          y0: y0,
           x1: sequence["calls"][0]["startTime"],
-          y1: layout_to_use["yaxis" + yDataPair[0]]["domain"][1] + yOvershoot,
+          y1: y1,
           opacity: 0.7,
           line: {
             width: 2,
@@ -613,14 +617,27 @@ const PulseSequencePlot = function SequencePlot({
           xref: "x",
           yref: "paper",
           x0: sequence["calls"][0]["endTime"],
-          y0: layout_to_use["yaxis" + yDataPair[1]]["domain"][0] - yOvershoot,
+          y0: y0,
           x1: sequence["calls"][0]["endTime"],
-          y1: layout_to_use["yaxis" + yDataPair[0]]["domain"][1] + yOvershoot,
+          y1: y1,
           opacity: 0.7,
           line: {
             width: 2,
           },
           layer: "above",
+        });
+        loopData["annotations"].push({
+          font: {
+            size: 18,
+          },
+          showarrow: false,
+          xanchor: "left",
+          yanchor: "bottom",
+          xref: "x",
+          yref: "paper",
+          x: sequence["calls"][0]["endTime"],
+          y: y1,
+          text: "x " + sequence["iterations"],
         });
       }
 
