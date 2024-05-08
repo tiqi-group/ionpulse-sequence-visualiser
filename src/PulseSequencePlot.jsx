@@ -385,19 +385,16 @@ const PulseSequencePlot = function SequencePlot({
   layout_to_use.shapes = [];
 
   for (const [channel, value] of Object.entries(sequenceData)) {
-    if (
-      channelDescription[channel].group === "TTL" &&
-      channelEnabled[channel]
-    ) {
-      let TTL_to_add = {
-        ...data_templates["TTL"],
+    if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
+      let trace = {
+        ...data_templates[channelDescription[channel].group],
       };
-      TTL_to_add.x = value.time;
-      TTL_to_add.y = value.values;
+      trace.x = value.time;
+      trace.y = value.values;
       //object_to_add.xaxis = "x" + index;
-      TTL_to_add.yaxis = "y" + index;
-      //TTL_to_add.xaxis = "x" + index;
-      TTL_to_add.text = compileEventName(value.names);
+      trace.yaxis = "y" + index;
+      //trace.xaxis = "x" + index;
+      trace.text = compileEventName(value.names);
 
       // layout["yaxis" + index] = yaxis_params;
       // layout["xaxis" + index] = xAxisParams;
@@ -418,39 +415,9 @@ const PulseSequencePlot = function SequencePlot({
       layout_to_use.annotations.push(annotation_to_add);
 
       index++;
-      data.push(TTL_to_add);
+      data.push(trace);
     }
   }
-
-  for (const [channel, value] of Object.entries(sequenceData))
-    if (
-      channelDescription[channel].group === "PMT" &&
-      channelEnabled[channel]
-    ) {
-      let PMT_to_add = {
-        ...data_templates["PMT"],
-      };
-      PMT_to_add.x = value.time;
-      PMT_to_add.y = value.values;
-      PMT_to_add.text = compileEventName(value.names);
-
-      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-      let annotation_position =
-        (annotation_position_1 + annotation_position_2) / 2;
-      let annotation_to_add = {
-        ...axisAnnotationDefault,
-        y: annotation_position,
-        text: channel,
-        textangle: isAnnotation90 ? -90 : 0,
-      };
-      layout_to_use.annotations.push(annotation_to_add);
-
-      PMT_to_add.yaxis = "y" + index;
-      index++;
-      data.push(PMT_to_add);
-    }
-
   let channel_idx = 0;
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
