@@ -220,8 +220,7 @@ if __name__ == "__main__":
             "729": [
                 {"DP": 0},
                 {"DP": 3}
-            ],
-            "ttl": True
+            ]
             }
 
     if False:
@@ -232,8 +231,8 @@ if __name__ == "__main__":
 
     state_prep = state_init("", channel_map)
     sbc_loop = sbc("0", channel_map, 0, state_prep, n_loops=int(args.sbcloops))
-    pi_2_unit_1 = pi_2("unit 1", channel_map, 0)
-    pi_2_unit_2 = pi_2("unit 2", channel_map | {"ttl": False}, 1)
+    pi_2_unit_1 = pi_2("unit 1", channel_map | {"ttl": True}, 0)
+    pi_2_unit_2 = pi_2("unit 2", channel_map, 1)
     ms12 = ms_1_2("1 2", channel_map, [0, 1])
     final_readout_seq = readout("final readout sequence", channel_map, 0)
 
