@@ -9,6 +9,14 @@ const N_RF_CHANNELS = 32;
 const N_TTL_CHANNELS = 32;
 const N_PMT_CHANNELS = 8;
 
+function getChannelKey(type, idx) {
+  if (type === ChannelSequenceType.rf) {
+    return "RF" + idx;
+  } else if (type === ChannelSequenceType.dio) {
+    return idx < 0 ? "PMT" + (idx + N_PMT_CHANNELS) : "TTL" + idx;
+  }
+}
+
 function stripIdxFromName(name) {
   if (name.startsWith("[")) {
     name = name.substring(name.search("]") + 2, name.length);
@@ -74,7 +82,8 @@ class SequenceParser {
         timeDomain: [0],
       };
       let loopIteration = 0;
-      plotData["RF" + rf_idx] = this.getDataForChannel(
+      const channelKey = getChannelKey(ChannelSequenceType.rf, rf_idx);
+      plotData[channelKey] = this.getDataForChannel(
         this.#main["Sequence"].length - 1,
         ChannelSequenceType.rf,
         rf_idx,
@@ -83,10 +92,10 @@ class SequenceParser {
         0,
         true,
       );
-      if (plotData["RF" + rf_idx]["timeDomain"].length % 2 == 1) {
-        plotData["RF" + rf_idx]["timeDomain"].pop();
+      if (plotData[channelKey]["timeDomain"].length % 2 == 1) {
+        plotData[channelKey]["timeDomain"].pop();
       }
-      plotData["RF" + rf_idx]["names"].pop();
+      plotData[channelKey]["names"].pop();
     }
     for (let i = -N_PMT_CHANNELS; i < N_TTL_CHANNELS; i++) {
       let data = {
@@ -96,7 +105,7 @@ class SequenceParser {
         timeDomain: [0],
       };
       let loopIteration = 0;
-      let name = i < 0 ? "PMT" + (8 + i) : "TTL" + i;
+      const name = getChannelKey(ChannelSequenceType.dio, i);
       plotData[name] = this.getDataForChannel(
         this.#main["Sequence"].length - 1,
         ChannelSequenceType.dio,
@@ -226,40 +235,64 @@ class SequenceParser {
           "}";
       if (iterationName.length > 0) data["names"].at(-1).push(iterationName);
       storeTime("startTime", iterationName);
-      let recordEventsLocal =
-        recordEvents &&
-        (this.#sequenceConfig[idx]["display"] == "full" ||
-          (this.#sequenceConfig[idx]["display"] == "minimized" &&
-            i == 0 &&
-            this.sequenceBlockData[idx]["calls"].length == 1));
+      const recordEventsLocal =
+        recordEvents && this.#sequenceConfig[idx]["display"] !== "hide";
       if (data["timeDomain"].length % 2 == recordEventsLocal) {
         // If it's even and not record or if it's odd and record
         data["timeDomain"].push(data["timeDomain"].at(-1));
+      }
+      let dataLocal = data;
+      if (
+        this.#sequenceConfig[idx]["display"] == "minimized" &&
+        i > 0 &&
+        this.#sequenceBlockData[idx]["calls"].length > 1
+      ) {
+        const channelKey = getChannelKey(channelType, channelIdx);
+        if (
+          !Object.hasOwn(this.#sequenceBlockData[idx]["calls"].at(-1), "data")
+        ) {
+          this.#sequenceBlockData[idx]["calls"].at(-1)["data"] = {};
+        }
+        this.#sequenceBlockData[idx]["calls"].at(-1)["data"][channelKey] =
+          Object.keys(data).reduce((lastData, dataKey) => {
+            if (dataKey === "name") {
+              lastData[dataKey] = data[dataKey].slice(-2);
+            } else {
+              lastData[dataKey] = data[dataKey].slice(-1);
+            }
+            return lastData;
+          }, {});
+        dataLocal =
+          this.#sequenceBlockData[idx]["calls"].at(-1)["data"][channelKey];
       }
       for (let event of channelSequence) {
         if (typeof event === "object") {
           event = event[0];
         }
         if (event < this.#main["Event"].length) {
-          data = this.getEventDataForChannel(
+          dataLocal = this.getEventDataForChannel(
             event,
             channelType,
             channelIdx,
-            data,
+            dataLocal,
             loopIteration + i,
             recordEventsLocal,
           );
         } else {
-          data = this.getDataForChannel(
+          dataLocal = this.getDataForChannel(
             event - this.#main["Event"].length,
             channelType,
             channelIdx,
-            data,
+            dataLocal,
             loopIteration + i,
             depth + 1,
             recordEventsLocal,
           );
         }
+      }
+      if (dataLocal !== data) {
+        data["timeDomain"][data["timeDomain"].length - 1] =
+          dataLocal["timeDomain"].at(-1);
       }
       if (iterationName.length > 0) data["names"].at(-1).pop();
       storeTime("endTime");
