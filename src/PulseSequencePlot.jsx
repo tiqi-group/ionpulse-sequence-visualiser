@@ -165,9 +165,13 @@ function createLayout(
     },
   };
 
+  let channelToAxisIdx = {};
+
   let j = 0;
   const baseIdx = numberTTLAxes + 1;
   for (let i = 0; i < numberRFAxes; i++) {
+    const channel = enabledKeys["RF"][i];
+    channelToAxisIdx[channel] = [baseIdx + j];
     if (channelYDataType[enabledKeys["RF"][i]] === "freq") {
       the_layout["yaxis" + (baseIdx + j)] = {
         ...RF_freq_yaxis_params,
@@ -188,6 +192,7 @@ function createLayout(
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
     if (channelYDataType[enabledKeys["RF"][i]] !== "sample") {
+      channelToAxisIdx[channel].push(baseIdx + j);
       the_layout["yaxis" + (baseIdx + j)] = { ...RF_amp_yaxis_params };
 
       the_layout["yaxis" + (baseIdx + j)].domain = [
@@ -201,6 +206,13 @@ function createLayout(
 
   for (let i = 0; i < numberTTLAxes; i++) {
     const axisIdx = i + 1;
+    if (i < enabledKeys["TTL"].length) {
+      channelToAxisIdx[enabledKeys["TTL"][i]] = [axisIdx];
+    } else {
+      channelToAxisIdx[enabledKeys["PMT"][i - enabledKeys["TTL"].length]] = [
+        axisIdx,
+      ];
+    }
     the_layout["yaxis" + axisIdx] = {
       ...TTL_yaxis_params,
     };
@@ -210,7 +222,7 @@ function createLayout(
     ];
     the_layout["yaxis" + axisIdx].anchor = "x" + axisIdx;
   }
-  return the_layout;
+  return [the_layout, channelToAxisIdx];
 }
 
 function filter(object_to_filter, filter) {
@@ -369,8 +381,7 @@ const PulseSequencePlot = function SequencePlot({
   }
 
   let data = [];
-  let index = 1;
-  let layout_to_use = createLayout(
+  let [layout_to_use, channelToAxisIdx] = createLayout(
     enabledKeys,
     xLimits,
     channelYDataType,
@@ -386,6 +397,7 @@ const PulseSequencePlot = function SequencePlot({
 
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
+      const index = channelToAxisIdx[channel][0];
       let trace = {
         ...data_templates[channelDescription[channel].group],
       };
@@ -414,13 +426,13 @@ const PulseSequencePlot = function SequencePlot({
       };
       layout_to_use.annotations.push(annotation_to_add);
 
-      index++;
       data.push(trace);
     }
   }
   let channel_idx = 0;
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
+      const index = channelToAxisIdx[channel][0];
       let object_to_add = structuredClone(
         data_templates[channelYDataType[channel]],
       );
@@ -463,9 +475,9 @@ const PulseSequencePlot = function SequencePlot({
       let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
 
       data.push(object_to_add);
-      index++;
 
       if (channelYDataType[channel] !== "sample") {
+        const index = channelToAxisIdx[channel][1];
         let amp_to_add = structuredClone(data_templates["amp"]);
         amp_to_add.x = value.time;
         amp_to_add.y = value.amp;
@@ -484,7 +496,6 @@ const PulseSequencePlot = function SequencePlot({
         };
         annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
         data.push(amp_to_add);
-        index++;
       }
 
       let annotation_position =
