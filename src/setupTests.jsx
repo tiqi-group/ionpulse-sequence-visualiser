@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import "vitest-canvas-mock";
+import "@testing-library/jest-dom/vitest";
 
 window.URL.createObjectURL = vi.fn();
 
