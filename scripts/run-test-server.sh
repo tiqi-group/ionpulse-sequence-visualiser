@@ -11,7 +11,7 @@ fi
 if [ -f ionpulse_seq_plot.json ]; then
 	poetry -C ./test/ run python ./test/sequence_server.py \
 		--plot ./ionpulse_seq_plot.json \
-		--file ./ionpulse_seqa.json &>> test_server.log &
+		--file ./ionpulse_seq.json &>> test_server.log &
 
 	sleep 0.5
 	if ps -p $! > /dev/null; then
