@@ -199,7 +199,7 @@ class SequenceParser {
           this.#sequenceBlockData[idx]["calls"].some((call) => {
             return (
               Math.abs(call[key] - data["timeDomain"].at(-1)) <=
-              100 * Number.EPSILON
+              1e6 * Number.EPSILON
             );
           }),
           key +
@@ -216,7 +216,7 @@ class SequenceParser {
           !this.#sequenceBlockData[idx]["calls"].some((call) => {
             return (
               Math.abs(call[key] - data["timeDomain"].at(-1)) <=
-              100 * Number.EPSILON
+              1e6 * Number.EPSILON
             );
           })
         ) {

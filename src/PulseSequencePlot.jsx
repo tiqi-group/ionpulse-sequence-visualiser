@@ -319,6 +319,8 @@ const PulseSequencePlot = function SequencePlot({
     return init;
   });
 
+  const [figureConfig, setFigureConfig] = useState({});
+
   const [individualRFHeight, setIndividualRFHeight] = useState(75);
   const [individualTTLHeight, setIndividualTTLHeight] = useState(45);
   const [axisPad, setAxisPad] = useState(10);
@@ -380,10 +382,17 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
+  const [xLimitState, setXLimitState] = useState(xLimits);
+  // Adjust whenever we are looking at an interval that is outside
+  // of the current data range
+  if (xLimitState[1] >= xLimits[1] && xLimits[1] !== xLimitState[1]) {
+    setXLimitState(xLimits);
+  }
+
   let data = [];
   let [layout_to_use, channelToAxisIdx] = createLayout(
     enabledKeys,
-    xLimits,
+    xLimitState,
     channelYDataType,
     individualRFHeight,
     individualTTLHeight,
@@ -394,6 +403,7 @@ const PulseSequencePlot = function SequencePlot({
   }
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
+  layout_to_use.uirevision = "true";
 
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
@@ -680,6 +690,12 @@ const PulseSequencePlot = function SequencePlot({
       <Plot
         data={data}
         layout={layout_to_use}
+        config={figureConfig}
+        onInitialized={(figure) => setFigureConfig(figure.config)}
+        onUpdate={(figure) => {
+          setFigureConfig(figure.config);
+          setXLimitState(figure.layout.xaxis.range);
+        }}
         onClickAnnotation={onClickAnnotation}
       />
     </>

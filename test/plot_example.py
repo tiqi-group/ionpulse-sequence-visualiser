@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
     all_channels = (1 << 16) - 1
     _seq = LinearSequence(
-        "main",
+        "inner main",
         ChannelMask(rf=all_channels, digital_io=True, readout=True, qubit=0x7),
         auto_channel_mask=False,
     )
@@ -260,8 +260,17 @@ if __name__ == "__main__":
     _seq += RFWait.fromvalues("EndWait", 0, 1.3)
     _seq.sync()
 
+    main_seq = LinearSequence(
+            "main",
+            ChannelMask(rf=(1 << 17) - 1, digital_io=True, readout=True, qubit=0x7),
+            auto_channel_mask=False
+            )
+    main_seq += _seq
+    main_seq += RFWait.fromvalues("TotalTime", 16, 100.)
+    main_seq.sync()
+
     with open("ionpulse_seq_plot.json", "w") as f:
-        json.dump(generate_simplified_json(_seq), f)
+        json.dump(generate_simplified_json(main_seq), f)
 
     header = Header()
 
@@ -284,7 +293,7 @@ if __name__ == "__main__":
         ReadoutPostprocessingMethod.AVERAGE,
     ]
     header.readout_channel_plot_index = [0, 1]
-    _seq.save_to_json_file("ionpulse_seq.json", header)
+    main_seq.save_to_json_file("ionpulse_seq.json", header)
 
     if args.jsononly:
         exit(0)
@@ -314,7 +323,7 @@ if __name__ == "__main__":
             yticks,
             names
         ) = plot_data_for_channel_sequence(
-            _seq, channelvalue[0], paths=[channelvalue[1]], expand=False
+            main_seq, channelvalue[0], paths=[channelvalue[1]], expand=False
         )
         subfig = subfigs[f]
         axs = subfig.subplots(len(values.keys()),1)
