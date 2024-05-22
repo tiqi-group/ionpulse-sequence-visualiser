@@ -189,8 +189,8 @@ def sbc(
     )
     _seq += state_init
     _seq.sync()
-    _seq += RFEdge.fromvalues(name_prefix + "DP on", channel_map["729"][unit_idx]["DP"], 250, 0, 100, min_time*(1+use_sp_aoms))
-    _seq += RFEdge.fromvalues(name_prefix + "DP off", channel_map["729"][unit_idx]["DP"], 250, 0, 0, rsb_time)
+    _seq += RFEdge.fromvalues(name_prefix + "DP on", channel_map["729"][unit_idx]["DP"], 250, 0, 100, min_time*(1+use_sp_aoms), SlopeTime.MEDIUM.value)
+    _seq += RFEdge.fromvalues(name_prefix + "DP off", channel_map["729"][unit_idx]["DP"], 250, 0, 0, rsb_time, SlopeTime.MEDIUM.value)
     if use_sp_aoms:
         _seq += RFWait.fromvalues(name_prefix + "DP wait", channel_map["729"][unit_idx]["DP"], 4)
     # _seq += QubitEdge.fromvalues(name_prefix + "pad", channel_map["729"][unit_idx]["DP"] // 3, 30, 0, 4)

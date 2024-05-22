@@ -31,6 +31,7 @@ class SequenceParser {
   #sequenceConfig;
   #plotData;
   #isUpToDate;
+  RF_PROPERTIES = ["freq", "phase", "amp", "slope_time"];
   constructor(ionpulseSequence, externalConfig) {
     this.#main = ionpulseSequence;
     this.hasNames =
@@ -72,15 +73,15 @@ class SequenceParser {
       this.#main["Sequence"].at(-1)[ChannelSequenceType.rf],
     )) {
       let data = {
-        freq: [0],
-        phase: [0],
-        amp: [0],
         time: [0],
         names: [["start"], []],
         // Array of times that alternatingly mark start and end of a time domain for
         // plotting.
         timeDomain: [0],
       };
+      for (const key of this.RF_PROPERTIES) {
+        data[key] = [0];
+      }
       let loopIteration = 0;
       const channelKey = getChannelKey(ChannelSequenceType.rf, rf_idx);
       plotData[channelKey] = this.getDataForChannel(
@@ -312,9 +313,11 @@ class SequenceParser {
     if (typeof idx === "object") {
       idx = idx[0];
     }
-    let mainType =
-      type.substring(0, 1).toUpperCase() + type.substring(1, type.length);
-    let param = this.#main[mainType][idx];
+    const mainType =
+      type === "slope_time"
+        ? "Time"
+        : type.substring(0, 1).toUpperCase() + type.substring(1, type.length);
+    const param = this.#main[mainType][idx];
     console.assert(
       channelType === ChannelSequenceType.rf
         ? param["ch_mask"]["rf"] & (1 << channelIdx)
@@ -365,16 +368,20 @@ class SequenceParser {
 
     switch (event["type"]) {
       case "RFEdge":
-        for (let type of ["time", "freq", "phase", "amp"]) {
-          data = this.getParamValue(
-            type,
-            event[type],
-            channelType,
-            channelIdx,
-            data,
-            loopIteration,
-            recordEvents,
-          );
+        for (let type of this.RF_PROPERTIES.concat(["time"])) {
+          if (type in event) {
+            data = this.getParamValue(
+              type,
+              event[type],
+              channelType,
+              channelIdx,
+              data,
+              loopIteration,
+              recordEvents,
+            );
+          } else if (recordEvents) {
+            data[type].push(0);
+          }
         }
         break;
       case "RFWait":
@@ -388,7 +395,7 @@ class SequenceParser {
           recordEvents,
         );
         if (recordEvents) {
-          for (let type of ["freq", "phase", "amp"]) {
+          for (let type of this.RF_PROPERTIES) {
             data[type].push(data[type].at(-1));
           }
         }
@@ -439,6 +446,18 @@ class SequenceParser {
   }
 }
 
+function blackman(t) {
+  const phase = t * Math.PI;
+  return (
+    0.355768 -
+    0.487396 * Math.cos(phase) +
+    0.144232 * Math.cos(2 * phase) -
+    0.012604 * Math.cos(3 * phase)
+  );
+}
+
+const freqScaling = 0.005;
+
 function expandToWaveform(sequenceData) {
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   const samplingRate = 10;
@@ -461,33 +480,57 @@ function expandToWaveform(sequenceData) {
   for (let i = 0; i < sequenceData["time"].length - 1; i++) {
     const duration = sequenceData["time"][i + 1] - sequenceData["time"][i];
     // Unfold waveforms
-    let f, p, a, t;
-    f = sequenceData["freq"][i];
-    p = sequenceData["phase"][i];
-    a = sequenceData["amp"][i];
-    t = sequenceData["time"][i];
+    const f = sequenceData["freq"][i];
+    const p = sequenceData["phase"][i];
+    const a = sequenceData["amp"][i];
+    const t = sequenceData["time"][i];
+    const slopeTime = sequenceData["slope_time"][i];
+
+    let getTimeArray = (t0, duration) => {
+      const nSamples = Math.ceil(duration * samplingRate);
+      return Array.from(
+        { length: nSamples },
+        (_, idx) => t0 + idx * (duration / nSamples),
+      );
+    };
 
     if (a === 0) {
       // console.log(`Expanding ${0} amplitude from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}`);
-      time[currentIdx] = t;
-      time[currentIdx + 1] = sequenceData["time"][i + 1];
+      if (slopeTime > 0) {
+        const times = getTimeArray(0, slopeTime);
+        times.forEach((timeVal, idx) => {
+          time[currentIdx + idx] = timeVal + t;
+          value[currentIdx + idx] =
+            sequenceData["amp"][i - 1] *
+            blackman(1 - timeVal / slopeTime) *
+            Math.cos(
+              2 *
+                Math.PI *
+                (sequenceData["freq"][i - 1] * freqScaling * (timeVal + t) +
+                  sequenceData["phase"][i - 1] / 360),
+            );
+        });
+        currentIdx += times.length;
+      } else {
+        time[currentIdx] = t;
+        value[currentIdx] = 0;
+        currentIdx++;
+      }
+      time[currentIdx] = sequenceData["time"][i + 1];
       value[currentIdx] = 0;
-      value[currentIdx + 1] = 0;
-      currentIdx += 2;
+      currentIdx++;
     } else {
-      const segmentSamples = Math.ceil(duration * samplingRate);
-      // console.log(`Expanding ${segmentSamples} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
+      const times = getTimeArray(t, duration);
+      // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
       // Optionally use relative time
-      const segmentTime = Array.from(
-        { length: segmentSamples },
-        (_, idx) => t + idx * (duration / segmentSamples),
-      );
-      segmentTime.forEach((timeVal, idx) => {
+      times.forEach((timeVal, idx) => {
         time[currentIdx + idx] = timeVal;
         value[currentIdx + idx] =
-          a * Math.cos(2 * Math.PI * (f * 0.001 * timeVal + p / 360));
+          (timeVal < slopeTime + t ? blackman((timeVal - t) / slopeTime) : 1) *
+          a *
+          Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
       });
-      currentIdx += segmentSamples;
+      currentIdx += times.length;
     }
   }
 

@@ -630,7 +630,7 @@ const PulseSequencePlot = function SequencePlot({
 
   return (
     <>
-      <Accordion defaultActiveKey="" flush={true}>
+      <Accordion defaultActiveKey="" flush={false}>
         <Accordion.Item eventKey="0">
           <Accordion.Header>Plot style control</Accordion.Header>
           <Accordion.Body>
