@@ -1,18 +1,11 @@
 import { useState, useEffect } from "react";
 import { Container, Form, Button } from "react-bootstrap";
 import Cookies from "js-cookie";
-
-let setValidatedProxy;
-
-function setConnectionState(state) {
-  if (setValidatedProxy !== undefined) {
-    setValidatedProxy(state);
-  }
-}
+import { setValidatedProxy } from "./ConnectionState";
 
 function Configurator() {
   const [validated, setValidated] = useState(false);
-  setValidatedProxy = setValidated;
+  setValidatedProxy.func = setValidated;
   const api = Cookies.withAttributes({
     sameSite: "lax",
   });
@@ -54,4 +47,4 @@ function Configurator() {
   );
 }
 
-export { Configurator, setConnectionState };
+export { Configurator };

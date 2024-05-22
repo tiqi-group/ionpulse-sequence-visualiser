@@ -3,7 +3,8 @@ import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
-import { Configurator, setConnectionState } from "./Configurator";
+import { Configurator } from "./Configurator";
+import { setConnectionState } from "./ConnectionState";
 
 import Cookies from "js-cookie";
 import { io } from "socket.io-client";
