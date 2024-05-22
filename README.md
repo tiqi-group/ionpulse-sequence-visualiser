@@ -15,8 +15,6 @@ For example, running the CoolDet from the Cryo setup looks like this:
   - Also see https://nodejs.org/en/download
 
 - Setup the environment with `npm install` in the repo
-- Change the settings.json file such that the IP address and port match the one from your Library.
-  The file gets created during the install step.
 - `npm build` to build the static content
 - `npm run serve` to start a webserver that exposes the library visualiser.
   By default, you can access it via
@@ -24,6 +22,12 @@ For example, running the CoolDet from the Cryo setup looks like this:
 ```
 http://localhost:3000
 ```
+
+## Configuration
+
+The library visualiser uses cookies to store the address and port of the experiment library.
+Just go to the _Configure_ menu entry and fill in the details of the form and click _Connect_.
+The form will indicate whether the visualiser could connect or not.
 
 ## Usage
 

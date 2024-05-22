@@ -3,9 +3,10 @@ import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
+import { Configurator, setConnectionState } from "./Configurator";
 
-import settings from "../settings";
-import { socket } from "./socket";
+import Cookies from "js-cookie";
+import { io } from "socket.io-client";
 
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
@@ -56,8 +57,6 @@ function App() {
     };
     return init;
   });
-  var libraryIp = settings["Library ip"];
-  var libraryPort = settings["Library port"];
 
   function updateChannelDescription(description) {
     let newDescription = {};
@@ -73,19 +72,12 @@ function App() {
   }
 
   useEffect(() => {
-    const hardware_url = `http://${libraryIp}:${libraryPort}/Hardware`;
+    const url = `${Cookies.get("libraryAddress")}:${Cookies.get("libraryPort")}`;
+    const hardware_url = `http://${url}/Hardware`;
 
-    fetch(hardware_url + "/description")
-      .then((response) => response.json())
-      .then((data) => {
-        updateChannelDescription(JSON.parse(data));
-      });
-
-    fetch(hardware_url + "/sequence")
-      .then((response) => response.json())
-      .then((data) => {
-        setIonpulseSequence(JSON.parse(data));
-      });
+    const socket = io(`ws://${url}`, {
+      path: "/ws/socket.io/",
+    });
 
     function updateIonpulseSequence(value) {
       // Extracting data from the notification
@@ -94,8 +86,44 @@ function App() {
       }
     }
 
-    socket.on("notify", updateIonpulseSequence);
-    return () => socket.off("notify", updateIonpulseSequence);
+    let isConnectionUp = true;
+    const fetchData = async () => {
+      let promise = fetch(hardware_url + "/description")
+        .then((response) => response.json())
+        .then((data) => {
+          if (isConnectionUp) {
+            updateChannelDescription(JSON.parse(data));
+          }
+        })
+        .catch((response) => {
+          isConnectionUp = false;
+        });
+      fetch(hardware_url + "/sequence")
+        .then((response) => response.json())
+        .then((data) => {
+          if (isConnectionUp) {
+            setIonpulseSequence(JSON.parse(data));
+          }
+        })
+        .catch((response) => {
+          isConnectionUp = false;
+        });
+
+      await promise;
+
+      if (isConnectionUp) {
+        setConnectionState(true);
+        socket.on("notify", updateIonpulseSequence);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isConnectionUp = false;
+      setConnectionState(false);
+      socket.off("notify", updateIonpulseSequence);
+    };
   }, []);
 
   return (
@@ -116,6 +144,7 @@ function App() {
           element={<Hardware channelDescription={channelDescription} />}
         />
         <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
+        <Route path="/config" element={<Configurator />} />
       </Routes>
     </>
   );

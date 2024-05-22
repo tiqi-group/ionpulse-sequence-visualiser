@@ -7,8 +7,4 @@ cp "$base_dir/scripts/pre-commit" "$base_dir/.git/hooks/" && \
 	chmod u+x "$base_dir/.git/hooks/pre-commit" && \
 	echo "hook copied"
 
-[[ ! -f "$base_dir/settings.json" ]] && \
-	cp "$base_dir/settings-example.json" "$base_dir/settings.json" && \
-	echo "settings copied"
-
 exit 0
