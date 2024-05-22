@@ -18,6 +18,9 @@ function getChannelKey(type, idx) {
 }
 
 function stripIdxFromName(name) {
+  if (name === undefined) {
+    return "";
+  }
   if (name.startsWith("[")) {
     name = name.substring(name.search("]") + 2, name.length);
   }
