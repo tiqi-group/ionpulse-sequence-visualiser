@@ -17,3 +17,11 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+vi.mock("react-transition-group", () => {
+  const FakeTransition = vi.fn(({ children }) => children);
+  const FakeCSSTransition = vi.fn((props) =>
+    props.in ? <FakeTransition>{props.children}</FakeTransition> : null,
+  );
+  return { CSSTransition: FakeCSSTransition, Transition: FakeTransition };
+});
