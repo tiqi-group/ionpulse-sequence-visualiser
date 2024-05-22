@@ -9,12 +9,6 @@ function Configurator() {
   const api = Cookies.withAttributes({
     sameSite: "lax",
   });
-  if (api.get("libraryAddress") === undefined) {
-    api.set("libraryAddress", "localhost");
-  }
-  if (api.get("libraryPort") === undefined) {
-    api.set("libraryPort", "8003");
-  }
 
   return (
     <Container>

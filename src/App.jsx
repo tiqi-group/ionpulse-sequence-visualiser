@@ -72,6 +72,16 @@ function App() {
     setChannelDescription(newDescription);
   }
 
+  const api = Cookies.withAttributes({
+    sameSite: "lax",
+  });
+  if (api.get("libraryAddress") === undefined) {
+    api.set("libraryAddress", "localhost");
+  }
+  if (api.get("libraryPort") === undefined) {
+    api.set("libraryPort", "8003");
+  }
+
   useEffect(() => {
     const url = `${Cookies.get("libraryAddress")}:${Cookies.get("libraryPort")}`;
     const hardware_url = `http://${url}/Hardware`;
