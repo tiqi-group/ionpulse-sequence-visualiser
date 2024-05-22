@@ -6,7 +6,7 @@ import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 import { setConnectionState } from "./ConnectionState";
 
-import Cookies from "js-cookie";
+import { Cookies } from "./Cookies";
 import { io } from "socket.io-client";
 
 function App() {
@@ -72,14 +72,11 @@ function App() {
     setChannelDescription(newDescription);
   }
 
-  const api = Cookies.withAttributes({
-    sameSite: "lax",
-  });
-  if (api.get("libraryAddress") === undefined) {
-    api.set("libraryAddress", "localhost");
+  if (Cookies.get("libraryAddress") === undefined) {
+    Cookies.set("libraryAddress", "localhost");
   }
-  if (api.get("libraryPort") === undefined) {
-    api.set("libraryPort", "8003");
+  if (Cookies.get("libraryPort") === undefined) {
+    Cookies.set("libraryPort", "8003");
   }
 
   useEffect(() => {

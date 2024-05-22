@@ -4,6 +4,7 @@ import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
 import { SequenceBlockPlot } from "./SequenceBlockPlot";
 import { Container, Row, Col } from "react-bootstrap";
+import { Cookies } from "./Cookies";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
@@ -12,12 +13,33 @@ const SequenceVisualiser = function SequenceVisualiser({
   sequenceConfig,
   setSequenceConfig,
 }) {
-  const [channelEnabled, setChannelEnabled] = useState(() => {
-    return Object.keys(channelDescription).reduce((init, k) => {
-      init[k] = false;
-      return init;
-    }, {});
+  const [channelEnabled, setChannelEnabledState] = useState(() => {
+    const initEnabledCookie = () => {
+      const initObject = Object.keys(channelDescription).reduce((init, k) => {
+        init[k] = false;
+        return init;
+      }, {});
+      Cookies.set("channelEnabled", JSON.stringify(initObject));
+      return initObject;
+    };
+
+    let initObject;
+    if (Cookies.get("channelEnabled") === undefined) {
+      initObject = initEnabledCookie();
+    } else {
+      try {
+        initObject = JSON.parse(Cookies.get("channelEnabled"));
+      } catch {
+        initObject = initEnabledCookie();
+      }
+    }
+    return initObject;
   });
+
+  const setChannelEnabled = (channelEnabled) => {
+    Cookies.set("channelEnabled", JSON.stringify(channelEnabled));
+    setChannelEnabledState(channelEnabled);
+  };
 
   const channelEnabledKeys = Object.keys(channelEnabled);
   const channelDescKeys = Object.keys(channelDescription);
