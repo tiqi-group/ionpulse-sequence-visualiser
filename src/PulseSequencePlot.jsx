@@ -387,6 +387,9 @@ const PulseSequencePlot = function SequencePlot({
     try {
       o = JSON.parse(sessionStorage.getItem("xLimits"));
     } catch {
+      console.warn("Invalid entry in sessionStorage for 'xLimits'");
+    }
+    if (o == null) {
       o = dataXLimits;
       sessionStorage.setItem("xLimits", JSON.stringify(o));
     }
