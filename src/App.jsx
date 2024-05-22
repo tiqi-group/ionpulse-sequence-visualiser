@@ -6,7 +6,6 @@ import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 import { setConnectionState } from "./ConnectionState";
 
-import { Cookies } from "./Cookies";
 import { io } from "socket.io-client";
 
 function App() {
@@ -72,15 +71,15 @@ function App() {
     setChannelDescription(newDescription);
   }
 
-  if (Cookies.get("libraryAddress") === undefined) {
-    Cookies.set("libraryAddress", "localhost");
+  if (localStorage.getItem("libraryAddress") == null) {
+    localStorage.setItem("libraryAddress", "localhost");
   }
-  if (Cookies.get("libraryPort") === undefined) {
-    Cookies.set("libraryPort", "8003");
+  if (localStorage.getItem("libraryPort") == null) {
+    localStorage.setItem("libraryPort", "8003");
   }
 
   useEffect(() => {
-    const url = `${Cookies.get("libraryAddress")}:${Cookies.get("libraryPort")}`;
+    const url = `${localStorage.getItem("libraryAddress")}:${localStorage.getItem("libraryPort")}`;
     const hardware_url = `http://${url}/Hardware`;
 
     const socket = io(`ws://${url}`, {

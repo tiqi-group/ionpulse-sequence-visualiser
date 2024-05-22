@@ -4,7 +4,6 @@ import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
 import { SequenceBlockPlot } from "./SequenceBlockPlot";
 import { Container, Row, Col } from "react-bootstrap";
-import { Cookies } from "./Cookies";
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
@@ -14,30 +13,24 @@ const SequenceVisualiser = function SequenceVisualiser({
   setSequenceConfig,
 }) {
   const [channelEnabled, setChannelEnabledState] = useState(() => {
-    const initEnabledCookie = () => {
-      const initObject = Object.keys(channelDescription).reduce((init, k) => {
+    let initObject;
+    try {
+      initObject = JSON.parse(localStorage.getItem("channelEnabled"));
+    } catch {
+      console.warn("Invalid entry in localStorage for 'channelEnabled'");
+    }
+    if (initObject == null) {
+      initObject = Object.keys(channelDescription).reduce((init, k) => {
         init[k] = false;
         return init;
       }, {});
-      Cookies.set("channelEnabled", JSON.stringify(initObject));
-      return initObject;
-    };
-
-    let initObject;
-    if (Cookies.get("channelEnabled") === undefined) {
-      initObject = initEnabledCookie();
-    } else {
-      try {
-        initObject = JSON.parse(Cookies.get("channelEnabled"));
-      } catch {
-        initObject = initEnabledCookie();
-      }
+      localStorage.setItem("channelEnabled", JSON.stringify(initObject));
     }
     return initObject;
   });
 
   const setChannelEnabled = (channelEnabled) => {
-    Cookies.set("channelEnabled", JSON.stringify(channelEnabled));
+    localStorage.setItem("channelEnabled", JSON.stringify(channelEnabled));
     setChannelEnabledState(channelEnabled);
   };
 

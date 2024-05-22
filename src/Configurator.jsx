@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Container, Form, Button } from "react-bootstrap";
-import { Cookies } from "./Cookies";
 import { setValidatedProxy } from "./ConnectionState";
 
 function Configurator() {
@@ -14,21 +13,21 @@ function Configurator() {
         noValidate
         validated={validated}
         onSubmit={(e) => {
-          Cookies.set("libraryAddress", e.target[0].value);
-          Cookies.set("libraryPort", e.target[1].value);
+          localStorage.setItem("libraryAddress", e.target[0].value);
+          localStorage.setItem("libraryPort", e.target[1].value);
         }}
       >
         <Form.Group className="mb-3">
           <Form.Label>Experiment library URL or IP address</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={Cookies.get("libraryAddress")}
+            defaultValue={localStorage.getItem("libraryAddress")}
             isInvalid={!validated}
           />
           <Form.Label>Experiment library port</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={Cookies.get("libraryPort")}
+            defaultValue={localStorage.getItem("libraryPort")}
             isInvalid={!validated}
           />
         </Form.Group>
