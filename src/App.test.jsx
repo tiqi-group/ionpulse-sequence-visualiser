@@ -38,6 +38,7 @@ test("Plot page renders", async () => {
 
   expect(screen.queryByText("Channels to display")).not.toBeInTheDocument();
   await user.click(butt);
+  await new Promise((resolve) => setTimeout(resolve, 100));
   expect(screen.getByText("Channels to display")).toBeVisible();
   const rf0_enable = screen.getByText("397");
   expect(screen.queryByText("a / %")).not.toBeInTheDocument();
