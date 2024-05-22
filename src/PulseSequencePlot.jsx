@@ -369,30 +369,46 @@ const PulseSequencePlot = function SequencePlot({
     { RF: [], TTL: [], PMT: [] },
   );
 
-  let xLimits = [0, 0];
+  let dataXLimits = [0, 0];
   for (const [channel, data] of Object.entries(sequenceData)) {
     if (channelEnabled[channel]) {
-      xLimits[1] = Math.max(xLimits[1], data["timeDomain"].at(-1));
+      dataXLimits[1] = Math.max(dataXLimits[1], data["timeDomain"].at(-1));
     }
   }
-  xLimits[0] = xLimits[1];
+  dataXLimits[0] = dataXLimits[1];
   for (const [channel, data] of Object.entries(sequenceData)) {
     if (channelEnabled[channel]) {
-      xLimits[0] = Math.min(xLimits[0], data["timeDomain"].at(0));
+      dataXLimits[0] = Math.min(dataXLimits[0], data["timeDomain"].at(0));
     }
   }
 
-  const [xLimitState, setXLimitState] = useState(xLimits);
+  const [xLimits, setXLimitsState] = useState(() => {
+    let o;
+    try {
+      o = JSON.parse(sessionStorage.getItem("xLimits"));
+    } catch {
+      o = dataXLimits;
+      sessionStorage.setItem("xLimits", JSON.stringify(o));
+    }
+    return o;
+  });
+  const setXLimits = (newXLimits) => {
+    if (newXLimits[0] === 0 && newXLimits[1] === 0) {
+      return;
+    }
+    sessionStorage.setItem("xLimits", JSON.stringify(newXLimits));
+    setXLimitsState(newXLimits);
+  };
   // Adjust whenever we are looking at an interval that is outside
   // of the current data range
-  if (xLimitState[1] >= xLimits[1] && xLimits[1] !== xLimitState[1]) {
-    setXLimitState(xLimits);
+  if (xLimits[1] >= dataXLimits[1] && dataXLimits[1] !== xLimits[1]) {
+    setXLimits(dataXLimits);
   }
 
   let data = [];
   let [layout_to_use, channelToAxisIdx] = createLayout(
     enabledKeys,
-    xLimitState,
+    xLimits,
     channelYDataType,
     individualRFHeight,
     individualTTLHeight,
@@ -694,7 +710,7 @@ const PulseSequencePlot = function SequencePlot({
         onInitialized={(figure) => setFigureConfig(figure.config)}
         onUpdate={(figure) => {
           setFigureConfig(figure.config);
-          setXLimitState(figure.layout.xaxis.range);
+          setXLimits(figure.layout.xaxis.range);
         }}
         onClickAnnotation={onClickAnnotation}
       />
