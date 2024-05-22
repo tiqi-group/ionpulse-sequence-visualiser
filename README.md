@@ -44,6 +44,35 @@ You can however use the "Channels" button to decide which channels to show and h
 
 Under the tab "Hardware" you can find the hardware description of your setup.
 
+## Deployment
+
+To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
+
+- Extract the artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
+- Add an nginx server configuration into the http section of `/etc/nginx/nginx.conf`
+
+```
+   server {
+        listen 80;
+        root /var/www/html/library-visualiser/dist/;
+        index index.html;
+        server_name library-visualiser.lab;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+```
+
+- Restart nginx (`systemctl restart nginx`)
+- Configure your router to forward this URL to the nginx server.
+  If you're using an edgerouter, add
+  ```
+  address=/library-visualiser.lab/<server-ip-address>
+  ```
+  to `Config Tree: service -> dns -> forwarding (options)`
+- Enjoy
+
 ## Development
 
 Use the development server instead of serving the static content by running
