@@ -1,27 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Container, Form, Button } from "react-bootstrap";
-import {
-  setValidatedProxy,
-  libraryPortDefault,
-  libraryAddressDefault,
-} from "./ConnectionState";
+import { useNavigate } from "react-router";
 
-function Configurator() {
-  const [validated, setValidated] = useState(false);
-  setValidatedProxy.func = setValidated;
+function Configurator({ library, setLibrary }) {
+  const [validated, setValidated] = useState(true);
+  const redirect = useRef(false);
 
-  const [libraryAddress, setLibraryAddress] = useState(() => {
-    return localStorage.getItem("libraryAddress") || libraryAddressDefault;
-  });
+  const controller = new AbortController();
   useEffect(() => {
-    localStorage.setItem("libraryAddress", libraryAddress);
-  }, [libraryAddress]);
-  const [libraryPort, setLibraryPort] = useState(() => {
-    return localStorage.getItem("libraryPort") || libraryPortDefault;
-  });
-  useEffect(() => {
-    localStorage.setItem("libraryPort", libraryPort);
-  }, [libraryPort]);
+    const url = `${library.address}:${library.port}`;
+    const hardware_url = `http://${url}/Hardware/description`;
+    setTimeout(() => controller.abort(), 200);
+    fetch(hardware_url, { signal: controller.signal })
+      .then((response) => {
+        setValidated(response.ok);
+        if (redirect.current && response.ok) {
+          redirect.current = false;
+          navigate("/plot");
+        }
+      })
+      .catch((response) => {
+        setValidated(false);
+      });
+  }, [library.address, library.port, redirect.current]);
+
+  const navigate = useNavigate();
 
   return (
     <Container>
@@ -29,22 +32,27 @@ function Configurator() {
         name="Experiment library"
         noValidate
         validated={validated}
-        onSubmit={(e) => {
-          setLibraryAddress(e.target[0].value);
-          setLibraryPort(e.target[1].value);
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const newLibrary = {
+            address: e.target[0].value,
+            port: e.target[1].value,
+          };
+          redirect.current = true;
+          setLibrary(newLibrary);
         }}
       >
         <Form.Group className="mb-3">
           <Form.Label>Experiment library URL or IP address</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={libraryAddress}
+            defaultValue={library.address}
             isInvalid={!validated}
           />
           <Form.Label>Experiment library port</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={libraryPort}
+            defaultValue={library.port}
             isInvalid={!validated}
           />
         </Form.Group>

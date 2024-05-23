@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
 import NavBar from "./Header";
-import { Link, Routes, Route } from "react-router-dom";
+import { Link, Routes, Route, useNavigate } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
-import {
-  setConnectionState,
-  libraryAddressDefault,
-  libraryPortDefault,
-} from "./ConnectionState";
 
 import { io } from "socket.io-client";
 
@@ -75,12 +70,21 @@ function App() {
     setChannelDescription(newDescription);
   }
 
+  const [library, setLibrary] = useState(() => {
+    return {
+      address: localStorage.getItem("libraryAddress") || "localhost",
+      port: localStorage.getItem("libraryPort") || "8003",
+    };
+  });
   useEffect(() => {
-    const libraryAddress =
-      localStorage.getItem("libraryAddress") || libraryAddressDefault;
-    const libraryPort =
-      localStorage.getItem("libraryPort") || libraryPortDefault;
-    const url = `${libraryAddress}:${libraryPort}`;
+    localStorage.setItem("libraryAddress", library.address);
+    localStorage.setItem("libraryPort", library.port);
+  }, [library]);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const url = `${library.address}:${library.port}`;
     const hardware_url = `http://${url}/Hardware`;
 
     const socket = io(`ws://${url}`, {
@@ -97,10 +101,16 @@ function App() {
     let isConnectionUp = true;
     const fetchData = async () => {
       let promise = fetch(hardware_url + "/description")
-        .then((response) => response.json())
-        .then((data) => {
-          if (isConnectionUp) {
-            updateChannelDescription(JSON.parse(data));
+        .then((response) => {
+          if (response.ok) {
+            response.json().then((data) => {
+              if (isConnectionUp) {
+                updateChannelDescription(JSON.parse(data));
+              }
+            });
+          } else {
+            isConnectionUp = false;
+            navigate("/config");
           }
         })
         .catch((response) => {
@@ -115,12 +125,12 @@ function App() {
         })
         .catch((response) => {
           isConnectionUp = false;
+          navigate("/config");
         });
 
       await promise;
 
       if (isConnectionUp) {
-        setConnectionState(true);
         socket.on("notify", updateIonpulseSequence);
       }
     };
@@ -129,10 +139,9 @@ function App() {
 
     return () => {
       isConnectionUp = false;
-      setConnectionState(false);
       socket.off("notify", updateIonpulseSequence);
     };
-  }, []);
+  }, [library]);
 
   return (
     <>
@@ -152,7 +161,10 @@ function App() {
           element={<Hardware channelDescription={channelDescription} />}
         />
         <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
-        <Route path="/config" element={<Configurator />} />
+        <Route
+          path="/config"
+          element={<Configurator library={library} setLibrary={setLibrary} />}
+        />
       </Routes>
     </>
   );
