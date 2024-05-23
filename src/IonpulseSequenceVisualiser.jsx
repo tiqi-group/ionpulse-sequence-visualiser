@@ -2,10 +2,14 @@ import { useImmer } from "use-immer";
 import { SequenceVisualiser } from "./SequenceVisualiser";
 
 import { SequenceParser } from "./SequenceParser.js";
+import { ConnectionStatus } from "./ConnectionStatus";
+import { Modal, Spinner, Button, Badge } from "react-bootstrap";
+import { useNavigate } from "react-router";
 
 const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   channelDescription,
   ionpulseSequence,
+  connectionStatus,
 }) {
   const [sequenceConfig, setSequenceConfig] = useImmer({});
 
@@ -14,15 +18,54 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   function updateSequenceConfig(recipe) {
     setSequenceConfig(recipe);
   }
+  const navigate = useNavigate();
 
   return (
-    <SequenceVisualiser
-      channelDescription={channelDescription}
-      pulseSequenceData={sequenceParser.plotData}
-      sequenceBlockData={sequenceParser.sequenceBlockData}
-      sequenceConfig={sequenceConfig}
-      setSequenceConfig={updateSequenceConfig}
-    />
+    <>
+      <Modal
+        show={connectionStatus !== ConnectionStatus.connected}
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Header>
+          <Modal.Title>
+            {connectionStatus === ConnectionStatus.failed ? (
+              <span class="text-danger">Failed to connect to library</span>
+            ) : (
+              "Connecting to library"
+            )}
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body className="text-center">
+          {connectionStatus === ConnectionStatus.connecting ? (
+            <Spinner className="m-3" animation="border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </Spinner>
+          ) : (
+            <span class="text-danger">Failed</span>
+          )}
+        </Modal.Body>
+
+        <Modal.Footer>
+          <Button
+            variant="primary"
+            onClick={() => {
+              navigate("/config");
+            }}
+          >
+            Go to configuration
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <SequenceVisualiser
+        channelDescription={channelDescription}
+        pulseSequenceData={sequenceParser.plotData}
+        sequenceBlockData={sequenceParser.sequenceBlockData}
+        sequenceConfig={sequenceConfig}
+        setSequenceConfig={updateSequenceConfig}
+      />
+    </>
   );
 };
 

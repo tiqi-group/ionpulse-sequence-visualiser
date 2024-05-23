@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Container, Form, Button, Spinner } from "react-bootstrap";
-import { useNavigate } from "react-router";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function Configurator({ library, setLibrary, connectionStatus }) {
   const redirect = useRef(false);
-  const navigate = useNavigate();
 
   if (redirect.current && connectionStatus === ConnectionStatus.connected) {
     redirect.current = false;
-    // navigate("/plot");
   }
 
   return (

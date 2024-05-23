@@ -167,6 +167,7 @@ function App() {
             <IonpulseSequenceVisualiser
               channelDescription={channelDescription}
               ionpulseSequence={ionpulseSequence}
+              connectionStatus={connectionStatus}
             />
           }
         />
