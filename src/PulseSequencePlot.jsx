@@ -1,5 +1,5 @@
 import Plot from "react-plotly.js";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
 import { ToggleButton, Form, Accordion } from "react-bootstrap";
 
@@ -382,29 +382,19 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
-  const [xLimits, setXLimitsState] = useState(() => {
-    let o;
-    try {
-      o = JSON.parse(sessionStorage.getItem("xLimits"));
-    } catch {
-      console.warn("Invalid entry in sessionStorage for 'xLimits'");
-    }
-    if (o == null) {
-      o = dataXLimits;
-      sessionStorage.setItem("xLimits", JSON.stringify(o));
-    }
-    return o;
+  const [xLimits, setXLimits] = useState(() => {
+    return JSON.parse(sessionStorage.getItem("xLimits")) || dataXLimits;
   });
-  const setXLimits = (newXLimits) => {
-    if (newXLimits[0] === 0 && newXLimits[1] === 0) {
-      return;
-    }
-    sessionStorage.setItem("xLimits", JSON.stringify(newXLimits));
-    setXLimitsState(newXLimits);
-  };
+  useEffect(() => {
+    sessionStorage.setItem("xLimits", JSON.stringify(xLimits));
+  }, [xLimits]);
   // Adjust whenever we are looking at an interval that is outside
   // of the current data range
-  if (xLimits[1] >= dataXLimits[1] && dataXLimits[1] !== xLimits[1]) {
+  if (
+    xLimits[1] >= dataXLimits[1] &&
+    dataXLimits[1] !== xLimits[1] &&
+    dataXLimits[0] !== dataXLimits[1]
+  ) {
     setXLimits(dataXLimits);
   }
 
@@ -713,7 +703,10 @@ const PulseSequencePlot = function SequencePlot({
         onInitialized={(figure) => setFigureConfig(figure.config)}
         onUpdate={(figure) => {
           setFigureConfig(figure.config);
-          setXLimits(figure.layout.xaxis.range);
+          const x = figure.layout.xaxis.range;
+          if (x[0] !== 0 || x[1] !== 0) {
+            setXLimits(figure.layout.xaxis.range);
+          }
         }}
         onClickAnnotation={onClickAnnotation}
       />

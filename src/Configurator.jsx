@@ -1,10 +1,27 @@
 import { useState, useEffect } from "react";
 import { Container, Form, Button } from "react-bootstrap";
-import { setValidatedProxy } from "./ConnectionState";
+import {
+  setValidatedProxy,
+  libraryPortDefault,
+  libraryAddressDefault,
+} from "./ConnectionState";
 
 function Configurator() {
   const [validated, setValidated] = useState(false);
   setValidatedProxy.func = setValidated;
+
+  const [libraryAddress, setLibraryAddress] = useState(() => {
+    return localStorage.getItem("libraryAddress") || libraryAddressDefault;
+  });
+  useEffect(() => {
+    localStorage.setItem("libraryAddress", libraryAddress);
+  }, [libraryAddress]);
+  const [libraryPort, setLibraryPort] = useState(() => {
+    return localStorage.getItem("libraryPort") || libraryPortDefault;
+  });
+  useEffect(() => {
+    localStorage.setItem("libraryPort", libraryPort);
+  }, [libraryPort]);
 
   return (
     <Container>
@@ -13,21 +30,21 @@ function Configurator() {
         noValidate
         validated={validated}
         onSubmit={(e) => {
-          localStorage.setItem("libraryAddress", e.target[0].value);
-          localStorage.setItem("libraryPort", e.target[1].value);
+          setLibraryAddress(e.target[0].value);
+          setLibraryPort(e.target[1].value);
         }}
       >
         <Form.Group className="mb-3">
           <Form.Label>Experiment library URL or IP address</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={localStorage.getItem("libraryAddress")}
+            defaultValue={libraryAddress}
             isInvalid={!validated}
           />
           <Form.Label>Experiment library port</Form.Label>
           <Form.Control
             type="text"
-            defaultValue={localStorage.getItem("libraryPort")}
+            defaultValue={libraryPort}
             isInvalid={!validated}
           />
         </Form.Group>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import EnablingGroupOff from "./OffCanvas";
 import { PulseSequencePlot } from "./PulseSequencePlot";
@@ -12,7 +12,7 @@ const SequenceVisualiser = function SequenceVisualiser({
   sequenceConfig,
   setSequenceConfig,
 }) {
-  const [channelEnabled, setChannelEnabledState] = useState(() => {
+  const [channelEnabled, setChannelEnabled] = useState(() => {
     let initObject;
     try {
       initObject = JSON.parse(localStorage.getItem("channelEnabled"));
@@ -24,15 +24,13 @@ const SequenceVisualiser = function SequenceVisualiser({
         init[k] = false;
         return init;
       }, {});
-      localStorage.setItem("channelEnabled", JSON.stringify(initObject));
     }
     return initObject;
   });
 
-  const setChannelEnabled = (channelEnabled) => {
+  useEffect(() => {
     localStorage.setItem("channelEnabled", JSON.stringify(channelEnabled));
-    setChannelEnabledState(channelEnabled);
-  };
+  }, [channelEnabled]);
 
   const channelEnabledKeys = Object.keys(channelEnabled);
   const channelDescKeys = Object.keys(channelDescription);

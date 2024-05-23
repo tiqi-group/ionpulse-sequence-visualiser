@@ -4,5 +4,12 @@ function setConnectionState(state) {
     setValidatedProxy.func(state);
   }
 }
+const libraryAddressDefault = "localhost";
+const libraryPortDefault = "8003";
 
-export { setConnectionState, setValidatedProxy };
+export {
+  setConnectionState,
+  setValidatedProxy,
+  libraryAddressDefault,
+  libraryPortDefault,
+};

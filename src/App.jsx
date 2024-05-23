@@ -4,7 +4,11 @@ import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
-import { setConnectionState } from "./ConnectionState";
+import {
+  setConnectionState,
+  libraryAddressDefault,
+  libraryPortDefault,
+} from "./ConnectionState";
 
 import { io } from "socket.io-client";
 
@@ -71,15 +75,12 @@ function App() {
     setChannelDescription(newDescription);
   }
 
-  if (localStorage.getItem("libraryAddress") == null) {
-    localStorage.setItem("libraryAddress", "localhost");
-  }
-  if (localStorage.getItem("libraryPort") == null) {
-    localStorage.setItem("libraryPort", "8003");
-  }
-
   useEffect(() => {
-    const url = `${localStorage.getItem("libraryAddress")}:${localStorage.getItem("libraryPort")}`;
+    const libraryAddress =
+      localStorage.getItem("libraryAddress") || libraryAddressDefault;
+    const libraryPort =
+      localStorage.getItem("libraryPort") || libraryPortDefault;
+    const url = `${libraryAddress}:${libraryPort}`;
     const hardware_url = `http://${url}/Hardware`;
 
     const socket = io(`ws://${url}`, {
