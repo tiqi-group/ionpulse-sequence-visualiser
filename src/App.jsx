@@ -6,6 +6,7 @@ import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 
 import { io } from "socket.io-client";
+import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
@@ -81,14 +82,18 @@ function App() {
     localStorage.setItem("libraryPort", library.port);
   }, [library]);
 
-  const navigate = useNavigate();
+  const [connectionStatus, setConnectionStatus] = useState(
+    ConnectionStatus.connecting,
+  );
 
+  const navigate = useNavigate();
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
     const hardware_url = `http://${url}/Hardware`;
 
     const socket = io(`ws://${url}`, {
       path: "/ws/socket.io/",
+      autoConnect: false,
     });
 
     function updateIonpulseSequence(value) {
@@ -99,8 +104,12 @@ function App() {
     }
 
     let isConnectionUp = true;
+    setConnectionStatus(ConnectionStatus.connecting);
+    const controller = new AbortController();
     const fetchData = async () => {
-      let promise = fetch(hardware_url + "/description")
+      let promise = fetch(hardware_url + "/description", {
+        signal: controller.signal,
+      })
         .then((response) => {
           if (response.ok) {
             response.json().then((data) => {
@@ -108,15 +117,19 @@ function App() {
                 updateChannelDescription(JSON.parse(data));
               }
             });
+            setConnectionStatus(ConnectionStatus.connected);
           } else {
             isConnectionUp = false;
-            navigate("/config");
+            setConnectionStatus(ConnectionStatus.failed);
           }
         })
-        .catch((response) => {
+        .catch((exception) => {
+          if (exception instanceof TypeError) {
+            setConnectionStatus(ConnectionStatus.failed);
+          }
           isConnectionUp = false;
         });
-      fetch(hardware_url + "/sequence")
+      fetch(hardware_url + "/sequence", { signal: controller.signal })
         .then((response) => response.json())
         .then((data) => {
           if (isConnectionUp) {
@@ -125,12 +138,12 @@ function App() {
         })
         .catch((response) => {
           isConnectionUp = false;
-          navigate("/config");
         });
 
       await promise;
 
       if (isConnectionUp) {
+        socket.connect();
         socket.on("notify", updateIonpulseSequence);
       }
     };
@@ -139,6 +152,7 @@ function App() {
 
     return () => {
       isConnectionUp = false;
+      controller.abort();
       socket.off("notify", updateIonpulseSequence);
     };
   }, [library]);
@@ -163,7 +177,13 @@ function App() {
         <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
         <Route
           path="/config"
-          element={<Configurator library={library} setLibrary={setLibrary} />}
+          element={
+            <Configurator
+              library={library}
+              setLibrary={setLibrary}
+              connectionStatus={connectionStatus}
+            />
+          }
         />
       </Routes>
     </>
