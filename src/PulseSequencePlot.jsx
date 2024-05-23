@@ -1,7 +1,9 @@
-import Plot from "react-plotly.js";
 import { useState, useEffect } from "react";
 import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
 import { ToggleButton, Form, Accordion } from "react-bootstrap";
+import Plotly from "plotly.js-basic-dist-min";
+import createPlotlyComponent from "react-plotly.js/factory";
+const Plot = createPlotlyComponent(Plotly);
 
 let TTL_yaxis_params = {
   range: [0, 1.2],
@@ -714,4 +716,4 @@ const PulseSequencePlot = function SequencePlot({
   );
 };
 
-export { PulseSequencePlot };
+export default PulseSequencePlot;

@@ -15,7 +15,7 @@ For example, running the CoolDet from the Cryo setup looks like this:
   - Also see https://nodejs.org/en/download
 
 - Setup the environment with `npm install` in the repo
-- `npm build` to build the static content
+- `npm run build` to build the static content
 - `npm run serve` to start a webserver that exposes the library visualiser.
   By default, you can access it via
 
@@ -81,7 +81,7 @@ Use the development server instead of serving the static content by running
 npm start
 ```
 
-This will automatically build and update the visualiser. `npm build` and `npm run serve` are no necessary in that case.
+This will automatically build and update the visualiser. `npm run build` and `npm run serve` are not necessary in that case.
 
 Once you have installed the visualiser, a pre-commit hook is added that uses `prettier` to check the code formatting before committing.
 If you get an error from the pre-commit hook, run `npm run prettier`

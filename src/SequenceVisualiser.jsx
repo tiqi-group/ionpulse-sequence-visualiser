@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { lazy, Suspense } from "react";
 
 import EnablingGroupOff from "./OffCanvas";
-import { PulseSequencePlot } from "./PulseSequencePlot";
-import { SequenceBlockPlot } from "./SequenceBlockPlot";
-import { Container, Row, Col } from "react-bootstrap";
+import { Row, Col, Spinner } from "react-bootstrap";
+
+const PulseSequencePlot = lazy(() => import("./PulseSequencePlot"));
+const SequenceBlockPlot = lazy(() => import("./SequenceBlockPlot"));
 
 const SequenceVisualiser = function SequenceVisualiser({
   channelDescription,
@@ -137,25 +139,29 @@ const SequenceVisualiser = function SequenceVisualiser({
       <Row>
         <Col>
           <h2>Pulse sequence plot</h2>
-          <PulseSequencePlot
-            channelDescription={channelDescription}
-            channelEnabled={channelEnabled}
-            sequenceData={pulseSequenceData}
-            sequenceBlockData={sequenceBlockData}
-          />
+          <Suspense fallback={<Spinner />}>
+            <PulseSequencePlot
+              channelDescription={channelDescription}
+              channelEnabled={channelEnabled}
+              sequenceData={pulseSequenceData}
+              sequenceBlockData={sequenceBlockData}
+            />
+          </Suspense>
         </Col>
         <Col>
           <h2>Sequence block plot</h2>
-          <SequenceBlockPlot
-            channelDescription={channelDescription}
-            channelEnabled={channelEnabled}
-            sequenceBlockData={sequenceBlockData}
-            timeDomain={[xDomains[0], xDomains.at(-1)]}
-            plotWidth={totalWidth}
-            margin={{ t: 100, b: 40, l: 100, r: 0 }}
-            sequenceConfig={sequenceConfig}
-            setSequenceConfig={setSequenceConfig}
-          />
+          <Suspense fallback={<Spinner />}>
+            <SequenceBlockPlot
+              channelDescription={channelDescription}
+              channelEnabled={channelEnabled}
+              sequenceBlockData={sequenceBlockData}
+              timeDomain={[xDomains[0], xDomains.at(-1)]}
+              plotWidth={totalWidth}
+              margin={{ t: 100, b: 40, l: 100, r: 0 }}
+              sequenceConfig={sequenceConfig}
+              setSequenceConfig={setSequenceConfig}
+            />
+          </Suspense>
         </Col>
       </Row>
     </div>

@@ -30,7 +30,7 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
         <Modal.Header>
           <Modal.Title>
             {connectionStatus === ConnectionStatus.failed ? (
-              <span class="text-danger">Failed to connect to library</span>
+              <span className="text-danger">Failed to connect to library</span>
             ) : (
               "Connecting to library"
             )}
@@ -43,7 +43,7 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
               <span className="visually-hidden">Loading...</span>
             </Spinner>
           ) : (
-            <span class="text-danger">Failed</span>
+            <span className="text-danger">Failed</span>
           )}
         </Modal.Body>
 

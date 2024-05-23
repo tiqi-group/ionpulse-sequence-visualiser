@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import NavBar from "./Header";
-import { Link, Routes, Route, useNavigate } from "react-router-dom";
+import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
@@ -86,7 +86,6 @@ function App() {
     ConnectionStatus.connecting,
   );
 
-  const navigate = useNavigate();
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
     const hardware_url = `http://${url}/Hardware`;

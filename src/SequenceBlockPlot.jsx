@@ -1,4 +1,3 @@
-// import Plot from "react-plotly.js";
 import * as Plot from "@observablehq/plot";
 import { useRef, useEffect } from "react";
 import { getNumberOfEnabledChannels, RF_HEIGHT } from "./PlotHelpers";
@@ -303,4 +302,4 @@ function on(mark, listeners = {}) {
   return mark;
 }
 
-export { SequenceBlockPlot };
+export default SequenceBlockPlot;
