@@ -86,7 +86,7 @@ const axisAnnotationDefault = {
   yanchor: "middle",
   xref: "paper",
   yref: "paper",
-  x: -0.07,
+  x: -70,
   showarrow: false,
   // textangle: -90,
   captureevents: false,
@@ -144,7 +144,7 @@ function createLayout(
   const totalHeight = totalTTLHeight + totalRFHeight;
 
   let the_layout = {
-    width: 960 + margin.l + margin.r,
+    width: window.innerWidth - 100,
     height: totalHeight + margin.t + margin.b,
     margin: {
       ...margin,
@@ -441,9 +441,10 @@ const PulseSequencePlot = function SequencePlot({
         y: annotation_position,
         text: channelDescription[channel].name,
         textangle: isAnnotation90 ? -90 : 0,
-        x: isAnnotation90
-          ? axisAnnotationDefault["x"]
-          : axisAnnotationDefault["x"] - axisPad / 100,
+        x:
+          (isAnnotation90
+            ? axisAnnotationDefault["x"]
+            : axisAnnotationDefault["x"] - axisPad) / layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -527,9 +528,10 @@ const PulseSequencePlot = function SequencePlot({
         text: channelDescription[channel].name,
         captureevents: true,
         textangle: isAnnotation90 ? -90 : 0,
-        x: isAnnotation90
-          ? axisAnnotationDefault["x"]
-          : axisAnnotationDefault["x"] - 0.03,
+        x:
+          (isAnnotation90
+            ? axisAnnotationDefault["x"]
+            : axisAnnotationDefault["x"] - axisPad) / layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
