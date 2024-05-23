@@ -59,6 +59,7 @@ class SequenceParser {
       });
 
       settings["calls"] = [];
+      settings["callIndex"] = 0;
       settings["ch_mask"] = entry["ch_mask"];
       settings["type"] = entry["type"];
       settings["iterations"] = entry["iterations"];
@@ -85,6 +86,9 @@ class SequenceParser {
       for (const key of this.RF_PROPERTIES) {
         data[key] = [0];
       }
+      for (const settings of this.#sequenceBlockData) {
+        settings["callIndex"] = 0;
+      }
       let loopIteration = 0;
       const channelKey = getChannelKey(ChannelSequenceType.rf, rf_idx);
       plotData[channelKey] = this.getDataForChannel(
@@ -108,6 +112,9 @@ class SequenceParser {
         names: [["start"], []],
         timeDomain: [0],
       };
+      for (const settings of this.#sequenceBlockData) {
+        settings["callIndex"] = 0;
+      }
       let loopIteration = 0;
       const name = getChannelKey(ChannelSequenceType.dio, i);
       plotData[name] = this.getDataForChannel(
@@ -189,6 +196,7 @@ class SequenceParser {
             startTime: data["timeDomain"].at(-1),
             depth: depth,
             name: iterationName,
+            data: {},
           });
           if (depth > this.#mainSequenceBlockData["maxDepth"]) {
             this.#mainSequenceBlockData["maxDepth"] = depth;
@@ -245,19 +253,19 @@ class SequenceParser {
         // If it's even and not record or if it's odd and record
         data["timeDomain"].push(data["timeDomain"].at(-1));
       }
+
       let dataLocal = data;
+      const channelKey = getChannelKey(channelType, channelIdx);
+      const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       if (
         this.#sequenceConfig[idx]["display"] == "minimized" &&
-        i > 0 &&
-        this.#sequenceBlockData[idx]["calls"].length > 1
+        (i > 0 || callIndex > 0)
       ) {
-        const channelKey = getChannelKey(channelType, channelIdx);
-        if (
-          !Object.hasOwn(this.#sequenceBlockData[idx]["calls"].at(-1), "data")
-        ) {
-          this.#sequenceBlockData[idx]["calls"].at(-1)["data"] = {};
-        }
-        this.#sequenceBlockData[idx]["calls"].at(-1)["data"][channelKey] =
+        console.assert(
+          callIndex < this.#sequenceBlockData[idx]["calls"].length,
+          `callIndex ${callIndex} too large for calls array with length ${this.#sequenceBlockData[idx]["calls"].length}`,
+        );
+        this.#sequenceBlockData[idx]["calls"][callIndex]["data"][channelKey] =
           Object.keys(data).reduce((lastData, dataKey) => {
             if (dataKey === "name") {
               lastData[dataKey] = data[dataKey].slice(-2);
@@ -267,8 +275,9 @@ class SequenceParser {
             return lastData;
           }, {});
         dataLocal =
-          this.#sequenceBlockData[idx]["calls"].at(-1)["data"][channelKey];
+          this.#sequenceBlockData[idx]["calls"][callIndex]["data"][channelKey];
       }
+
       for (let event of channelSequence) {
         if (typeof event === "object") {
           event = event[0];
@@ -300,6 +309,7 @@ class SequenceParser {
       }
       if (iterationName.length > 0) data["names"].at(-1).pop();
       storeTime("endTime");
+      this.#sequenceBlockData[idx]["callIndex"]++;
     }
     return data;
   }

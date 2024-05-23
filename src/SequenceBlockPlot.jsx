@@ -38,7 +38,7 @@ const SequenceBlockPlot = function ({
   const totalChannels = nChannels["RF"] + hasDigitalIo;
 
   const depthYShrink = 1 / 2 / sequenceBlockData.at(-1)["maxDepth"];
-  const depthXShrink = 2;
+  const depthXShrink = 1;
   const xPad = 1;
   const yPad = 0.02;
 

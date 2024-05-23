@@ -30,6 +30,7 @@ const RF_yaxis_params = {
 const RF_yaxis_ranges = {
   freq: [0, 500],
   phase: [-200, 200],
+  amp: [0, 100],
   sample: [-120, 120],
 };
 
@@ -593,6 +594,7 @@ const PulseSequencePlot = function SequencePlot({
       }
 
       const yOvershoot = 0.01;
+      const xPad = 1;
 
       for (const yDataPair of yDataPairs) {
         const y0 =
@@ -603,9 +605,9 @@ const PulseSequencePlot = function SequencePlot({
           type: "line",
           xref: "x",
           yref: "paper",
-          x0: sequence["calls"][0]["startTime"],
+          x0: sequence["calls"][0]["startTime"] - xPad,
           y0: y0,
-          x1: sequence["calls"][0]["startTime"],
+          x1: sequence["calls"][0]["startTime"] - xPad,
           y1: y1,
           opacity: 0.7,
           line: {
@@ -617,9 +619,9 @@ const PulseSequencePlot = function SequencePlot({
           type: "line",
           xref: "x",
           yref: "paper",
-          x0: sequence["calls"][0]["endTime"],
+          x0: sequence["calls"][0]["endTime"] + xPad,
           y0: y0,
-          x1: sequence["calls"][0]["endTime"],
+          x1: sequence["calls"][0]["endTime"] + xPad,
           y1: y1,
           opacity: 0.7,
           line: {
