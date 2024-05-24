@@ -86,6 +86,8 @@ function App() {
     ConnectionStatus.connecting,
   );
 
+  const [connectionErrMsg, setConnectionErrMsg] = useState("");
+
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
     const hardware_url = `http://${url}/Hardware`;
@@ -120,11 +122,16 @@ function App() {
           } else {
             isConnectionUp = false;
             setConnectionStatus(ConnectionStatus.failed);
+            setConnectionErrMsg(
+              "" + response.status + " " + response.statusText,
+            );
+            console.log(response);
           }
         })
         .catch((exception) => {
           if (exception instanceof TypeError) {
             setConnectionStatus(ConnectionStatus.failed);
+            setConnectionErrMsg(exception.message);
           }
           isConnectionUp = false;
         });
@@ -167,6 +174,7 @@ function App() {
               channelDescription={channelDescription}
               ionpulseSequence={ionpulseSequence}
               connectionStatus={connectionStatus}
+              connectionErrMsg={connectionErrMsg}
             />
           }
         />

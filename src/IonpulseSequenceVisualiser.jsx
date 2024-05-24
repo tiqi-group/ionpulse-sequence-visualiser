@@ -3,13 +3,14 @@ import { SequenceVisualiser } from "./SequenceVisualiser";
 
 import { SequenceParser } from "./SequenceParser.js";
 import { ConnectionStatus } from "./ConnectionStatus";
-import { Modal, Spinner, Button, Badge } from "react-bootstrap";
+import { Modal, Spinner, Button } from "react-bootstrap";
 import { useNavigate } from "react-router";
 
 const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   channelDescription,
   ionpulseSequence,
   connectionStatus,
+  connectionErrMsg,
 }) {
   const [sequenceConfig, setSequenceConfig] = useImmer({});
 
@@ -43,7 +44,7 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
               <span className="visually-hidden">Loading...</span>
             </Spinner>
           ) : (
-            <span className="text-danger">Failed</span>
+            <span>{connectionErrMsg}</span>
           )}
         </Modal.Body>
 
