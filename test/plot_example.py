@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from typing import Any, Dict, List, Tuple
+from ionpulse_sequence_generator.utils import logger, DebugLevels
 from numpy.typing import NDArray
 from numpy import array, log2, binary_repr
 import json
@@ -213,6 +214,9 @@ if __name__ == "__main__":
     parser.add_argument("--sbcloops", help="Number of SBC loops", default=5)
     args = parser.parse_args()
 
+    logger.log_level = DebugLevels.DEBUG
+    logger.stdout_level = DebugLevels.WARNING
+
     channel_map = {
             "397": 6,
             "866": 7,
@@ -260,14 +264,18 @@ if __name__ == "__main__":
     _seq += RFWait.fromvalues("EndWait", 0, 1.3)
     _seq.sync()
 
-    main_seq = LinearSequence(
-            "main",
-            ChannelMask(rf=(1 << 17) - 1, digital_io=True, readout=True, qubit=0x7),
-            auto_channel_mask=False
-            )
-    main_seq += _seq
-    main_seq += RFWait.fromvalues("TotalTime", 16, 100.)
-    main_seq.sync()
+    if False:
+        main_seq = LinearSequence(
+                "main",
+                ChannelMask(rf=(1 << 17) - 1, digital_io=True, readout=True, qubit=0x7),
+                auto_channel_mask=False
+                )
+        main_seq += _seq
+        main_seq += RFWait.fromvalues("TotalTime", 16, 100.)
+        main_seq.sync()
+    else:
+        main_seq = _seq
+        main_seq.name = "main"
 
     with open("ionpulse_seq_plot.json", "w") as f:
         json.dump(generate_simplified_json(main_seq), f)
