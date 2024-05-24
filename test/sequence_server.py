@@ -80,6 +80,8 @@ if __name__ == "__main__":
         d = dict()
         d["RFs"] = dict()
         for i in range(n_rfs):
+            if i not in channel_index_to_name:
+                channel_index_to_name[i] = f"RF {i}"
             d["RFs"][f"RF{i}"] = {
                     "name": channel_index_to_name[i],
                     "type": "single pass",

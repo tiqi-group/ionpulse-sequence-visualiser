@@ -52,11 +52,17 @@ class SequenceParser {
       const name = this.hasNames ? stripIdxFromName(entry["name"]) : i;
       settings["name"] = name;
 
-      this.#sequenceConfig.push({
-        display: "full",
-        paths: [],
-        ...externalConfig[name],
-      });
+      if (Object.hasOwn(externalConfig, name)) {
+        this.#sequenceConfig.push({
+          display: externalConfig[name]["display"] || "full",
+          paths: (externalConfig[name]["paths"] || []).slice(),
+        });
+      } else {
+        this.#sequenceConfig.push({
+          display: "full",
+          paths: [],
+        });
+      }
 
       settings["calls"] = [];
       settings["callIndex"] = 0;
@@ -157,24 +163,33 @@ class SequenceParser {
     if (isFork) {
       if (
         this.#sequenceConfig[idx]["paths"].length <=
-        this.#sequenceBlockData[idx]["calls"].length
+        this.#sequenceBlockData[idx]["callIndex"]
       ) {
         this.#sequenceConfig[idx]["paths"].push(0);
       }
-      channelSequence = [
-        seq["paths"][
-          this.#sequenceConfig[idx]["paths"][
-            this.#sequenceBlockData[idx]["calls"].length
-          ]
-        ],
-      ];
-    } else if (
-      channelType === ChannelSequenceType.rf ||
-      channelType === ChannelSequenceType.qubit_sequences
-    ) {
-      channelSequence = seq[channelType][channelIdx];
+      const pathIdx =
+        this.#sequenceConfig[idx]["paths"][
+          this.#sequenceBlockData[idx]["callIndex"]
+        ];
+      if (
+        channelType === ChannelSequenceType.rf ||
+        channelType === ChannelSequenceType.qubit_sequences
+      ) {
+        const numPaths = seq[channelType][channelIdx].length;
+        channelSequence = [seq[channelType][channelIdx][pathIdx % numPaths]];
+      } else {
+        const numPaths = seq[channelType].length;
+        channelSequence = [seq[channelType][pathIdx % numPaths]];
+      }
     } else {
-      channelSequence = seq[channelType];
+      if (
+        channelType === ChannelSequenceType.rf ||
+        channelType === ChannelSequenceType.qubit_sequences
+      ) {
+        channelSequence = seq[channelType][channelIdx];
+      } else {
+        channelSequence = seq[channelType];
+      }
     }
     let baseName = "";
     if (this.hasNames) {
@@ -246,15 +261,12 @@ class SequenceParser {
 
     const lastDataLength = data.time.length;
     for (let i = 0; i < iterations; i++) {
+      const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       let iterationName = baseName;
       if (isLoop) iterationName += "[" + i + "]";
       if (isFork)
         iterationName +=
-          "{" +
-          this.#sequenceConfig[idx]["paths"][
-            this.#sequenceBlockData[idx]["calls"].length - 1
-          ] +
-          "}";
+          "{" + this.#sequenceConfig[idx]["paths"][callIndex] + "}";
       if (iterationName.length > 0) data["names"].at(-1).push(iterationName);
       storeTime("startTime", iterationName);
       const recordEventsLocal =
@@ -266,7 +278,6 @@ class SequenceParser {
 
       let dataLocal = data;
       const channelKey = getChannelKey(channelType, channelIdx);
-      const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       if (
         this.#sequenceConfig[idx]["display"] == "minimized" &&
         (i > 0 || callIndex > 0)

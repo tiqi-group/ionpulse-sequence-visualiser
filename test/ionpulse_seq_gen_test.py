@@ -318,7 +318,10 @@ if __name__ == "__main__":
         name="sequence_description",
         value="Test Sequence for Ionpulse Sequence Generator",
     )
-
+    header.add_field(
+            name="channel_map",
+            value= channel_map
+            )
     header.shot_channel_names = ["Signal", "Background"]
     header.shot_channel_plot_index = [0, 0]
     header.readout_channel_names = [

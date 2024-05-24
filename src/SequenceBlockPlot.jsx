@@ -21,6 +21,11 @@ const typeToColor = {
     "color-mix(in srgb, var(--bs-red) 40%, white)",
     "var(--bs-gray-300)",
   ],
+  Path: [
+    "color-mix(in srgb, var(--bs-red) 70%, white)",
+    "color-mix(in srgb, var(--bs-red) 40%, white)",
+    "var(--bs-gray-300)",
+  ],
 };
 
 const SequenceBlockPlot = function ({
@@ -151,15 +156,24 @@ const SequenceBlockPlot = function ({
               },
               click: function (event, { mark }) {
                 setSequenceConfig((cfg) => {
-                  if (Object.hasOwn(cfg, sequence["name"])) {
-                    cfg[sequence["name"]]["display"] =
-                      cfg[sequence["name"]]["display"] === "full"
-                        ? "minimized"
-                        : cfg[sequence["name"]]["display"] === "minimized"
-                          ? "hide"
-                          : "full";
+                  if (sequence["type"] === "Fork") {
+                    cfg[sequence["name"]] = {
+                      paths: [0],
+                      ...cfg[sequence["name"]],
+                    };
+                    cfg[sequence["name"]]["paths"][0]++;
+                    cfg[sequence["name"]]["display"] = "full";
                   } else {
-                    cfg[sequence["name"]] = { display: "minimized" };
+                    if (Object.hasOwn(cfg, sequence["name"])) {
+                      cfg[sequence["name"]]["display"] =
+                        cfg[sequence["name"]]["display"] === "full"
+                          ? "minimized"
+                          : cfg[sequence["name"]]["display"] === "minimized"
+                            ? "hide"
+                            : "full";
+                    } else {
+                      cfg[sequence["name"]] = { display: "minimized" };
+                    }
                   }
                   return cfg;
                 });
