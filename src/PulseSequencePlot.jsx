@@ -293,17 +293,15 @@ const data_templates = {
 };
 
 const wavelengthColours = {
-  397: "blue",
-  729: "red",
-  854: "rgb(70%,0,0)",
-  866: "rgb(60%,0,0)",
+  397: "rgba(0%,0%,100%,1)",
+  729: "rgba(100%,0%,0%,1)",
+  854: "rgba(70%,0%,0%, 1)",
+  866: "rgba(60%,0%,0%, 1)",
 };
-const ampFillColour = {
-  397: "rgba(0%,0%,100%,80%)",
-  729: "rgb(100%,20%,20%)",
-  854: "rgb(80%,20%,20%)",
-  866: "rgb(75%,20%,20%)",
-};
+
+function setOpacity(cString, opacity) {
+  return cString.replace("1)", "" + opacity + ")");
+}
 
 const PulseSequencePlot = function SequencePlot({
   channelDescription,
@@ -480,7 +478,8 @@ const PulseSequencePlot = function SequencePlot({
           }
         }
       }
-      object_to_add.name = channelDescription[channel].name;
+      object_to_add.name =
+        channelDescription[channel].name + " " + channelYDataType[channel];
       object_to_add.yaxis = "y" + index;
 
       for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
@@ -506,10 +505,12 @@ const PulseSequencePlot = function SequencePlot({
         amp_to_add.y = value.amp;
         amp_to_add.text = compileEventName(value.names);
         amp_to_add.yaxis = "y" + index;
+        amp_to_add.name = channelDescription[channel].name + " amp";
 
         for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
           if (channelDescription[channel].name.includes(wavelength)) {
             amp_to_add["marker"]["color"] = colour;
+            amp_to_add["fillcolor"] = setOpacity(colour, 0.5);
           }
         }
 
@@ -594,7 +595,7 @@ const PulseSequencePlot = function SequencePlot({
       }
 
       const yOvershoot = 0.01;
-      const xPad = 1;
+      const xPad = 0;
 
       for (const yDataPair of yDataPairs) {
         const y0 =
@@ -652,6 +653,95 @@ const PulseSequencePlot = function SequencePlot({
   layout_to_use.annotations = layout_to_use.annotations.concat(
     loopData["annotations"],
   );
+
+  sequenceBlockData.forEach((sequence) => {
+    if (sequence["type"] === "Loop" && sequence["display"] === "minimized") {
+      for (const call of sequence["calls"]) {
+        for (const [channel, value] of Object.entries(call["data"])) {
+          if (
+            channelDescription[channel].group === "RF" &&
+            channelEnabled[channel]
+          ) {
+            const index = channelToAxisIdx[channel][0];
+            let object_to_add = structuredClone(
+              data_templates[channelYDataType[channel]],
+            );
+            const localData = {
+              ...value,
+              time: value.time.map((t) => {
+                return (
+                  t - call["startTime"] + sequence["calls"][0]["startTime"]
+                );
+              }),
+            };
+
+            if (channelYDataType[channel] === "sample") {
+              const waveform = expandToWaveform(localData);
+              object_to_add.x = waveform[0];
+              object_to_add.y = waveform[1];
+
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  object_to_add["marker"]["color"] = colour;
+                }
+              }
+            } else {
+              object_to_add.x = localData.time;
+              object_to_add.y = localData[channelYDataType[channel]];
+              object_to_add.text = compileEventName(value.names);
+
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  object_to_add["marker"]["color"] = colour;
+                }
+              }
+            }
+            object_to_add.name =
+              channelDescription[channel].name + channelYDataType[channel];
+            object_to_add.yaxis = "y" + index;
+
+            for (const [wavelength, colour] of Object.entries(
+              wavelengthColours,
+            )) {
+              if (channelDescription[channel].name.includes(wavelength)) {
+                object_to_add["marker"]["color"] = colour;
+              }
+            }
+
+            data.push(object_to_add);
+
+            if (channelYDataType[channel] !== "sample") {
+              const index = channelToAxisIdx[channel][1];
+              let amp_to_add = structuredClone(data_templates["amp"]);
+              amp_to_add.x = localData.time;
+              amp_to_add.y = localData.amp;
+              amp_to_add.text = compileEventName(value.names);
+              amp_to_add.yaxis = "y" + index;
+              amp_to_add.name = channelDescription[channel].name + " amp";
+
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  amp_to_add["marker"]["color"] = colour;
+                  amp_to_add["fillcolor"] = setOpacity(
+                    colour,
+                    0.5 / sequence["calls"].length,
+                  );
+                }
+              }
+
+              data.push(amp_to_add);
+            }
+          }
+        }
+      }
+    }
+  });
 
   return (
     <>

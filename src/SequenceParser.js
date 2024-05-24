@@ -76,6 +76,7 @@ class SequenceParser {
     for (let rf_idx of Object.keys(
       this.#main["Sequence"].at(-1)[ChannelSequenceType.rf],
     )) {
+      // Initialise per-channel data. Will end up in plotData[channelKey] later
       let data = {
         time: [0],
         names: [["start"], []],
@@ -176,8 +177,14 @@ class SequenceParser {
       channelSequence = seq[channelType];
     }
     let baseName = "";
-    if (!this.#sequenceBlockData[idx]["name"] !== "main") {
-      baseName = this.#sequenceBlockData[idx]["name"];
+    if (this.hasNames) {
+      if (this.#sequenceBlockData[idx]["name"] !== "main") {
+        baseName = this.#sequenceBlockData[idx]["name"];
+      }
+    } else {
+      if (idx < this.#main["Sequence"].length - 1) {
+        baseName = baseName + idx;
+      }
     }
     let isLoop = seq["type"] === "Loop";
     let iterations = isLoop // && this.#sequenceConfig[idx]["display"] === "full"
@@ -231,10 +238,13 @@ class SequenceParser {
             );
           })
         ) {
+          console.log(data);
           console.log(this.#sequenceBlockData[idx]);
         }
       }
     };
+
+    const lastDataLength = data.time.length;
     for (let i = 0; i < iterations; i++) {
       let iterationName = baseName;
       if (isLoop) iterationName += "[" + i + "]";
@@ -267,10 +277,15 @@ class SequenceParser {
         );
         this.#sequenceBlockData[idx]["calls"][callIndex]["data"][channelKey] =
           Object.keys(data).reduce((lastData, dataKey) => {
-            if (dataKey === "name") {
-              lastData[dataKey] = data[dataKey].slice(-2);
-            } else {
+            // if (dataKey === "names") {
+            // Do we need extra treatment? last 2 entries?
+            if (dataKey === "timeDomain") {
               lastData[dataKey] = data[dataKey].slice(-1);
+            } else {
+              lastData[dataKey] = data[dataKey].slice(
+                lastDataLength - 1,
+                lastDataLength,
+              );
             }
             return lastData;
           }, {});
@@ -377,7 +392,11 @@ class SequenceParser {
     );
 
     data["names"].push([...data["names"].at(-1)]);
-    data["names"].at(-2).push(stripIdxFromName(event["name"]));
+    if (this.hasNames) {
+      data["names"].at(-2).push(stripIdxFromName(event["name"]));
+    } else {
+      data["names"].at(-2).push("Event " + idx);
+    }
 
     switch (event["type"]) {
       case "RFEdge":
