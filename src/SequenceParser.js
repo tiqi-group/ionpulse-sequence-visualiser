@@ -488,7 +488,7 @@ function blackman(t) {
   );
 }
 
-const freqScaling = 0.005;
+const freqScaling = 0.002;
 
 function expandToWaveform(sequenceData) {
   // time is in units of us so sampling rate of 10 equal 10 MSPS

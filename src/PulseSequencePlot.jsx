@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
-import { ToggleButton, Form, Accordion } from "react-bootstrap";
+import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
 import Plotly from "plotly.js-basic-dist-min";
 import createPlotlyComponent from "react-plotly.js/factory";
 const Plot = createPlotlyComponent(Plotly);
@@ -20,7 +20,6 @@ const RF_yaxis_params = {
       size: 16,
       // color: "gray",
     },
-    standoff: 0,
   },
   tickfont: {
     size: 16,
@@ -30,7 +29,7 @@ const RF_yaxis_params = {
 const RF_yaxis_ranges = {
   freq: [0, 500],
   phase: [-200, 200],
-  amp: [0, 100],
+  amp: [0, 110],
   sample: [-120, 120],
 };
 
@@ -39,7 +38,6 @@ const RF_freq_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "f / MHz",
-    standoff: 4,
   },
   range: RF_yaxis_ranges["freq"],
   nticks: 3,
@@ -50,7 +48,6 @@ const RF_phase_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "p / °",
-    standoff: 0,
   },
   tickvals: [-180, 0, 180],
   range: RF_yaxis_ranges["phase"],
@@ -61,7 +58,6 @@ const RF_amp_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "a / %",
-    standoff: 4,
   },
   range: RF_yaxis_ranges["amp"],
   nticks: 3,
@@ -72,17 +68,23 @@ const RF_sample_yaxis_params = {
   title: {
     ...RF_yaxis_params["title"],
     text: "rf / %",
-    standoff: 0,
   },
   range: RF_yaxis_ranges["sample"],
   nticks: 3,
+};
+
+const rfYaxisParams = {
+  freq: RF_freq_yaxis_params,
+  phase: RF_phase_yaxis_params,
+  amp: RF_amp_yaxis_params,
+  sample: RF_sample_yaxis_params,
 };
 
 let xAxisParams = {
   rangemode: "nonnegative",
 };
 
-const axisAnnotationDefault = {
+const axisAnnotationDefaultBase = {
   xanchor: "right",
   yanchor: "middle",
   xref: "paper",
@@ -111,7 +113,7 @@ function compileEventName(eventNames) {
 }
 
 const margin = {
-  b: 40,
+  b: 50,
   l: 230,
   r: 0,
   t: 40,
@@ -124,6 +126,7 @@ function createLayout(
   rfAxisHeight,
   ttlAxisHeight,
   pad,
+  isPlotMode,
 ) {
   let numberRFAxes = 0;
   for (const key of enabledKeys["RF"]) {
@@ -158,9 +161,10 @@ function createLayout(
       title: {
         text: "time / μs",
         font: {
-          size: 20,
+          size: isPlotMode ? 20 : 20,
         },
-        standoff: 0,
+        // Always constrained to bottom margin
+        standoff: isPlotMode ? 100 : 40,
       },
       tickfont: {
         size: 18,
@@ -175,18 +179,17 @@ function createLayout(
   for (let i = 0; i < numberRFAxes; i++) {
     const channel = enabledKeys["RF"][i];
     channelToAxisIdx[channel] = [baseIdx + j];
-    if (channelYDataType[enabledKeys["RF"][i]] === "freq") {
-      the_layout["yaxis" + (baseIdx + j)] = {
-        ...RF_freq_yaxis_params,
-      };
-    } else if (channelYDataType[enabledKeys["RF"][i]] === "phase") {
-      the_layout["yaxis" + (baseIdx + j)] = {
-        ...RF_phase_yaxis_params,
-      };
+    const yDataType = channelYDataType[enabledKeys["RF"][i]] || "freq";
+    the_layout["yaxis" + (baseIdx + j)] = {
+      ...rfYaxisParams[yDataType],
+    };
+    const isFreq = yDataType === "freq";
+    if (isPlotMode) {
+      the_layout["yaxis" + (baseIdx + j)]["standoff"] = isFreq ? 10 : 5;
+      the_layout["yaxis" + (baseIdx + j)]["title"]["font"]["size"] = 18;
     } else {
-      the_layout["yaxis" + (baseIdx + j)] = {
-        ...RF_sample_yaxis_params,
-      };
+      the_layout["yaxis" + (baseIdx + j)]["standoff"] = isFreq ? 4 : 0;
+      the_layout["yaxis" + (baseIdx + j)]["title"]["font"]["size"] = 16;
     }
     the_layout["yaxis" + (baseIdx + j)].domain = [
       (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
@@ -194,9 +197,16 @@ function createLayout(
     ];
     the_layout["yaxis" + (baseIdx + j)].anchor = "x" + (baseIdx + j);
     j++;
-    if (channelYDataType[enabledKeys["RF"][i]] !== "sample") {
+    if (yDataType !== "sample") {
       channelToAxisIdx[channel].push(baseIdx + j);
       the_layout["yaxis" + (baseIdx + j)] = { ...RF_amp_yaxis_params };
+      if (isPlotMode) {
+        the_layout["yaxis" + (baseIdx + j)]["standoff"] = 10;
+        the_layout["yaxis" + (baseIdx + j)]["title"]["font"]["size"] = 18;
+      } else {
+        the_layout["yaxis" + (baseIdx + j)]["standoff"] = 5;
+        the_layout["yaxis" + (baseIdx + j)]["title"]["font"]["size"] = 16;
+      }
 
       the_layout["yaxis" + (baseIdx + j)].domain = [
         (totalRFHeight - j * (pad + rfAxisHeight) - rfAxisHeight) / totalHeight,
@@ -319,13 +329,13 @@ const PulseSequencePlot = function SequencePlot({
     }
     return init;
   });
-
   const [figureConfig, setFigureConfig] = useState({});
 
   const [individualRFHeight, setIndividualRFHeight] = useState(75);
   const [individualTTLHeight, setIndividualTTLHeight] = useState(45);
   const [axisPad, setAxisPad] = useState(10);
   const [isAnnotation90, setIsAnnotation90] = useState(true);
+  const [isPlotMode, setIsPlotMode] = useState(false);
 
   const channelYDataTypeKeys = Object.keys(channelYDataType);
   const channelDescKeys = Object.keys(channelDescription);
@@ -407,6 +417,7 @@ const PulseSequencePlot = function SequencePlot({
     individualRFHeight,
     individualTTLHeight,
     axisPad,
+    isPlotMode,
   );
   if (isAnnotation90) {
     layout_to_use["margin"]["l"] = margin["l"] - 120;
@@ -414,6 +425,13 @@ const PulseSequencePlot = function SequencePlot({
   layout_to_use.annotations = [];
   layout_to_use.shapes = [];
   layout_to_use.uirevision = "true";
+
+  const axisAnnotationDefault = {
+    ...axisAnnotationDefaultBase,
+    font: {
+      size: isPlotMode ? 20 : 18,
+    },
+  };
 
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
@@ -441,9 +459,9 @@ const PulseSequencePlot = function SequencePlot({
         text: channelDescription[channel].name,
         textangle: isAnnotation90 ? -90 : 0,
         x:
-          (isAnnotation90
-            ? axisAnnotationDefault["x"]
-            : axisAnnotationDefault["x"] - axisPad) / layout_to_use.width,
+          (axisAnnotationDefault["x"] +
+            (isAnnotation90 ? 0 : isPlotMode ? -50 : -15)) /
+          layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -531,9 +549,9 @@ const PulseSequencePlot = function SequencePlot({
         captureevents: true,
         textangle: isAnnotation90 ? -90 : 0,
         x:
-          (isAnnotation90
-            ? axisAnnotationDefault["x"]
-            : axisAnnotationDefault["x"] - axisPad) / layout_to_use.width,
+          (axisAnnotationDefault["x"] +
+            (isAnnotation90 ? 0 : isPlotMode ? -30 : -15)) /
+          layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
 
@@ -781,6 +799,7 @@ const PulseSequencePlot = function SequencePlot({
             />
             <ToggleButton
               id={"ButtonAnnotation90"}
+              className="m-1"
               type="checkbox"
               value="1"
               variant="outline-secondary"
@@ -789,6 +808,28 @@ const PulseSequencePlot = function SequencePlot({
             >
               Rotate Axes annotations
             </ToggleButton>
+            <ToggleButton
+              id={"ButtonPlotMode"}
+              className="m-1"
+              type="checkbox"
+              value="1"
+              variant="outline-secondary"
+              checked={isPlotMode}
+              onChange={() => setIsPlotMode(!isPlotMode)}
+            >
+              Plot Mode
+            </ToggleButton>
+            <Button
+              variant="primary"
+              className="m-1"
+              onClick={() => {
+                const plotText =
+                  document.getElementsByClassName("js-plotly-plot");
+                navigator.clipboard.writeText(plotText[0].firstChild.innerHTML);
+              }}
+            >
+              Copy Pulse sequence plot
+            </Button>
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>

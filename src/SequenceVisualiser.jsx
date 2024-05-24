@@ -127,7 +127,7 @@ const SequenceVisualiser = function SequenceVisualiser({
     return domains;
   }, []);
 
-  const totalWidth = 1000;
+  const totalWidth = window.innerWidth - 100;
 
   return (
     <div className="mx-3">
