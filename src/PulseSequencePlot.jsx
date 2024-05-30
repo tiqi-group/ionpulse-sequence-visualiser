@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
 import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
 import Plotly from "plotly.js-basic-dist-min";
@@ -393,26 +393,19 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
+  const lastDataXLimits = useRef(dataXLimits);
+
   const [xLimits, setXLimits] = useState(() => {
     return JSON.parse(sessionStorage.getItem("xLimits")) || dataXLimits;
   });
   useEffect(() => {
     sessionStorage.setItem("xLimits", JSON.stringify(xLimits));
   }, [xLimits]);
-  // Adjust whenever we are looking at an interval that is outside
-  // of the current data range
-  if (
-    xLimits[1] >= dataXLimits[1] &&
-    dataXLimits[1] !== xLimits[1] &&
-    dataXLimits[0] !== dataXLimits[1]
-  ) {
-    setXLimits(dataXLimits);
-  }
 
   let data = [];
   let [layout_to_use, channelToAxisIdx] = createLayout(
     enabledKeys,
-    xLimits,
+    xLimits.slice(),
     channelYDataType,
     individualRFHeight,
     individualTTLHeight,
@@ -468,7 +461,6 @@ const PulseSequencePlot = function SequencePlot({
       data.push(trace);
     }
   }
-  let channel_idx = 0;
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
       const index = channelToAxisIdx[channel][0];
@@ -508,7 +500,7 @@ const PulseSequencePlot = function SequencePlot({
 
       layout_to_use["xaxis" + index] = {
         ...xAxisParams,
-        range: xLimits,
+        range: xLimits.slice(),
       };
 
       let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
@@ -534,7 +526,7 @@ const PulseSequencePlot = function SequencePlot({
 
         layout_to_use["xaxis" + index] = {
           ...xAxisParams,
-          range: xLimits,
+          range: xLimits.slice(),
         };
         annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
         data.push(amp_to_add);
@@ -555,7 +547,7 @@ const PulseSequencePlot = function SequencePlot({
       };
       layout_to_use.annotations.push(annotation_to_add);
 
-      if (channel_idx % 2 == 1) {
+      if ((index / 2) % 2 >= 1) {
         let shape_to_add = {
           type: "rect",
           xref: "paper",
@@ -573,7 +565,6 @@ const PulseSequencePlot = function SequencePlot({
         };
         layout_to_use.shapes.push(shape_to_add);
       }
-      channel_idx++;
     }
   }
 
@@ -840,10 +831,25 @@ const PulseSequencePlot = function SequencePlot({
         onInitialized={(figure) => setFigureConfig(figure.config)}
         onUpdate={(figure) => {
           setFigureConfig(figure.config);
-          const x = figure.layout.xaxis.range;
-          if (x[0] !== 0 || x[1] !== 0) {
-            setXLimits(figure.layout.xaxis.range);
+          let x = figure.layout.xaxis.range;
+          // Adjust whenever we are looking at an interval that is outside
+          // of the current data range
+          if (
+            ((dataXLimits[1] !== lastDataXLimits.current[1] &&
+              x[1] > dataXLimits[1]) ||
+              (dataXLimits[0] !== lastDataXLimits.current[0] &&
+                x[0] < dataXLimits[0])) &&
+            dataXLimits[0] !== dataXLimits[1]
+          ) {
+            x = dataXLimits;
           }
+          if (
+            (x[0] !== 0 || x[1] !== 0) &&
+            (x[0] !== xLimits[0] || x[1] !== xLimits[1])
+          ) {
+            setXLimits(x);
+          }
+          lastDataXLimits.current = dataXLimits;
         }}
         onClickAnnotation={onClickAnnotation}
       />
