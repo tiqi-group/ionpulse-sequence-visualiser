@@ -12,7 +12,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 numpy = ">=1.24.2"
-msgpack = ">=1.0.5"
+msgpack = ">=1.0.3"
 ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "e176ee1", develop = true}
 
 [tool.poetry.group.dev.dependencies]

@@ -16,6 +16,7 @@ yarn-error.log*
 test_server.log
 test_json_generator.log
 ionpulse*.json
+*.svg
 
 __*
 .*
