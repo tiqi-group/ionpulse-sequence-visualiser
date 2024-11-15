@@ -279,29 +279,32 @@ class SequenceParser {
       let dataLocal = data;
       const channelKey = getChannelKey(channelType, channelIdx);
       if (
-        this.#sequenceConfig[idx]["display"] == "minimized" &&
+        (this.#sequenceConfig[idx]["display"] == "minimized" ||
+          this.#sequenceConfig[idx]["display"] == "contracted") &&
         (i > 0 || callIndex > 0)
       ) {
         console.assert(
           callIndex < this.#sequenceBlockData[idx]["calls"].length,
           `callIndex ${callIndex} too large for calls array with length ${this.#sequenceBlockData[idx]["calls"].length}`,
         );
+        dataLocal = Object.keys(data).reduce((lastData, dataKey) => {
+          if (dataKey === "timeDomain") {
+            lastData[dataKey] = data[dataKey].slice(-1);
+          } else {
+            lastData[dataKey] = data[dataKey].slice(
+              lastDataLength - 1,
+              lastDataLength,
+            );
+          }
+          return lastData;
+        }, {});
+        // Update the time of the carrier over events to the time of the current call
+        // as indicated by timeDomain
+        dataLocal["time"] = dataLocal["time"].map((t) => {
+          return t - dataLocal["time"][0] + dataLocal["timeDomain"][0];
+        });
         this.#sequenceBlockData[idx]["calls"][callIndex]["data"][channelKey] =
-          Object.keys(data).reduce((lastData, dataKey) => {
-            // if (dataKey === "names") {
-            // Do we need extra treatment? last 2 entries?
-            if (dataKey === "timeDomain") {
-              lastData[dataKey] = data[dataKey].slice(-1);
-            } else {
-              lastData[dataKey] = data[dataKey].slice(
-                lastDataLength - 1,
-                lastDataLength,
-              );
-            }
-            return lastData;
-          }, {});
-        dataLocal =
-          this.#sequenceBlockData[idx]["calls"][callIndex]["data"][channelKey];
+          dataLocal;
       }
 
       for (let event of channelSequence) {
@@ -329,7 +332,10 @@ class SequenceParser {
           );
         }
       }
-      if (dataLocal !== data) {
+      if (
+        dataLocal !== data &&
+        this.#sequenceConfig[idx]["display"] !== "contracted"
+      ) {
         data["timeDomain"][data["timeDomain"].length - 1] =
           dataLocal["timeDomain"].at(-1);
       }
@@ -439,7 +445,11 @@ class SequenceParser {
         );
         if (recordEvents) {
           for (let type of this.RF_PROPERTIES) {
-            data[type].push(data[type].at(-1));
+            if (type === "slope_time" && data["amp"].at(-1) !== 0) {
+              data[type].push(0);
+            } else {
+              data[type].push(data[type].at(-1));
+            }
           }
         }
         break;

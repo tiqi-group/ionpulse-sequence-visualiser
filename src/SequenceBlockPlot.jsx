@@ -140,7 +140,10 @@ const SequenceBlockPlot = function ({
                 !sequenceConfig[sequence["name"]] ||
                 sequenceConfig[sequence["name"]]["display"] === "full"
                   ? typeToColor[sequence["type"]][0]
-                  : sequenceConfig[sequence["name"]]["display"] === "minimized"
+                  : sequenceConfig[sequence["name"]]["display"] ===
+                        "minimized" ||
+                      sequenceConfig[sequence["name"]]["display"] ===
+                        "contracted"
                     ? typeToColor[sequence["type"]][1]
                     : typeToColor[sequence["type"]][2],
             }),
@@ -169,8 +172,10 @@ const SequenceBlockPlot = function ({
                         cfg[sequence["name"]]["display"] === "full"
                           ? "minimized"
                           : cfg[sequence["name"]]["display"] === "minimized"
-                            ? "hide"
-                            : "full";
+                            ? "contracted"
+                            : cfg[sequence["name"]]["display"] === "contracted"
+                              ? "hide"
+                              : "full";
                     } else {
                       cfg[sequence["name"]] = { display: "minimized" };
                     }

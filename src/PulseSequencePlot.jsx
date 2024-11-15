@@ -235,7 +235,7 @@ function createLayout(
     ];
     the_layout["yaxis" + axisIdx].anchor = "x" + axisIdx;
   }
-  return [the_layout, channelToAxisIdx];
+  return [the_layout, channelToAxisIdx, numberRFAxes];
 }
 
 function filter(object_to_filter, filter) {
@@ -403,7 +403,7 @@ const PulseSequencePlot = function SequencePlot({
   }, [xLimits]);
 
   let data = [];
-  let [layout_to_use, channelToAxisIdx] = createLayout(
+  let [layout_to_use, channelToAxisIdx, numberRFAxes] = createLayout(
     enabledKeys,
     xLimits.slice(),
     channelYDataType,
@@ -461,6 +461,9 @@ const PulseSequencePlot = function SequencePlot({
       data.push(trace);
     }
   }
+
+  let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
+
   for (const [channel, value] of Object.entries(sequenceData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
       const index = channelToAxisIdx[channel][0];
@@ -510,6 +513,7 @@ const PulseSequencePlot = function SequencePlot({
 
       if (channelYDataType[channel] !== "sample") {
         const index = channelToAxisIdx[channel][1];
+        axisGroupedWithPrevious[index] = true;
         let amp_to_add = structuredClone(data_templates["amp"]);
         amp_to_add.x = value.time;
         amp_to_add.y = value.amp;
@@ -546,25 +550,33 @@ const PulseSequencePlot = function SequencePlot({
           layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
+    }
+  }
 
-      if ((index / 2) % 2 >= 1) {
-        let shape_to_add = {
-          type: "rect",
-          xref: "paper",
-          yref: "paper",
-          x0: 0,
-          y0: annotation_position_1,
-          x1: 1,
-          y1: annotation_position_2,
-          fillcolor: "#d3d3d3",
-          opacity: 0.7,
-          line: {
-            width: 0,
-          },
-          layer: "below",
-        };
-        layout_to_use.shapes.push(shape_to_add);
-      }
+  let greyBackground = true;
+  for (let i = 0; i < numberRFAxes; i++) {
+    greyBackground ^= !axisGroupedWithPrevious[i];
+    if (greyBackground) {
+      const annotation_position_1 = axisGroupedWithPrevious[i]
+        ? layout_to_use["yaxis" + (i - 1)].domain[0]
+        : layout_to_use["yaxis" + i].domain[1];
+      const annotation_position_2 = layout_to_use["yaxis" + i].domain[0];
+      const shape_to_add = {
+        type: "rect",
+        xref: "paper",
+        yref: "paper",
+        x0: 0,
+        y0: annotation_position_1,
+        x1: 1,
+        y1: annotation_position_2,
+        fillcolor: "#d3d3d3",
+        opacity: 0.7,
+        line: {
+          width: 0,
+        },
+        layer: "below",
+      };
+      layout_to_use.shapes.push(shape_to_add);
     }
   }
 
@@ -572,7 +584,11 @@ const PulseSequencePlot = function SequencePlot({
 
   const loopData = sequenceBlockData.reduce(
     (loopData, sequence) => {
-      if (sequence["type"] !== "Loop" || sequence["display"] !== "minimized")
+      if (
+        sequence["type"] !== "Loop" ||
+        (sequence["display"] !== "minimized" &&
+          sequence["display"] !== "contracted")
+      )
         return loopData;
 
       // Create array of pairs with axis indices
@@ -664,7 +680,11 @@ const PulseSequencePlot = function SequencePlot({
   );
 
   sequenceBlockData.forEach((sequence) => {
-    if (sequence["type"] === "Loop" && sequence["display"] === "minimized") {
+    if (
+      sequence["type"] === "Loop" &&
+      (sequence["display"] === "minimized" ||
+        sequence["display"] === "contracted")
+    ) {
       for (const call of sequence["calls"]) {
         for (const [channel, value] of Object.entries(call["data"])) {
           if (
@@ -679,7 +699,8 @@ const PulseSequencePlot = function SequencePlot({
               ...value,
               time: value.time.map((t) => {
                 return (
-                  t - call["startTime"] + sequence["calls"][0]["startTime"]
+                  t - (call["startTime"] - sequence["calls"][0]["startTime"])
+                  // t
                 );
               }),
             };
