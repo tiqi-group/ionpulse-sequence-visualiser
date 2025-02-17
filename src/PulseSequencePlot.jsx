@@ -369,7 +369,39 @@ const PulseSequencePlot = function SequencePlot({
     setChannelYDataType(newChannelYDataType);
   }
 
-  sequenceData = filter(sequenceData, Object.keys(channelDescription));
+  const plotData = Object.fromEntries(
+    Object.entries(channelDescription).map(([key, desc]) => {
+      // TODO: Add support for multi hw channel operations (subtract/add etc.)
+      let channelData;
+      if (Object.hasOwn(desc, "sub_channel")) {
+        const type = desc["group"] === "TTL" ? "output" : "pmts";
+        let last = 0;
+        channelData = {
+          names: sequenceData[desc["hw_channels"][0]]["names"],
+          time: sequenceData[desc["hw_channels"][0]]["time"],
+          timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
+          values: sequenceData[desc["hw_channels"][0]][type].map(
+            ((last = 0),
+            (vals) => {
+              const mask =
+                (sequenceData[desc["hw_channels"][0]][type + "_mask"] &
+                  (1 << desc["sub_channel"])) !==
+                0;
+              const val = (vals & (1 << desc["sub_channel"])) !== 0;
+              console.assert(
+                !(val & !mask),
+                `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} but mask is ${mask}`,
+              );
+              return (last = (last & mask) | val);
+            }),
+          ),
+        };
+      } else {
+        channelData = sequenceData[desc["hw_channels"][0]];
+      }
+      return [key, channelData];
+    }),
+  );
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
       if (channelEnabled[key] == true) {
@@ -381,13 +413,13 @@ const PulseSequencePlot = function SequencePlot({
   );
 
   let dataXLimits = [0, 0];
-  for (const [channel, data] of Object.entries(sequenceData)) {
+  for (const [channel, data] of Object.entries(plotData)) {
     if (channelEnabled[channel]) {
       dataXLimits[1] = Math.max(dataXLimits[1], data["timeDomain"].at(-1));
     }
   }
   dataXLimits[0] = dataXLimits[1];
-  for (const [channel, data] of Object.entries(sequenceData)) {
+  for (const [channel, data] of Object.entries(plotData)) {
     if (channelEnabled[channel]) {
       dataXLimits[0] = Math.min(dataXLimits[0], data["timeDomain"].at(0));
     }
@@ -426,7 +458,7 @@ const PulseSequencePlot = function SequencePlot({
     },
   };
 
-  for (const [channel, value] of Object.entries(sequenceData)) {
+  for (const [channel, value] of Object.entries(plotData)) {
     if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
       const index = channelToAxisIdx[channel][0];
       let trace = {
@@ -464,7 +496,7 @@ const PulseSequencePlot = function SequencePlot({
 
   let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
 
-  for (const [channel, value] of Object.entries(sequenceData)) {
+  for (const [channel, value] of Object.entries(plotData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
       const index = channelToAxisIdx[channel][0];
       let object_to_add = structuredClone(

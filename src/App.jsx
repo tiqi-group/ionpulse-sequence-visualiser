@@ -17,16 +17,20 @@ function App() {
         type: "single_pass",
         central_frequency: 100,
         order: 1,
-        dds_channels: [i],
+        hw_channels: ["DDSHardware (" + i / 4 + "," + (i % 4) + ")"],
         group: "RF",
       };
       init["TTL" + i] = {
         name: "TTL" + i,
+        hw_channels: ["DIOHardware"],
+        sub_channel: i,
         group: "TTL",
       };
     }
     init["PMT0"] = {
       name: "PMT0",
+      hw_channels: ["DIOHardware"],
+      sub_channel: 0,
       group: "PMT",
     };
     return init;

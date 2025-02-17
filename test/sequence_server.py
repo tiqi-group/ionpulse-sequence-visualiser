@@ -87,19 +87,23 @@ if __name__ == "__main__":
                     "type": "single pass",
                     "central_frequency": 100,
                     "order": 1,
-                    "dds_channels":[i]
+                    "hw_channels":[f"DDSHardware ({i//4},{i%4})"]
                     }
 
         d["TTLs"] = dict()
         for i in range(n_ttls):
             d["TTLs"][f"TTL{i}"] = {
-                    "name": f"TTL {i}"
+                    "name": f"TTL {i}",
+                    "hw_channels": ["DIOHardware (0,0)"],
+                    "sub_channels": [i],
                     }
 
         d["PMTs"] = dict()
         for i in range(n_pmts):
             d["PMTs"][f"PMT{i}"] = {
-                    "name": f"PMT {i}"
+                    "name": f"PMT {i}",
+                    "hw_channels": ["DIOHardware (0,0)"],
+                    "sub_channels": [i],
                     }
         
         # Double dump to return a properly escaped string
