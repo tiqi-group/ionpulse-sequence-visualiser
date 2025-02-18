@@ -74,7 +74,7 @@ class SequenceParser {
 
       settings["calls"] = [];
       settings["callIndex"] = 0;
-      settings["ch_mask"] = entry["ch_mask"];
+      settings["ch_mask"] = new Set(entry["ch_mask"].map(this.chIdxToKey));
       settings["type"] = entry["type"];
       settings["iterations"] = entry["iterations"];
       settings["display"] = this.#sequenceConfig[i]["display"];
@@ -579,4 +579,4 @@ function expandToWaveform(sequenceData) {
   return [time, value];
 }
 
-export { SequenceParser, expandToWaveform };
+export { SequenceParser, expandToWaveform, ChannelType };

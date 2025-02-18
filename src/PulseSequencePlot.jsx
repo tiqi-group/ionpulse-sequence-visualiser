@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
+import { ChannelType, expandToWaveform } from "./SequenceParser";
 import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
 import Plotly from "plotly.js-basic-dist-min";
 import createPlotlyComponent from "react-plotly.js/factory";
@@ -628,20 +628,25 @@ const PulseSequencePlot = function SequencePlot({
       let yDataPairs = [];
       let startYData;
       if (
-        sequence["ch_mask"]["digital_io"] &&
+        sequence["ch_mask"].has(ChannelType.dio + " (0,0)") &&
         (enabledKeys["TTL"].length || enabledKeys["PMT"])
       ) {
         startYData = 1;
       }
       let axisIdx = enabledKeys["TTL"].length + enabledKeys["PMT"].length + 1;
-      for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
-        const key = "RF" + rf_idx;
+      for (let key of enabledKeys["RF"]) {
         if (!channelEnabled[key]) continue;
         if (startYData === undefined) {
-          if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
+          if (
+            channelDescription[key]["hw_channels"].some(sequence["ch_mask"].has)
+          ) {
             startYData = axisIdx;
           }
-        } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
+        } else if (
+          channelDescription[key]["hw_channels"].every(
+            (hw_ch) => !sequence["ch_mask"].has(hw_ch),
+          )
+        ) {
           yDataPairs.push([startYData, axisIdx - 1]);
           startYData = undefined;
         }
