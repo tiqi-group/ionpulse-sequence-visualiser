@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = [
   "Alfredo Ricci <aricci@phys.ethz.ch>",
-  "Martin Stadler <mstadle@phys.ethz.ch>",
+  "Martin Stadler <mastadle@phys.ethz.ch>",
 ]
 license = "MIT"
 readme = "README.md"
@@ -13,6 +13,10 @@ readme = "README.md"
 python = "^3.10"
 numpy = ">=1.24.2"
 msgpack = ">=1.0.3"
+python-socketio = "^5.11.0"
+flask = "^3.0.1"
+watchdog = "^4.0.0"
+flask-cors = "^4.0.0"
 ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "cbcaadc", develop = true}
 
 [tool.poetry.group.dev.dependencies]
@@ -32,10 +36,6 @@ mypy = "^1.1.1"
 optional=false
 
 [tool.poetry.group.plot.dependencies]
-python-socketio = "^5.11.0"
-flask = "^3.0.1"
-watchdog = "^4.0.0"
-flask-cors = "^4.0.0"
 matplotlib = ">=3.6.0"
 
 [build-system]

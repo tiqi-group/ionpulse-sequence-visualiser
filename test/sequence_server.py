@@ -55,56 +55,66 @@ if __name__ == "__main__":
                             return f"{key} Unit {map_idx} {sub_key}"
         return f"RF {i}"
 
+    def getChannelKey(hw_ch):
+        return f"{hw_ch['device']} {hw_ch['type']} {hw_ch['channelSpec']}"
+
     @app.route("/Hardware/description")
     def description() -> str:
-        n_ttls = 32
-        n_rfs = 32
-        n_pmts = 8
-        channel_index_to_name = {}
+        channel_index_to_hw = [
+                {
+                    "type": "Readout"
+                },
+        ]
         try:
             with open(args.file) as f:
                 data = f.read()
                 if len(data) > 0:
                     try:
-                        seq = json.loads(data)
-                        main_seq = seq["Sequence"][-1]
-                        n_ttls = 32 if main_seq["ch_mask"]["digital_io"] else 0
-                        n_pmts = 8 if main_seq["ch_mask"]["digital_io"] else 0
-                        n_rfs = main_seq["ch_mask"]["rf"].bit_count()
-                        for i in range(n_rfs):
-                            channel_index_to_name[i] = get_channel_name(seq["Header"]["channel_map"], i)
+                        sequence_json = json.loads(data)
+                        channel_index_to_hw = sequence_json["header"]["channel_idx_to_hw"]
                     except:
                         pass
         except:
             pass
         d = dict()
         d["RFs"] = dict()
-        for i in range(n_rfs):
-            if i not in channel_index_to_name:
-                channel_index_to_name[i] = f"RF {i}"
-            d["RFs"][f"RF{i}"] = {
-                    "name": channel_index_to_name[i],
-                    "type": "single pass",
-                    "central_frequency": 100,
-                    "order": 1,
-                    "hw_channels":[f"DDSHardware ({i//4},{i%4})"]
-                    }
+        rf_idx = 0
+        for hw_ch in channel_index_to_hw:
+            if hw_ch["type"] == "DIOHardware":
 
-        d["TTLs"] = dict()
-        for i in range(n_ttls):
-            d["TTLs"][f"TTL{i}"] = {
-                    "name": f"TTL {i}",
-                    "hw_channels": ["DIOHardware (0,0)"],
-                    "sub_channels": [i],
-                    }
+                d["TTLs"] = dict()
+                for i in range(32):
+                    d["TTLs"][f"TTL{i}"] = {
+                            "name": hw_ch.get("name", f"TTL {i}"),
+                            "hw_channels": [getChannelKey(hw_ch)],
+                            "sub_channel": i,
+                            }
 
-        d["PMTs"] = dict()
-        for i in range(n_pmts):
-            d["PMTs"][f"PMT{i}"] = {
-                    "name": f"PMT {i}",
-                    "hw_channels": ["DIOHardware (0,0)"],
-                    "sub_channels": [i],
-                    }
+                d["PMTs"] = dict()
+                for i in range(8):
+                    d["PMTs"][f"PMT{i}"] = {
+                            "name": hw_ch.get("name", f"PMT {i}"),
+                            "hw_channels": [getChannelKey(hw_ch)],
+                            "sub_channel": i,
+                            }
+            elif hw_ch["type"] == "QuenchHardware":
+                d["RFs"][f"RF{rf_idx}"] = {
+                        "name": hw_ch.get("name", f"Quench RF{rf_idx}"),
+                        "type": "single pass",
+                        "central_frequency": 100,
+                        "order": 1,
+                        "hw_channels":[getChannelKey(hw_ch)]
+                        }
+                rf_idx = rf_idx + 1
+            elif hw_ch["type"] == "DDSHardware":
+                d["RFs"][f"RF{rf_idx}"] = {
+                        "name": hw_ch.get("name", f"DDS {rf_idx}"),
+                        "type": "single pass",
+                        "central_frequency": 100,
+                        "order": 1,
+                        "hw_channels":[getChannelKey(hw_ch)]
+                        }
+                rf_idx = rf_idx + 1
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
