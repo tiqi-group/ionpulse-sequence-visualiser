@@ -372,32 +372,39 @@ const PulseSequencePlot = function SequencePlot({
   const plotData = Object.fromEntries(
     Object.entries(channelDescription).map(([key, desc]) => {
       // TODO: Add support for multi hw channel operations (subtract/add etc.)
-      let channelData;
-      if (Object.hasOwn(desc, "sub_channel")) {
-        const type = desc["group"] === "TTL" ? "output" : "pmts";
-        let last = 0;
-        channelData = {
-          names: sequenceData[desc["hw_channels"][0]]["names"],
-          time: sequenceData[desc["hw_channels"][0]]["time"],
-          timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
-          values: sequenceData[desc["hw_channels"][0]][type].map(
-            ((last = 0),
-            (vals) => {
-              const mask =
-                (sequenceData[desc["hw_channels"][0]][type + "_mask"] &
-                  (1 << desc["sub_channel"])) !==
-                0;
-              const val = (vals & (1 << desc["sub_channel"])) !== 0;
-              console.assert(
-                !(val & !mask),
-                `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} but mask is ${mask}`,
-              );
-              return (last = (last & mask) | val);
-            }),
-          ),
-        };
-      } else {
-        channelData = sequenceData[desc["hw_channels"][0]];
+      let channelData = {
+        timeDomain: [0, 0],
+      };
+      if (
+        desc["hw_channels"].length > 0 &&
+        Object.hasOwn(sequenceData, desc["hw_channels"][0])
+      ) {
+        if (Object.hasOwn(desc, "sub_channel")) {
+          const type = desc["group"] === "TTL" ? "output" : "pmts";
+          let last = 0;
+          channelData = {
+            names: sequenceData[desc["hw_channels"][0]]["names"],
+            time: sequenceData[desc["hw_channels"][0]]["time"],
+            timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
+            values: sequenceData[desc["hw_channels"][0]][type].map(
+              ((last = 0),
+              (vals) => {
+                const mask =
+                  (sequenceData[desc["hw_channels"][0]][type + "_mask"] &
+                    (1 << desc["sub_channel"])) !==
+                  0;
+                const val = (vals & (1 << desc["sub_channel"])) !== 0;
+                console.assert(
+                  !(val & !mask),
+                  `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} but mask is ${mask}`,
+                );
+                return (last = (last & mask) | val);
+              }),
+            ),
+          };
+        } else {
+          channelData = sequenceData[desc["hw_channels"][0]];
+        }
       }
       return [key, channelData];
     }),

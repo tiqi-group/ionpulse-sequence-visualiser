@@ -12,7 +12,7 @@ const ChannelType = {
  * @param {Object} hw An object that specifies the hardware domain "type" (DDSHardware, QuenchHardware, DIOHardware, Readout) and optionally the slot/channel "channel"
  */
 function getChannelKey(hw) {
-  return hw["type"] + (Object.has("channel") ? " " + hw["channel"] : "");
+  return hw["device"] + " " + hw["type"] + " " + hw["channelSpec"];
 }
 
 /**
@@ -46,16 +46,16 @@ class SequenceParser {
   constructor(ionpulseSequence, externalConfig) {
     this.#main = ionpulseSequence;
     this.hasNames =
-      this.#main["Sequence"].length > 0 &&
-      Object.hasOwn(this.#main["Sequence"][0], "name");
+      this.#main["sequence"].length > 0 &&
+      Object.hasOwn(this.#main["sequence"][0], "name");
     if (this.hasNames) {
-      this.nameToId = this.#main["Sequence"].reduce((cfg, val, i) => {
+      this.nameToId = this.#main["sequence"].reduce((cfg, val, i) => {
         cfg[val["name"]] = i;
         return cfg;
       }, {});
     }
     this.#sequenceConfig = [];
-    this.#sequenceBlockData = this.#main["Sequence"].map((entry, i) => {
+    this.#sequenceBlockData = this.#main["sequence"].map((entry, i) => {
       let settings = {};
       const name = this.hasNames ? stripIdxFromName(entry["name"]) : i;
       settings["name"] = name;
@@ -151,9 +151,12 @@ class SequenceParser {
     depth,
     recordEvents,
   ) {
-    const seq = this.#main["Sequence"][idx];
+    const seq = this.#main["sequence"][idx];
     let isFork = seq["type"] === "Fork";
-    channelMask = channelMask.intersect(new Set(seq["ch_mask"]));
+    channelMask = channelMask.intersection(new Set(seq["ch_mask"]));
+    if (channelMask.size == 0) {
+      return data;
+    }
 
     if (!this.#sequenceBlockData[idx]["refChannel"]) {
       this.#sequenceBlockData[idx]["refChannel"] = channelMask[0];
@@ -181,7 +184,7 @@ class SequenceParser {
         baseName = this.#sequenceBlockData[idx]["name"];
       }
     } else {
-      if (idx < this.#main["Sequence"].length - 1) {
+      if (idx < this.#main["sequence"].length - 1) {
         baseName = baseName + idx;
       }
     }
@@ -388,7 +391,7 @@ class SequenceParser {
 
   getEventDataForChannel(idx, channelMask, data, loopIteration, recordEvents) {
     let event = this.#main["event"][idx];
-    channelMask = channelMask.intersect(new Set(event["ch_mask"]));
+    channelMask = channelMask.intersection(new Set(event["ch_mask"]));
     console.assert(
       channelMask,
       "Enclosing sequence does not contain channel " + event["ch_mask"],

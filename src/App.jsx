@@ -11,13 +11,15 @@ import { ConnectionStatus } from "./ConnectionStatus";
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
     let init = {};
-    for (var i = 0; i < 32; i++) {
+    for (let i = 0; i < 32; i++) {
       init["RF" + i] = {
         name: "RF" + i,
         type: "single_pass",
         central_frequency: 100,
         order: 1,
-        hw_channels: ["DDSHardware (" + i / 4 + "," + (i % 4) + ")"],
+        hw_channels: [
+          "DDSHardware [" + Math.trunc(i / 4) + "," + (i % 4) + "]",
+        ],
         group: "RF",
       };
       init["TTL" + i] = {
@@ -37,25 +39,17 @@ function App() {
   });
   const [ionpulseSequence, setIonpulseSequence] = useState(() => {
     let init = {
-      Freq: [],
-      Phase: [],
-      Amp: [],
-      Time: [],
-      Event: [],
-      Sequence: [
+      freq: [],
+      phase: [],
+      amp: [],
+      time: [],
+      event: [],
+      sequence: [
         {
           name: "main",
           type: "LinearSequence",
-          ch_mask: {
-            rf: 0,
-            digital_io: false,
-            readout: false,
-            qubit: 0,
-          },
-          rf_channel_sequences: {},
-          digital_io: [],
-          readout: [],
-          qubit_sequences: {},
+          ch_mask: [],
+          sequences: [],
         },
       ],
     };

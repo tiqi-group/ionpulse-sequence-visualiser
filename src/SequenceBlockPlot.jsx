@@ -56,7 +56,10 @@ const SequenceBlockPlot = function ({
   const xPad = 1;
   const yPad = 0.02;
 
-  const maxTime = sequenceBlockData.at(-1)["calls"].at(-1)["endTime"];
+  const maxTime =
+    sequenceBlockData.at(-1)["calls"].length > 0
+      ? sequenceBlockData.at(-1)["calls"].at(-1)["endTime"]
+      : 0;
 
   const plotHeight = RF_HEIGHT * totalEnabledChannels + margin.t + margin.b;
   // const plotWidth = 1100 + margin.l + margin.r;
@@ -188,12 +191,11 @@ const SequenceBlockPlot = function ({
     });
   marks.push(
     Plot.ruleY(
-      Object.keys(axisIdxToChannel).map((axisIdx) => {
+      axisIdxToChannel.forEach((hw_ch, axisIdx) => {
         return {
           axisIdx: axisIdx,
           color:
-            axisIdxToChannel[axisIdx].subString(0, ChannelType.dio.length) ==
-            ChannelType.dio
+            hw_ch.subString(0, ChannelType.dio.length) == ChannelType.dio
               ? "green"
               : "blue",
         };
@@ -214,13 +216,12 @@ const SequenceBlockPlot = function ({
   );
   marks.push(
     Plot.text(
-      Object.keys(axisIdxToChannel).map((axisIdx) => {
+      axisIdxToChannel.forEach((hw_ch, axisIdx) => {
         return {
           axisIdx: axisIdx,
-          channel: axisIdxToChannel[axisIdx],
+          channel: hw_ch,
           color:
-            axisIdxToChannel[axisIdx].subString(0, ChannelType.dio.length) ==
-            ChannelType.dio
+            hw_ch.subString(0, ChannelType.dio.length) == ChannelType.dio
               ? "green"
               : "blue",
         };
