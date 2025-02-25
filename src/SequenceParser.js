@@ -12,7 +12,7 @@ const ChannelType = {
  * @param {Object} hw An object that specifies the hardware domain "type" (DDSHardware, QuenchHardware, DIOHardware, Readout) and optionally the slot/channel "channel"
  */
 function getChannelKey(hw) {
-  return hw["device"] + " " + hw["type"] + " " + hw["channelSpec"];
+  return hw["device"] + " " + hw["type"] + " [" + hw["channelSpec"] + "]";
 }
 
 /**
@@ -133,6 +133,8 @@ class SequenceParser {
       }
       value["names"].pop();
     }
+    console.log(this.#sequenceBlockData);
+    console.log(plotData);
     return plotData;
   }
 
@@ -362,23 +364,35 @@ class SequenceParser {
     return data;
   }
 
-  getParamValue(type, idx, channelMask, data, loopIteration, recordEvents) {
-    if (typeof idx === "object") {
-      idx = idx[0];
-    }
-    const mainType =
-      type === "slope_time"
-        ? "Time"
-        : type.substring(0, 1).toUpperCase() + type.substring(1, type.length);
-    const param = this.#main[mainType][idx];
-
-    let value = param.value;
+  getParamValue(type, value, channelMask, data, loopIteration, recordEvents) {
     if (typeof value === "object") {
-      value = value[loopIteration % param.value.length];
+      // value is a list of index and name
+      value = value[0];
+    }
+    const mainType = type === "slope_time" ? "time" : type;
+
+    if (Object.hasOwn(this.#main, mainType)) {
+      // value points to a parameter
+      value = this.#main[mainType][value].value;
+    }
+
+    if (typeof value === "object") {
+      value = value[loopIteration % value.length];
+    }
+    let scaling = 1;
+    if (type === "time" || type === "slope_time") {
+      scaling = 1 / 1000;
+    } else if (type === "amp") {
+      scaling = 100 / (Math.pow(2, 16) - 1);
+    } else if (type === "phase") {
+      scaling = 180 / Math.pow(2, 16);
+    } else if (type === "freq") {
+      scaling = 1e3 / Math.pow(2, 32);
     }
     if (type === "time") {
       for (const ch of channelMask) {
-        data[ch]["timeDomain"][data[ch]["timeDomain"].length - 1] += value;
+        data[ch]["timeDomain"][data[ch]["timeDomain"].length - 1] +=
+          value * scaling;
       }
     }
     if (recordEvents) {
@@ -388,7 +402,7 @@ class SequenceParser {
         }
       } else {
         for (const ch of channelMask) {
-          data[ch][type].push(value);
+          data[ch][type].push(value * scaling);
         }
       }
     }
@@ -414,9 +428,9 @@ class SequenceParser {
     }
 
     switch (event["type"]) {
-      case "RFEdge":
+      case "DDSEvent":
         for (let type of this.RF_PROPERTIES.concat(["time"])) {
-          if (type in event) {
+          if (type in event && event[type] !== null) {
             data = this.getParamValue(
               type,
               event[type],
@@ -432,31 +446,30 @@ class SequenceParser {
           }
         }
         break;
-      case "RFWait":
+      case "Wait":
         data = this.getParamValue(
           "time",
           event["time"],
-          channelType,
-          channelIdx,
+          channelMask,
           data,
           loopIteration,
           recordEvents,
         );
         if (recordEvents) {
-          for (let type of this.RF_PROPERTIES) {
-            if (type === "slope_time" && data["amp"].at(-1) !== 0) {
-              for (const ch of channelMask) {
-                data[ch][type].push(0);
-              }
-            } else {
-              for (const ch of channelMask) {
-                data[ch][type].push(data[type].at(-1));
+          for (let type of this.RF_PROPERTIES.concat(this.DIO_PROPERTIES)) {
+            for (const ch of channelMask) {
+              if (type in data[ch]) {
+                if (type === "slope_time") {
+                  data[ch][type].push(0);
+                } else {
+                  data[ch][type].push(data[ch][type].at(-1));
+                }
               }
             }
           }
         }
         break;
-      case "TtlEdge":
+      case "DOEvent":
         for (let type of this.DIO_PROPERTIES.concat(["time"])) {
           data = this.getParamValue(
             type,

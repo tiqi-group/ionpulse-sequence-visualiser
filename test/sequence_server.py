@@ -56,7 +56,7 @@ if __name__ == "__main__":
         return f"RF {i}"
 
     def getChannelKey(hw_ch):
-        return f"{hw_ch['device']} {hw_ch['type']} {hw_ch['channelSpec']}"
+        return f"{hw_ch['device']} {hw_ch['type']} [{','.join('{}'.format(c) for c in hw_ch['channelSpec'])}]"
 
     @app.route("/Hardware/description")
     def description() -> str:
