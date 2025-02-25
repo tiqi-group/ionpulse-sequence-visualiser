@@ -1,9 +1,11 @@
 # Test sequences for the library visualiser
 
-This folder contains Python scripts that generate JSON strings for the Library Visualiser.
+This folder contains a mock server that provides the required endpoints of the experiment library, `/Hardware/description` and `/Hardware/sequence`.
+Additionally, there's a script to create a test sequence
 
 ## Usage
 
 - `poetry install` to set up the virtual environment.
-- `poetry run python plot_example.py` to generate the `ionpulse_seq_plot.json` file for the sequence server
-- `poetry run python sequence_server.py` fires up a minimal flask server that the Library Visualiser can connect to
+- `poetry run python ionpulse_seq_gen_test.py` to generate the `ionpulse_seq.json` file for the sequence server.
+  Alternatively, you can symlink any other JSON file into the same folder, which will be served to the Sequence Visualizer.
+- `poetry run python sequence_server.py` fires up a minimal flask server that the Sequence Visualizer can connect to
