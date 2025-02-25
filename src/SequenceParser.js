@@ -163,7 +163,9 @@ class SequenceParser {
     }
 
     if (!this.#sequenceBlockData[idx]["refChannel"]) {
-      this.#sequenceBlockData[idx]["refChannel"] = channelMask[0];
+      this.#sequenceBlockData[idx]["refChannel"] = channelMask
+        .values()
+        .next().value;
     }
     let seqArray;
     if (isFork) {
@@ -201,7 +203,8 @@ class SequenceParser {
     const storeTime = (key, iterationName) => {
       if (key === "startTime") {
         this.#sequenceBlockData[idx]["calls"].push({
-          startTime: data[channelMask[0]]["timeDomain"].at(-1),
+          startTime:
+            data[channelMask.values().next().value]["timeDomain"].at(-1),
           depth: depth,
           name: iterationName,
           data: {},
@@ -211,7 +214,7 @@ class SequenceParser {
         }
       } else {
         this.#sequenceBlockData[idx]["calls"].at(-1)[key] =
-          data[channelMask[0]]["timeDomain"].at(-1);
+          data[channelMask.values().next().value]["timeDomain"].at(-1);
       }
       for (let ch of channelMask) {
         console.assert(
@@ -227,7 +230,7 @@ class SequenceParser {
             " don't match for Sequence " +
             idx +
             ". " +
-            data["timeDomain"].at(-1) +
+            data[ch]["timeDomain"].at(-1) +
             " is not in " +
             this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
         );
@@ -245,7 +248,7 @@ class SequenceParser {
       }
     };
 
-    const lastDataLength = data[channelMask[0]].time.length;
+    const lastDataLength = data[channelMask.values().next().value].time.length;
     for (let i = 0; i < iterations; i++) {
       const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       let iterationName = baseName;
@@ -474,6 +477,7 @@ class SequenceParser {
       this.#plotData = Object.entries(this.generatePlotData()).reduce(
         (plotData, [ch, channelData]) => {
           plotData[this.chIdxToKey(ch)] = channelData;
+          return plotData;
         },
         {},
       );
