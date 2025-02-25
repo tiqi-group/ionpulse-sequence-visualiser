@@ -189,52 +189,56 @@ const SequenceBlockPlot = function ({
         );
       }
     });
-  marks.push(
-    Plot.ruleY(
-      axisIdxToChannel.forEach((hw_ch, axisIdx) => {
-        return {
-          axisIdx: axisIdx,
-          color:
-            hw_ch.subString(0, ChannelType.dio.length) == ChannelType.dio
-              ? "green"
-              : "blue",
-        };
-      }),
-      {
-        y: "axisIdx",
-        x1: -xPad,
-        x2: maxTime,
-        stroke: "color",
-      },
-    ),
-  );
+  if (axisIdxToChannel.length > 0) {
+    marks.push(
+      Plot.ruleY(
+        axisIdxToChannel.map((hw_ch, axisIdx) => {
+          return {
+            axisIdx: axisIdx,
+            color:
+              hw_ch.substring(0, ChannelType.dio.length) == ChannelType.dio
+                ? "green"
+                : "blue",
+          };
+        }),
+        {
+          y: "axisIdx",
+          x1: -xPad,
+          x2: maxTime,
+          stroke: "color",
+        },
+      ),
+    );
+  }
   marks.push(
     Plot.ruleY([totalEnabledChannels - 1 / 2 - yPad], {
       x1: -xPad,
       x2: maxTime,
     }),
   );
-  marks.push(
-    Plot.text(
-      axisIdxToChannel.forEach((hw_ch, axisIdx) => {
-        return {
-          axisIdx: axisIdx,
-          channel: hw_ch,
-          color:
-            hw_ch.subString(0, ChannelType.dio.length) == ChannelType.dio
-              ? "green"
-              : "blue",
-        };
-      }),
-      {
-        text: "channel",
-        x: -xPad - 5,
-        y: "axisIdx",
-        textAnchor: "end",
-        fill: "color",
-      },
-    ),
-  );
+  if (axisIdxToChannel.length > 0) {
+    marks.push(
+      Plot.text(
+        axisIdxToChannel.map((hw_ch, axisIdx) => {
+          return {
+            axisIdx: axisIdx,
+            channel: hw_ch,
+            color:
+              hw_ch.substring(0, ChannelType.dio.length) == ChannelType.dio
+                ? "green"
+                : "blue",
+          };
+        }),
+        {
+          text: "channel",
+          x: -xPad - 5,
+          y: "axisIdx",
+          textAnchor: "end",
+          fill: "color",
+        },
+      ),
+    );
+  }
 
   const plotRef = useRef();
 

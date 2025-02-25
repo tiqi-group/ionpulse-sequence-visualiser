@@ -74,7 +74,11 @@ class SequenceParser {
 
       settings["calls"] = [];
       settings["callIndex"] = 0;
-      settings["ch_mask"] = new Set(entry["ch_mask"].map(this.chIdxToKey));
+      settings["ch_mask"] = new Set(
+        entry["ch_mask"].map((idx) =>
+          getChannelKey(this.#main["header"]["channel_idx_to_hw"][idx]),
+        ),
+      );
       settings["type"] = entry["type"];
       settings["iterations"] = entry["iterations"];
       settings["display"] = this.#sequenceConfig[i]["display"];
