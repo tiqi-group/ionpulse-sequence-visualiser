@@ -56,7 +56,7 @@ if __name__ == "__main__":
         return f"RF {i}"
 
     def getChannelKey(hw_ch):
-        return f"{hw_ch['device']} {hw_ch['type']} [{','.join('{}'.format(c) for c in hw_ch['channelSpec'])}]"
+        return f"{hw_ch['device']} {hw_ch['hardware']} {hw_ch['channel']}"
 
     @app.route("/Hardware/description")
     def description() -> str:
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         d["RFs"] = dict()
         rf_idx = 0
         for hw_ch in channel_index_to_hw:
-            if hw_ch["type"] == "DIOHardware":
+            if hw_ch["hardware"] == "DIOHardware":
 
                 d["TTLs"] = dict()
                 for i in range(32):
@@ -97,7 +97,7 @@ if __name__ == "__main__":
                             "hw_channels": [getChannelKey(hw_ch)],
                             "sub_channel": i,
                             }
-            elif hw_ch["type"] == "QuenchHardware":
+            elif hw_ch["hardware"] == "QuenchHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
                         "name": hw_ch.get("name", f"Quench RF{rf_idx}"),
                         "type": "single pass",
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                         "hw_channels":[getChannelKey(hw_ch)]
                         }
                 rf_idx = rf_idx + 1
-            elif hw_ch["type"] == "DDSHardware":
+            elif hw_ch["hardware"] == "DDSHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
                         "name": hw_ch.get("name", f"DDS {rf_idx}"),
                         "type": "single pass",

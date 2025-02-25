@@ -9,10 +9,10 @@ const ChannelType = {
 /**
  * getChannelKey converts hardware channel to a unique string
  *
- * @param {Object} hw An object that specifies the hardware domain "type" (DDSHardware, QuenchHardware, DIOHardware, Readout) and optionally the slot/channel "channel"
+ * @param {Object} hw An object that specifies the hardware domain "hardware" (DDSHardware, QuenchHardware, DIOHardware, Readout) and optionally the "channel"
  */
 function getChannelKey(hw) {
-  return hw["device"] + " " + hw["type"] + " [" + hw["channelSpec"] + "]";
+  return hw["device"] + " " + hw["hardware"] + " " + hw["channel"];
 }
 
 /**
@@ -90,8 +90,11 @@ class SequenceParser {
   }
 
   generatePlotData() {
+    let ch_mask = new Set(this.#main["sequence"].at(-1)["ch_mask"]);
+    ch_mask.delete(0);
+
     let plotData = {};
-    for (let ch of this.#main["sequence"].at(-1)["ch_mask"]) {
+    for (let ch of ch_mask) {
       const hw = this.#main["header"]["channel_idx_to_hw"][ch];
       // Initialise per-channel data. Will end up in plotData[channelKey] later
       let data = {
@@ -103,11 +106,14 @@ class SequenceParser {
         // If the whole sequence is plotted it will have 2 entries in the end, [0, sequenceLength]
         timeDomain: [0],
       };
-      if (hw["type"] == ChannelType.quench || hw["type"] == ChannelType.dds) {
+      if (
+        hw["hardware"] == ChannelType.quench ||
+        hw["hardware"] == ChannelType.dds
+      ) {
         for (const key of this.RF_PROPERTIES) {
           data[key] = [0];
         }
-      } else if (hw["type"] == ChannelType.dio) {
+      } else if (hw["hardware"] == ChannelType.dio) {
         for (const key of this.DIO_PROPERTIES) {
           data[key] = [0];
         }
@@ -121,7 +127,7 @@ class SequenceParser {
     let loopIteration = 0;
     plotData = this.getDataForChannel(
       this.#main["sequence"].length - 1,
-      new Set(this.#main["sequence"].at(-1)["ch_mask"]),
+      ch_mask,
       plotData,
       loopIteration,
       0,
@@ -383,9 +389,9 @@ class SequenceParser {
     if (type === "time" || type === "slope_time") {
       scaling = 1 / 1000;
     } else if (type === "amp") {
-      scaling = 100 / (Math.pow(2, 16) - 1);
+      scaling = 100 / (Math.pow(2, 14) - 1);
     } else if (type === "phase") {
-      scaling = 180 / Math.pow(2, 16);
+      scaling = 360 / Math.pow(2, 16);
     } else if (type === "freq") {
       scaling = 1e3 / Math.pow(2, 32);
     }
@@ -459,7 +465,8 @@ class SequenceParser {
           for (let type of this.RF_PROPERTIES.concat(this.DIO_PROPERTIES)) {
             for (const ch of channelMask) {
               if (type in data[ch]) {
-                if (type === "slope_time") {
+                if (type === "slope_time" && data[ch]["amp"].at(-1) !== 0) {
+                  // if (type === "slope_time") {
                   data[ch][type].push(0);
                 } else {
                   data[ch][type].push(data[ch][type].at(-1));
@@ -469,7 +476,7 @@ class SequenceParser {
           }
         }
         break;
-      case "DOEvent":
+      case "DIOEvent":
         for (let type of this.DIO_PROPERTIES.concat(["time"])) {
           data = this.getParamValue(
             type,
