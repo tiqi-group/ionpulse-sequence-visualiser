@@ -139,8 +139,8 @@ class SequenceParser {
       }
       value["names"].pop();
     }
-    console.log(this.#sequenceBlockData);
-    console.log(plotData);
+    // console.log("sequence block data: ", this.#sequenceBlockData);
+    // console.log("plot data: ", plotData);
     return plotData;
   }
 
@@ -321,11 +321,7 @@ class SequenceParser {
           },
           {},
         );
-        channelMask.forEach((channelIdx) => {
-          this.#sequenceBlockData[idx]["calls"][callIndex]["data"][
-            this.chIdxToKey(channelIdx)
-          ] = dataLocal;
-        });
+        this.#sequenceBlockData[idx]["calls"][callIndex]["data"] = dataLocal;
       }
 
       for (let event of seqArray) {

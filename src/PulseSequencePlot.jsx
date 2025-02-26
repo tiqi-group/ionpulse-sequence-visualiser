@@ -251,6 +251,48 @@ function filter(object_to_filter, filter) {
   return filtered;
 }
 
+function getPlotData(sequenceData, channelDescription) {
+  return Object.fromEntries(
+    Object.entries(channelDescription).map(([key, desc]) => {
+      // TODO: Add support for multi hw channel operations (subtract/add etc.)
+      let channelData = {
+        timeDomain: [0, 0],
+      };
+      if (
+        desc["hw_channels"].length > 0 &&
+        Object.hasOwn(sequenceData, desc["hw_channels"][0])
+      ) {
+        if (Object.hasOwn(desc, "sub_channel")) {
+          const type = desc["group"] === "TTL" ? "output" : "pmts";
+          let last = 0;
+          channelData = {
+            names: sequenceData[desc["hw_channels"][0]]["names"],
+            time: sequenceData[desc["hw_channels"][0]]["time"],
+            timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
+            values: sequenceData[desc["hw_channels"][0]][type].map(
+              (vals, idx) => {
+                const mask =
+                  (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
+                    (1 << desc["sub_channel"])) !==
+                  0;
+                const val = (vals & (1 << desc["sub_channel"])) !== 0;
+                console.assert(
+                  !(val & !mask),
+                  `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
+                );
+                return (last = (last & ~mask) | val);
+              },
+            ),
+          };
+        } else {
+          channelData = sequenceData[desc["hw_channels"][0]];
+        }
+      }
+      return [key, channelData];
+    }),
+  );
+}
+
 let data_template_TTL = {
   line: { shape: "hv" },
   type: "scatter",
@@ -369,46 +411,7 @@ const PulseSequencePlot = function SequencePlot({
     setChannelYDataType(newChannelYDataType);
   }
 
-  const plotData = Object.fromEntries(
-    Object.entries(channelDescription).map(([key, desc]) => {
-      // TODO: Add support for multi hw channel operations (subtract/add etc.)
-      let channelData = {
-        timeDomain: [0, 0],
-      };
-      if (
-        desc["hw_channels"].length > 0 &&
-        Object.hasOwn(sequenceData, desc["hw_channels"][0])
-      ) {
-        if (Object.hasOwn(desc, "sub_channel")) {
-          const type = desc["group"] === "TTL" ? "output" : "pmts";
-          let last = 0;
-          channelData = {
-            names: sequenceData[desc["hw_channels"][0]]["names"],
-            time: sequenceData[desc["hw_channels"][0]]["time"],
-            timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
-            values: sequenceData[desc["hw_channels"][0]][type].map(
-              (vals, idx) => {
-                const mask =
-                  (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
-                    (1 << desc["sub_channel"])) !==
-                  0;
-                const val = (vals & (1 << desc["sub_channel"])) !== 0;
-                console.assert(
-                  !(val & !mask),
-                  `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
-                );
-                return (last = (last & ~mask) | val);
-              },
-            ),
-          };
-        } else {
-          channelData = sequenceData[desc["hw_channels"][0]];
-        }
-      }
-      return [key, channelData];
-    }),
-  );
-  console.log(plotData);
+  const plotData = getPlotData(sequenceData, channelDescription);
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
       if (channelEnabled[key] == true) {
@@ -645,7 +648,9 @@ const PulseSequencePlot = function SequencePlot({
         if (!channelEnabled[key]) continue;
         if (startYData === undefined) {
           if (
-            channelDescription[key]["hw_channels"].some(sequence["ch_mask"].has)
+            channelDescription[key]["hw_channels"].some((ch) =>
+              sequence["ch_mask"].has(ch),
+            )
           ) {
             startYData = axisIdx;
           }
@@ -730,86 +735,90 @@ const PulseSequencePlot = function SequencePlot({
         sequence["display"] === "contracted")
     ) {
       for (const call of sequence["calls"]) {
-        for (const [channel, value] of Object.entries(call["data"])) {
-          if (
-            channelDescription[channel].group === "RF" &&
-            channelEnabled[channel]
-          ) {
-            const index = channelToAxisIdx[channel][0];
-            let object_to_add = structuredClone(
-              data_templates[channelYDataType[channel]],
-            );
-            const localData = {
-              ...value,
-              time: value.time.map((t) => {
-                return (
-                  t - (call["startTime"] - sequence["calls"][0]["startTime"])
-                  // t
-                );
-              }),
-            };
-
-            if (channelYDataType[channel] === "sample") {
-              const waveform = expandToWaveform(localData);
-              object_to_add.x = waveform[0];
-              object_to_add.y = waveform[1];
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  object_to_add["marker"]["color"] = colour;
-                }
-              }
-            } else {
-              object_to_add.x = localData.time;
-              object_to_add.y = localData[channelYDataType[channel]];
-              object_to_add.text = compileEventName(value.names);
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  object_to_add["marker"]["color"] = colour;
-                }
-              }
-            }
-            object_to_add.name =
-              channelDescription[channel].name + channelYDataType[channel];
-            object_to_add.yaxis = "y" + index;
-
-            for (const [wavelength, colour] of Object.entries(
-              wavelengthColours,
-            )) {
-              if (channelDescription[channel].name.includes(wavelength)) {
-                object_to_add["marker"]["color"] = colour;
-              }
-            }
-
-            data.push(object_to_add);
-
-            if (channelYDataType[channel] !== "sample") {
-              const index = channelToAxisIdx[channel][1];
-              let amp_to_add = structuredClone(data_templates["amp"]);
-              amp_to_add.x = localData.time;
-              amp_to_add.y = localData.amp;
-              amp_to_add.text = compileEventName(value.names);
-              amp_to_add.yaxis = "y" + index;
-              amp_to_add.name = channelDescription[channel].name + " amp";
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  amp_to_add["marker"]["color"] = colour;
-                  amp_to_add["fillcolor"] = setOpacity(
-                    colour,
-                    0.5 / sequence["calls"].length,
+        if (Object.hasOwn(call["data"], "time")) {
+          for (const [channel, value] of Object.entries(
+            getPlotData(call["data"], channelDescription),
+          )) {
+            if (
+              channelDescription[channel].group === "RF" &&
+              channelEnabled[channel]
+            ) {
+              const index = channelToAxisIdx[channel][0];
+              let object_to_add = structuredClone(
+                data_templates[channelYDataType[channel]],
+              );
+              const localData = {
+                ...value,
+                time: value.time.map((t) => {
+                  return (
+                    t - (call["startTime"] - sequence["calls"][0]["startTime"])
+                    // t
                   );
+                }),
+              };
+
+              if (channelYDataType[channel] === "sample") {
+                const waveform = expandToWaveform(localData);
+                object_to_add.x = waveform[0];
+                object_to_add.y = waveform[1];
+
+                for (const [wavelength, colour] of Object.entries(
+                  wavelengthColours,
+                )) {
+                  if (channelDescription[channel].name.includes(wavelength)) {
+                    object_to_add["marker"]["color"] = colour;
+                  }
+                }
+              } else {
+                object_to_add.x = localData.time;
+                object_to_add.y = localData[channelYDataType[channel]];
+                object_to_add.text = compileEventName(value.names);
+
+                for (const [wavelength, colour] of Object.entries(
+                  wavelengthColours,
+                )) {
+                  if (channelDescription[channel].name.includes(wavelength)) {
+                    object_to_add["marker"]["color"] = colour;
+                  }
+                }
+              }
+              object_to_add.name =
+                channelDescription[channel].name + channelYDataType[channel];
+              object_to_add.yaxis = "y" + index;
+
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  object_to_add["marker"]["color"] = colour;
                 }
               }
 
-              data.push(amp_to_add);
+              data.push(object_to_add);
+
+              if (channelYDataType[channel] !== "sample") {
+                const index = channelToAxisIdx[channel][1];
+                let amp_to_add = structuredClone(data_templates["amp"]);
+                amp_to_add.x = localData.time;
+                amp_to_add.y = localData.amp;
+                amp_to_add.text = compileEventName(value.names);
+                amp_to_add.yaxis = "y" + index;
+                amp_to_add.name = channelDescription[channel].name + " amp";
+
+                for (const [wavelength, colour] of Object.entries(
+                  wavelengthColours,
+                )) {
+                  if (channelDescription[channel].name.includes(wavelength)) {
+                    amp_to_add["marker"]["color"] = colour;
+                    amp_to_add["fillcolor"] = setOpacity(
+                      colour,
+                      0.5 / sequence["calls"].length,
+                    );
+                  }
+                }
+
+                data.push(amp_to_add);
+              }
             }
           }
         }
