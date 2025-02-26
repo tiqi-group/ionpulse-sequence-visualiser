@@ -8,7 +8,7 @@ For example, running the CoolDet from the Cryo setup looks like this:
 ## Getting Started
 
 - git clone this repo in a suittable location.
-- Install Node.js 20 (LTS Iron)
+- Install Node.js 22 (LTS Jod)
 
   - I recommend the [Node Version Manager](https://github.com/nvm-sh/nvm)
   - Or [n](https://github.com/tj/n) for a system wide installation
