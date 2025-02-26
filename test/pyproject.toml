@@ -15,7 +15,7 @@ python-socketio = "^5.11.0"
 flask = "^3.0.1"
 watchdog = "^4.0.0"
 flask-cors = "^4.0.0"
-ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "4891376", develop = true}
+ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "fix/code-style", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
