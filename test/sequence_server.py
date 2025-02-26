@@ -13,7 +13,6 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
-    parser.add_argument("--plot", required=False, default="ionpulse_seq_plot.json")
     parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     args = parser.parse_args()
 
