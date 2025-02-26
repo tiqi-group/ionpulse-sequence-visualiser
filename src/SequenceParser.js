@@ -497,6 +497,17 @@ class SequenceParser {
         },
         {},
       );
+      this.#sequenceBlockData.forEach((seq) => {
+        seq["calls"].forEach((call) => {
+          call["data"] = Object.entries(call["data"]).reduce(
+            (callData, [ch, channelData]) => {
+              callData[this.chIdxToKey(ch)] = channelData;
+              return callData;
+            },
+            {},
+          );
+        });
+      });
       this.#isUpToDate = true;
     }
     return this.#plotData;

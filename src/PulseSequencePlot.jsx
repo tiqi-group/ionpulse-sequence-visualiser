@@ -734,57 +734,31 @@ const PulseSequencePlot = function SequencePlot({
       (sequence["display"] === "minimized" ||
         sequence["display"] === "contracted")
     ) {
-      for (const call of sequence["calls"]) {
-        if (Object.hasOwn(call["data"], "time")) {
-          for (const [channel, value] of Object.entries(
-            getPlotData(call["data"], channelDescription),
-          )) {
-            if (
-              channelDescription[channel].group === "RF" &&
-              channelEnabled[channel]
-            ) {
-              const index = channelToAxisIdx[channel][0];
-              let object_to_add = structuredClone(
-                data_templates[channelYDataType[channel]],
-              );
-              const localData = {
-                ...value,
-                time: value.time.map((t) => {
-                  return (
-                    t - (call["startTime"] - sequence["calls"][0]["startTime"])
-                    // t
-                  );
-                }),
-              };
+      for (const call of sequence["calls"].slice(1)) {
+        let plotData = getPlotData(call["data"], channelDescription);
+        for (const [channel, value] of Object.entries(plotData)) {
+          if (
+            channelDescription[channel].group === "RF" &&
+            channelEnabled[channel]
+          ) {
+            const index = channelToAxisIdx[channel][0];
+            let object_to_add = structuredClone(
+              data_templates[channelYDataType[channel]],
+            );
+            const localData = {
+              ...value,
+              time: value.time.map((t) => {
+                return (
+                  t - (call["startTime"] - sequence["calls"][0]["startTime"])
+                  // t
+                );
+              }),
+            };
 
-              if (channelYDataType[channel] === "sample") {
-                const waveform = expandToWaveform(localData);
-                object_to_add.x = waveform[0];
-                object_to_add.y = waveform[1];
-
-                for (const [wavelength, colour] of Object.entries(
-                  wavelengthColours,
-                )) {
-                  if (channelDescription[channel].name.includes(wavelength)) {
-                    object_to_add["marker"]["color"] = colour;
-                  }
-                }
-              } else {
-                object_to_add.x = localData.time;
-                object_to_add.y = localData[channelYDataType[channel]];
-                object_to_add.text = compileEventName(value.names);
-
-                for (const [wavelength, colour] of Object.entries(
-                  wavelengthColours,
-                )) {
-                  if (channelDescription[channel].name.includes(wavelength)) {
-                    object_to_add["marker"]["color"] = colour;
-                  }
-                }
-              }
-              object_to_add.name =
-                channelDescription[channel].name + channelYDataType[channel];
-              object_to_add.yaxis = "y" + index;
+            if (channelYDataType[channel] === "sample") {
+              const waveform = expandToWaveform(localData);
+              object_to_add.x = waveform[0];
+              object_to_add.y = waveform[1];
 
               for (const [wavelength, colour] of Object.entries(
                 wavelengthColours,
@@ -793,32 +767,55 @@ const PulseSequencePlot = function SequencePlot({
                   object_to_add["marker"]["color"] = colour;
                 }
               }
+            } else {
+              object_to_add.x = localData.time;
+              object_to_add.y = localData[channelYDataType[channel]];
+              object_to_add.text = compileEventName(value.names);
 
-              data.push(object_to_add);
-
-              if (channelYDataType[channel] !== "sample") {
-                const index = channelToAxisIdx[channel][1];
-                let amp_to_add = structuredClone(data_templates["amp"]);
-                amp_to_add.x = localData.time;
-                amp_to_add.y = localData.amp;
-                amp_to_add.text = compileEventName(value.names);
-                amp_to_add.yaxis = "y" + index;
-                amp_to_add.name = channelDescription[channel].name + " amp";
-
-                for (const [wavelength, colour] of Object.entries(
-                  wavelengthColours,
-                )) {
-                  if (channelDescription[channel].name.includes(wavelength)) {
-                    amp_to_add["marker"]["color"] = colour;
-                    amp_to_add["fillcolor"] = setOpacity(
-                      colour,
-                      0.5 / sequence["calls"].length,
-                    );
-                  }
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  object_to_add["marker"]["color"] = colour;
                 }
-
-                data.push(amp_to_add);
               }
+            }
+            object_to_add.name =
+              channelDescription[channel].name + channelYDataType[channel];
+            object_to_add.yaxis = "y" + index;
+
+            for (const [wavelength, colour] of Object.entries(
+              wavelengthColours,
+            )) {
+              if (channelDescription[channel].name.includes(wavelength)) {
+                object_to_add["marker"]["color"] = colour;
+              }
+            }
+
+            data.push(object_to_add);
+
+            if (channelYDataType[channel] !== "sample") {
+              const index = channelToAxisIdx[channel][1];
+              let amp_to_add = structuredClone(data_templates["amp"]);
+              amp_to_add.x = localData.time;
+              amp_to_add.y = localData.amp;
+              amp_to_add.text = compileEventName(value.names);
+              amp_to_add.yaxis = "y" + index;
+              amp_to_add.name = channelDescription[channel].name + " amp";
+
+              for (const [wavelength, colour] of Object.entries(
+                wavelengthColours,
+              )) {
+                if (channelDescription[channel].name.includes(wavelength)) {
+                  amp_to_add["marker"]["color"] = colour;
+                  amp_to_add["fillcolor"] = setOpacity(
+                    colour,
+                    0.5 / sequence["calls"].length,
+                  );
+                }
+              }
+
+              data.push(amp_to_add);
             }
           }
         }
