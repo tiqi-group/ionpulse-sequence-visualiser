@@ -6,7 +6,6 @@ Created on Wed Apr 24 14:56:08 2024
 """
 import xml.etree.ElementTree as ET
 import argparse
-from tkinter import Tk
 
 parser = argparse.ArgumentParser(
         prog="CleanSVG",
@@ -21,6 +20,7 @@ parser.add_argument('outputFilename', nargs='?', default='output.svg')
 
 args = parser.parse_args()
 if args.inputFilename == "clipboard":
+    from tkinter import Tk
     w = Tk()
     clipboard = w.clipboard_get();
     w.destroy()
@@ -84,4 +84,3 @@ for time in timeElements:
 svgOutput = ET.ElementTree(element=svgs[0])
 ET.indent(svgOutput, space="  ", level=0)
 svgOutput.write(args.outputFilename)
-        

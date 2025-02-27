@@ -5,6 +5,8 @@ import { MemoryRouter, BrowserRouter } from "react-router-dom";
 
 import App from "./App";
 
+const fs = require("node:fs");
+
 afterEach(() => {
   cleanup();
   window.URL.createObjectURL.mockReset();
@@ -44,7 +46,13 @@ test("Plot page renders", async () => {
   expect(screen.queryByText("a / %")).not.toBeInTheDocument();
   await user.click(rf0_enable);
   await user.click(screen.getByRole("button", { name: "Close" }));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   expect(screen.getByText("Channels")).toBeVisible();
   expect(screen.queryByText("Channels to display")).not.toBeInTheDocument();
   expect(screen.getByText("a / %")).toBeInTheDocument();
+  await user.click(screen.getByText("Plot style control"));
+  await user.click(screen.getByText("Copy Pulse sequence plot"));
+  navigator.clipboard
+    .readText()
+    .then((text) => fs.writeFileSync("temp.svg", text));
 });
