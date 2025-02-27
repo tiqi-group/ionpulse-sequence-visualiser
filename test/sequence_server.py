@@ -98,7 +98,7 @@ if __name__ == "__main__":
                             }
             elif hw_ch["hardware"] == "QuenchHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
-                        "name": hw_ch.get("name", f"Quench RF{rf_idx}"),
+                        "name": hw_ch.get("name", f"Quench RF {rf_idx}"),
                         "type": "single pass",
                         "central_frequency": 100,
                         "order": 1,

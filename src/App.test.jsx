@@ -38,8 +38,9 @@ test("Plot page renders", async () => {
 
   expect(screen.queryByText("Channels to display")).not.toBeInTheDocument();
   await user.click(butt);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 200));
   expect(screen.getByText("Channels to display")).toBeVisible();
+  console.log(screen.queryAllByText("DDS", { exact: false }));
   const rf0_enable = screen.getByText("DDS 0");
   expect(screen.queryByText("a / %")).not.toBeInTheDocument();
   await user.click(rf0_enable);
