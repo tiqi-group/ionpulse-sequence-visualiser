@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 
 date > test_server.log
-if [ ! -f ./test/ionpulse_seq.json ]; then
+if [ ! -f ./ionpulse_seq.json ]; then
+	echo "Generating sequence JSON"
 	poetry -C ./test/ run bash -c 'python $VIRTUAL_ENV/src/ionpulse_sequence_generator/test/ionpulse_seq_gen_test.py' &> test_json_generator.log
 	if [ $? -ne 0 ]; then
 		cat test_json_generator.log
 		exit 1
 	fi
+	mv ./test/ionpulse_seq.json ./
 fi
-if [ -f ./test/ionpulse_seq.json ]; then
+if [ -f ./ionpulse_seq.json ]; then
 	poetry -C ./test/ run python ./sequence_server.py \
-		--file ./ionpulse_seq.json &>> test_server.log &
+		--file ../ionpulse_seq.json &>> test_server.log &
 
 	sleep 0.5
 	if ps -p $! > /dev/null; then

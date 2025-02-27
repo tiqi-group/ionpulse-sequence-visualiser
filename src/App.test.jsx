@@ -51,8 +51,6 @@ test("Plot page renders", async () => {
   expect(screen.queryByText("Channels to display")).not.toBeInTheDocument();
   expect(screen.getByText("a / %")).toBeInTheDocument();
   await user.click(screen.getByText("Plot style control"));
-  await user.click(screen.getByText("Copy Pulse sequence plot"));
-  navigator.clipboard
-    .readText()
-    .then((text) => fs.writeFileSync("temp.svg", text));
+  const plotText = document.getElementsByClassName("js-plotly-plot");
+  fs.writeFileSync("temp.svg", plotText[0].firstChild.innerHTML);
 });

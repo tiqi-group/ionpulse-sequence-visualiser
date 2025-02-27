@@ -885,12 +885,13 @@ const PulseSequencePlot = function SequencePlot({
               variant="primary"
               className="m-1"
               onClick={() => {
-                const plotText =
-                  document.getElementsByClassName("js-plotly-plot");
-                navigator.clipboard.writeText(plotText[0].firstChild.innerHTML);
+                Plotly.downloadImage(
+                  { data: data, layout: layout_to_use, config: figureConfig },
+                  { format: "svg" },
+                );
               }}
             >
-              Copy Pulse sequence plot
+              Download sequence plot svg
             </Button>
           </Accordion.Body>
         </Accordion.Item>
