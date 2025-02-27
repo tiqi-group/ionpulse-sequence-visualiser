@@ -3,9 +3,6 @@
 date > test_server.log
 if [ ! -f ./ionpulse_seq.json ]; then
 	echo "Generating sequence JSON"
-	if [ -n "$IONPULSE_SEQUENCE_GENERATOR_REF" ]; then
-		poetry -C ./test/ add --editable git+ssh://git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git#$IONPULSE_SEQUENCE_GENERATOR_REF
-	fi
 	poetry -C ./test/ run bash -c 'python $VIRTUAL_ENV/src/ionpulse_sequence_generator/test/ionpulse_seq_gen_test.py' &> test_json_generator.log
 	if [ $? -ne 0 ]; then
 		cat test_json_generator.log
