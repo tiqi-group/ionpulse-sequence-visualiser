@@ -263,13 +263,13 @@ function getPlotData(sequenceData, channelDescription) {
         Object.hasOwn(sequenceData, desc["hw_channels"][0])
       ) {
         if (Object.hasOwn(desc, "sub_channel")) {
-          const type = desc["group"] === "TTL" ? "output" : "pmts";
+          const type = desc["group"] === "TTL" ? "output" : "input_gate";
           let last = 0;
           channelData = {
             names: sequenceData[desc["hw_channels"][0]]["names"],
             time: sequenceData[desc["hw_channels"][0]]["time"],
             timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
-            values: sequenceData[desc["hw_channels"][0]][type].map(
+            values: sequenceData[desc["hw_channels"][0]][type + "_state"].map(
               (vals, idx) => {
                 const mask =
                   (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &

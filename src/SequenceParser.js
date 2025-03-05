@@ -42,7 +42,12 @@ class SequenceParser {
   #plotData;
   #isUpToDate;
   RF_PROPERTIES = ["freq", "phase", "amp", "slope_time"];
-  DIO_PROPERTIES = ["output", "output_mask", "pmts", "pmts_mask"];
+  DIO_PROPERTIES = [
+    "output_state",
+    "output_mask",
+    "input_gate_state",
+    "input_gate_mask",
+  ];
   constructor(ionpulseSequence, externalConfig) {
     this.#main = ionpulseSequence;
     this.hasNames =

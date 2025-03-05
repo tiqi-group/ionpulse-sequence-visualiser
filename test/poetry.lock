@@ -312,7 +312,7 @@ scipy = "^1.15"
 type = "git"
 url = "ssh://git@gitlab.phys.ethz.ch/tiqi-projects/ionpulse_sequence_generator.git"
 reference = "fix/code-style"
-resolved_reference = "6aa1cf8101eac17bf029de2c1ad8b34566033ff4"
+resolved_reference = "4aa3ff606899ec08cda32164af5e47622da36ff1"
 
 [[package]]
 name = "isort"
