@@ -13,14 +13,29 @@ afterEach(() => {
 });
 
 test("Root page renders title", () => {
-  render(<App />, { wrapper: BrowserRouter });
+  render(
+    <BrowserRouter
+      future={{
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      }}
+    >
+      <App />
+    </BrowserRouter>,
+  );
   const linkElement = screen.getByText(/Sequence Visualizer/i);
   expect(linkElement).toBeDefined();
 });
 
 test("Hardware page displays AOM information", () => {
   render(
-    <MemoryRouter initialEntries={["/hardware"]}>
+    <MemoryRouter
+      initialEntries={["/hardware"]}
+      future={{
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      }}
+    >
       <App />
     </MemoryRouter>,
   );
@@ -31,7 +46,13 @@ test("Hardware page displays AOM information", () => {
 test("Plot page renders", async () => {
   const user = userEvent.setup();
   render(
-    <MemoryRouter initialEntries={["/plot"]}>
+    <MemoryRouter
+      initialEntries={["/plot"]}
+      future={{
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      }}
+    >
       <App />
     </MemoryRouter>,
   );
