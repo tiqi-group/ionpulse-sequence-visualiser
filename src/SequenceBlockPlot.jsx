@@ -6,7 +6,7 @@ import { ChannelType } from "./SequenceParser.js";
 import * as d3 from "d3";
 
 const typeToColor = {
-  Loop: [
+  LoopSequence: [
     "color-mix(in srgb, var(--bs-blue) 70%, white)",
     "color-mix(in srgb, var(--bs-blue) 40%, white)",
     "var(--bs-gray-300)",
@@ -16,7 +16,7 @@ const typeToColor = {
     "color-mix(in srgb, var(--bs-green) 40%, white)",
     "var(--bs-gray-300)",
   ],
-  Fork: [
+  ConditionalSequence: [
     "color-mix(in srgb, var(--bs-red) 70%, white)",
     "color-mix(in srgb, var(--bs-red) 40%, white)",
     "var(--bs-gray-300)",

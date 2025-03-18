@@ -169,7 +169,21 @@ class SequenceParser {
     recordEvents,
   ) {
     const seq = this.#main["sequence"][idx];
-    let isFork = seq["type"] === "Fork";
+    let isLoopSeq = false;
+    let isConditionalSeq = false;
+    switch (seq["type"]) {
+      case "LinearSequence":
+        break;
+      case "ConditionalSequence":
+        isConditionalSeq = true;
+        break;
+      case "LoopSequence":
+        isLoopSeq = true;
+        break;
+      default:
+        console.error("Unknown sequence type: " + seq["type"]);
+        break;
+    }
     channelMask = channelMask.intersection(new Set(seq["ch_mask"]));
     if (channelMask.size == 0) {
       return data;
@@ -181,7 +195,7 @@ class SequenceParser {
         .next().value;
     }
     let seqArray;
-    if (isFork) {
+    if (isConditionalSeq) {
       if (
         this.#sequenceConfig[idx]["paths"].length <=
         this.#sequenceBlockData[idx]["callIndex"]
@@ -207,11 +221,10 @@ class SequenceParser {
         baseName = baseName + idx;
       }
     }
-    let isLoop = seq["type"] === "Loop";
-    let iterations = isLoop // && this.#sequenceConfig[idx]["display"] === "full"
+    let iterations = isLoopSeq // && this.#sequenceConfig[idx]["display"] === "full"
       ? seq["iterations"]
       : 1;
-    if (isLoop) loopIteration *= iterations;
+    if (isLoopSeq) loopIteration *= iterations;
 
     const storeTime = (key, iterationName) => {
       if (key === "startTime") {
@@ -247,17 +260,17 @@ class SequenceParser {
             " is not in " +
             this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
         );
-        if (
-          !this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return (
-              Math.abs(call[key] - data[ch]["timeDomain"].at(-1)) <=
-              1e6 * Number.EPSILON
-            );
-          })
-        ) {
-          console.log(data[ch]);
-          console.log(this.#sequenceBlockData[idx]);
-        }
+        // if (
+        //   !this.#sequenceBlockData[idx]["calls"].some((call) => {
+        //     return (
+        //       Math.abs(call[key] - data[ch]["timeDomain"].at(-1)) <=
+        //       1e6 * Number.EPSILON
+        //     );
+        //   })
+        // ) {
+        //   console.log(data[ch]);
+        //   console.log(this.#sequenceBlockData[idx]);
+        // }
       }
     };
 
@@ -265,8 +278,8 @@ class SequenceParser {
     for (let i = 0; i < iterations; i++) {
       const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       let iterationName = baseName;
-      if (isLoop) iterationName += "[" + i + "]";
-      if (isFork)
+      if (isLoopSeq) iterationName += "[" + i + "]";
+      if (isConditionalSeq)
         iterationName +=
           "{" + this.#sequenceConfig[idx]["paths"][callIndex] + "}";
       if (iterationName.length > 0)
