@@ -435,7 +435,26 @@ class SequenceParser {
     }
 
     switch (event["type"]) {
-      case "DDSEvent":
+      case "SingleToneRFEvent":
+        for (let type of this.RF_PROPERTIES.concat(["time"])) {
+          if (type in event && event[type] !== null) {
+            data = this.getParamValue(
+              type,
+              event[type],
+              channelMask,
+              data,
+              loopIteration,
+              recordEvents,
+            );
+          } else if (recordEvents) {
+            for (const ch of channelMask) {
+              data[ch][type].push(0);
+            }
+          }
+        }
+        break;
+      case "MultiToneRFEvent":
+        // TODO Properly implement
         for (let type of this.RF_PROPERTIES.concat(["time"])) {
           if (type in event && event[type] !== null) {
             data = this.getParamValue(
@@ -488,6 +507,15 @@ class SequenceParser {
             recordEvents,
           );
         }
+        break;
+      case "Discriminator":
+        // TODO Properly implement
+        break;
+      case "PopPMTFIFO":
+        // TODO Properly implement
+        break;
+      default:
+        console.error("Encountered unexpected event: " + event["type"]);
         break;
     }
     return data;
