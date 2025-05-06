@@ -485,6 +485,7 @@ class SequenceParser {
           }
         }
         break;
+      case "DDSPIDStateChange":
       case "Wait":
         data = this.getParamValue(
           "time",
