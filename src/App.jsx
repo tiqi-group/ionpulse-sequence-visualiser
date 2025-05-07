@@ -104,7 +104,9 @@ function App() {
     function updateIonpulseSequence(value) {
       // Extracting data from the notification
       if (value.data.name == "Hardware.sequence") {
-        setIonpulseSequence(JSON.parse(value.data.value));
+        const json_sequence = JSON.parse(value.data.value);
+        console.log(json_sequence);
+        setIonpulseSequence(json_sequence);
       }
     }
 

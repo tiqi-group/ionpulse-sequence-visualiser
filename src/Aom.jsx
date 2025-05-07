@@ -15,7 +15,10 @@ function AOM(input) {
           Order: {input.aomConfiguration.order}
         </Card.Subtitle>
         <Card.Subtitle className="mb-2 text-muted">
-          Input channels: {input.aomConfiguration.dds_channels}
+          Input channels:{" "}
+          {input.aomConfiguration.hw_channels.map((elem) => {
+            return elem + ", "; // Need to think of a better naming
+          })}
         </Card.Subtitle>
         {/* <Card.Text>
           Some quick example text to build on the card title and make up the
