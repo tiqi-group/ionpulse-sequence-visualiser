@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 for i in range(32):
                     d["TTLs"][f"TTL{i}"] = {
                             "name": hw_ch.get("name", f"TTL {i}"),
-                            "hw_channels": [getChannelKey(hw_ch)],
+                            "hw_channels": [hw_ch],
                             "sub_channel": i,
                             }
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
                 for i in range(8):
                     d["PMTs"][f"PMT{i}"] = {
                             "name": hw_ch.get("name", f"PMT {i}"),
-                            "hw_channels": [getChannelKey(hw_ch)],
+                            "hw_channels": [hw_ch],
                             "sub_channel": i,
                             }
             elif hw_ch["hardware"] == "QuenchHardware":
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                         "type": "single pass",
                         "central_frequency": 100,
                         "order": 1,
-                        "hw_channels":[getChannelKey(hw_ch)]
+                        "hw_channels":[hw_ch]
                         }
                 rf_idx = rf_idx + 1
             elif hw_ch["hardware"] == "DDSHardware":
@@ -111,7 +111,7 @@ if __name__ == "__main__":
                         "type": "single pass",
                         "central_frequency": 100,
                         "order": 1,
-                        "hw_channels":[getChannelKey(hw_ch)]
+                        "hw_channels":[hw_ch]
                         }
                 rf_idx = rf_idx + 1
         
