@@ -64,8 +64,14 @@ function App() {
           ...value,
           group: group,
         };
+        newDescription[key]["hw_channels"] = newDescription[key][
+          "hw_channels"
+        ].map((v) => {
+          return "" + v["device"] + " " + v["hardware"] + " " + v["channel"];
+        });
       }
     }
+    console.log(newDescription);
     setChannelDescription(newDescription);
   }
 
