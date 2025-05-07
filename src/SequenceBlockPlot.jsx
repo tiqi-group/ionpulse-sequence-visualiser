@@ -53,7 +53,7 @@ const SequenceBlockPlot = function ({
 
   const depthYShrink = 1 / 2 / sequenceBlockData.at(-1)["maxDepth"];
   const depthXShrink = 1;
-  const xPad = 1;
+  const xPad = 0;
   const yPad = 0.02;
 
   const maxTime =
@@ -73,6 +73,8 @@ const SequenceBlockPlot = function ({
   }, {});
 
   let marks = [];
+
+  console.log("sequenceBlockData", sequenceBlockData);
 
   sequenceBlockData
     .slice(0, -1) // exclude main sequence
@@ -100,10 +102,20 @@ const SequenceBlockPlot = function ({
           call["startTime"] < timeDomain[1] &&
           call["endTime"] > timeDomain[0]
         ) {
+          console.log("Plotting call:", {
+            name: call.name,
+            startTime: call.startTime,
+            endTime: call.endTime,
+            duration: call.endTime - call.startTime,
+            depth: call.depth,
+            x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1),
+            x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
+          });
+
           for (const yData of yDataPairs) {
             blockData.push({
               x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1), // -1 because we ignore main sequence
-              x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
+              x2: call["endTime"] - 0 - depthXShrink * (call["depth"] - 1),
               y1: yData[0] - 1 / 2 + depthYShrink * (call["depth"] - 1) + yPad,
               y2: yData[1] + 1 / 2 - depthYShrink * (call["depth"] - 1) - yPad,
               name: call["name"],

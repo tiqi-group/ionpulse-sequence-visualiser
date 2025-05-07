@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
-import { Hardware } from "./Hardware";
+import { Hardware, channelGroups } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 
@@ -58,7 +58,7 @@ function App() {
 
   function updateChannelDescription(description) {
     let newDescription = {};
-    for (const group of ["RF", "TTL", "PMT"]) {
+    for (const group of channelGroups) {
       for (const [key, value] of Object.entries(description[group + "s"])) {
         newDescription[key] = {
           ...value,
