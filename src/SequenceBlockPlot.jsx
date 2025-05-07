@@ -74,8 +74,6 @@ const SequenceBlockPlot = function ({
 
   let marks = [];
 
-  console.log("sequenceBlockData", sequenceBlockData);
-
   sequenceBlockData
     .slice(0, -1) // exclude main sequence
     .reverse()
@@ -102,15 +100,15 @@ const SequenceBlockPlot = function ({
           call["startTime"] < timeDomain[1] &&
           call["endTime"] > timeDomain[0]
         ) {
-          console.log("Plotting call:", {
-            name: call.name,
-            startTime: call.startTime,
-            endTime: call.endTime,
-            duration: call.endTime - call.startTime,
-            depth: call.depth,
-            x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1),
-            x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
-          });
+          // console.log("Plotting call:", {
+          //   name: call.name,
+          //   startTime: call.startTime,
+          //   endTime: call.endTime,
+          //   duration: call.endTime - call.startTime,
+          //   depth: call.depth,
+          //   x1: call["startTime"] + xPad + depthXShrink * (call["depth"] - 1),
+          //   x2: call["endTime"] - xPad - depthXShrink * (call["depth"] - 1),
+          // });
 
           for (const yData of yDataPairs) {
             blockData.push({

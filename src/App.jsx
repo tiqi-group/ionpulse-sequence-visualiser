@@ -71,7 +71,6 @@ function App() {
         });
       }
     }
-    console.log(newDescription);
     setChannelDescription(newDescription);
   }
 
@@ -105,7 +104,6 @@ function App() {
       // Extracting data from the notification
       if (value.data.name == "Hardware.sequence") {
         const json_sequence = JSON.parse(value.data.value);
-        console.log(json_sequence);
         setIonpulseSequence(json_sequence);
       }
     }
@@ -131,7 +129,6 @@ function App() {
             setConnectionErrMsg(
               "" + response.status + " " + response.statusText,
             );
-            console.log(response);
           }
         })
         .catch((exception) => {
