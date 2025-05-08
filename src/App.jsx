@@ -9,34 +9,7 @@ import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
-  const [channelDescription, setChannelDescription] = useState(() => {
-    let init = {};
-    for (let i = 0; i < 32; i++) {
-      init["RF" + i] = {
-        name: "RF" + i,
-        type: "single_pass",
-        central_frequency: 100,
-        order: 1,
-        hw_channels: [
-          "DDSHardware [" + Math.trunc(i / 4) + "," + (i % 4) + "]",
-        ],
-        group: "RF",
-      };
-      init["TTL" + i] = {
-        name: "TTL" + i,
-        hw_channels: ["DIOHardware"],
-        sub_channel: i,
-        group: "TTL",
-      };
-    }
-    init["PMT0"] = {
-      name: "PMT0",
-      hw_channels: ["DIOHardware"],
-      sub_channel: 0,
-      group: "PMT",
-    };
-    return init;
-  });
+  const [channelDescription, setChannelDescription] = useState({});
   const [ionpulseSequence, setIonpulseSequence] = useState(() => {
     let init = {
       freq: [],

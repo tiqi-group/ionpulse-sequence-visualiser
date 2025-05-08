@@ -512,6 +512,11 @@ const PulseSequencePlot = function SequencePlot({
       let object_to_add = structuredClone(
         data_templates[channelYDataType[channel]],
       );
+
+      if (object_to_add == null) {
+        continue; // need to wait for the hardware data to load
+      }
+
       if (channelYDataType[channel] === "sample") {
         const waveform = expandToWaveform(value);
         object_to_add.x = waveform[0];
