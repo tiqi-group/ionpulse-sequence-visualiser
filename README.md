@@ -15,14 +15,19 @@ For example, running the CoolDet from the Cryo setup looks like this:
   - Also see https://nodejs.org/en/download
 
 - Setup the environment with `npm install` in the repo
-- Change the settings.json file such that the IP address and port match the one from your Library.
-  The file gets created in the install step.
-- Use `npm start` to run the visualiser
+- `npm run build` to build the static content
+- `npm run serve` to start a webserver that exposes the library visualiser.
   By default, you can access it via
 
 ```
 http://localhost:3000
 ```
+
+## Configuration
+
+The library visualiser uses cookies to store the address and port of the experiment library.
+Just go to the _Configure_ menu entry and fill in the details of the form and click _Connect_.
+The form will indicate whether the visualiser could connect or not.
 
 ## Usage
 
@@ -39,7 +44,44 @@ You can however use the "Channels" button to decide which channels to show and h
 
 Under the tab "Hardware" you can find the hardware description of your setup.
 
+## Deployment
+
+To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
+
+- Extract the artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
+- Add an nginx server configuration into the http section of `/etc/nginx/nginx.conf`
+
+```
+   server {
+        listen 80;
+        root /var/www/html/library-visualiser/dist/;
+        index index.html;
+        server_name library-visualiser.lab;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+```
+
+- Restart nginx (`systemctl restart nginx`)
+- Configure your router to forward this URL to the nginx server.
+  If you're using an edgerouter, add
+  ```
+  address=/library-visualiser.lab/<server-ip-address>
+  ```
+  to `Config Tree: service -> dns -> forwarding (options)`
+- Enjoy
+
 ## Development
+
+Use the development server instead of serving the static content by running
+
+```
+npm start
+```
+
+This will automatically build and update the visualiser. `npm run build` and `npm run serve` are not necessary in that case.
 
 Once you have installed the visualiser, a pre-commit hook is added that uses `prettier` to check the code formatting before committing.
 If you get an error from the pre-commit hook, run `npm run prettier`

@@ -1,15 +1,19 @@
 #!/usr/bin/python3
 from typing import Any, Dict, List, Tuple
+from ionpulse_sequence_generator.utils import logger, DebugLevels
 from numpy.typing import NDArray
 from numpy import array, log2, binary_repr
 import json
 import argparse
 
 from ionpulse_sequence_generator import (
+        RFWait,
         Sequence,
         LinearSequence,
         ChannelMask,
-        ChannelIndex
+        ChannelIndex,
+        Header,
+        ReadoutPostprocessingMethod
         )
 
 from ionpulse_seq_gen_test import (
@@ -26,10 +30,6 @@ import matplotlib.pyplot as plt
 # From experiment library
 def generate_simplified_json(sequence):
     generated_dict = dict()
-    for i in range(32):
-        generated_dict[f"TTL{i}"] = {"values": [], "times": []}
-    for pmt_idx in range(8):
-        generated_dict[f"PMT{pmt_idx}"] = {"values": [], "times": []}
     for channel in sequence._ch_mask.to_idx_list():
         if channel.is_rf_channel():
 
@@ -37,24 +37,26 @@ def generate_simplified_json(sequence):
                     channel)
             channel_sequence["time"] = list(array(channel_sequence["time"]).cumsum(dtype=float))
 
-            #channel_sequence["names"] = names
+            channel_sequence["names"] = names
 
             generated_dict[f"RF{int(log2(channel.rf))}"] = channel_sequence
         elif channel.is_digital_io():
 
-            events = sequence.get_event_params_per_channel(channel)[0]
+            events, _,_,_,_, names = sequence.get_event_params_per_channel(channel)
 
             for i in range(32):
                 generated_dict[f"TTL{i}"] = {"values": []}
                 for ttl_event in events["ttl_target"]:
                     generated_dict[f"TTL{i}"]["values"].append(int(binary_repr(ttl_event, 32)[::-1][i]))
                     generated_dict[f"TTL{i}"]["time"] = list(array(events["time"]).cumsum(dtype=float))
+                    generated_dict[f"TTL{i}"]["names"] = names
 
             for pmt_idx in range(8):
                 generated_dict[f"PMT{pmt_idx}"] = {"values": []}
                 for pmt_event in events["pmts"]:
                     generated_dict[f"PMT{pmt_idx}"]["values"].append(int(binary_repr(pmt_event, 8)[::-1][pmt_idx]))
                     generated_dict[f"PMT{pmt_idx}"]["time"] = list(array(events["time"]).cumsum(dtype=float))
+                    generated_dict[f"PMT{pmt_idx}"]["names"] = names
 
     return generated_dict
 
@@ -212,34 +214,94 @@ if __name__ == "__main__":
     parser.add_argument("--sbcloops", help="Number of SBC loops", default=5)
     args = parser.parse_args()
 
-    state_prep = state_init("", 6)
-    sbc_loop = sbc("0", 0, state_prep, n_loops=int(args.sbcloops))
-    pi_2_unit_1 = pi_2("unit 1", 0, True)
-    pi_2_unit_2 = pi_2("unit 2", 3)
-    ms12 = ms_1_2("1 2", 0, 3)
-    final_readout_seq = readout("final readout sequence", 6, 0)
+    logger.log_level = DebugLevels.DEBUG
+    logger.stdout_level = DebugLevels.WARNING
+
+    channel_map = {
+            "397": 6,
+            "866": 7,
+            "854": 8,
+            "729": [
+                {"DP": 0},
+                {"DP": 3}
+            ]
+            }
+
+    if False:
+        channel_map["729"][0]["SP1"] = 1
+        channel_map["729"][0]["SP2"] = 2
+        channel_map["729"][1]["SP1"] = 4
+        channel_map["729"][1]["SP2"] = 5
+
+    state_prep = state_init("", channel_map)
+    sbc_loop = sbc("0", channel_map, 0, state_prep, n_loops=int(args.sbcloops))
+    pi_2_unit_1 = pi_2("unit 1", channel_map | {"ttl": True}, 0)
+    pi_2_unit_2 = pi_2("unit 2", channel_map, 1)
+    ms12 = ms_1_2("1 2", channel_map, [0, 1])
+    final_readout_seq = readout("final readout sequence", channel_map, 0)
 
     all_channels = (1 << 16) - 1
     _seq = LinearSequence(
-        "main",
+        "inner main",
         ChannelMask(rf=all_channels, digital_io=True, readout=True, qubit=0x7),
         auto_channel_mask=False,
     )
 
+    _seq += RFWait.fromvalues("StartWait", 0, 1.3)
+    _seq.sync()
     _seq += sbc_loop
     _seq += state_prep
     _seq.sync()
-    _seq += pi_2_unit_1
-    _seq += pi_2_unit_2
-    _seq += ms12
-    _seq += pi_2_unit_1
-    _seq += pi_2_unit_2
-    _seq.sync()
-    _seq += final_readout_seq
+    if False:
+        _seq += pi_2_unit_1
+        _seq += pi_2_unit_2
+        _seq += ms12
+        _seq += pi_2_unit_1
+        _seq += pi_2_unit_2
+        _seq.sync()
+        _seq += final_readout_seq
+        _seq.sync()
+    _seq += RFWait.fromvalues("EndWait", 0, 1.3)
     _seq.sync()
 
+    if False:
+        main_seq = LinearSequence(
+                "main",
+                ChannelMask(rf=(1 << 17) - 1, digital_io=True, readout=True, qubit=0x7),
+                auto_channel_mask=False
+                )
+        main_seq += _seq
+        main_seq += RFWait.fromvalues("TotalTime", 16, 100.)
+        main_seq.sync()
+    else:
+        main_seq = _seq
+        main_seq.name = "main"
+
     with open("ionpulse_seq_plot.json", "w") as f:
-        json.dump(generate_simplified_json(_seq), f)
+        json.dump(generate_simplified_json(main_seq), f)
+
+    header = Header()
+
+    header.add_field(
+        name="sequence_description",
+        value="Test Sequence for Library Visualiser"
+    )
+    header.add_field(
+            name="channel_map",
+            value= channel_map
+            )
+    header.shot_channel_names = ["Signal", "Background"]
+    header.shot_channel_plot_index = [0, 0]
+    header.readout_channel_names = [
+        "Raw",
+        "Background Corrected",
+    ]
+    header.readout_postprocessing_method = [
+        ReadoutPostprocessingMethod.SUM,
+        ReadoutPostprocessingMethod.AVERAGE,
+    ]
+    header.readout_channel_plot_index = [0, 1]
+    main_seq.save_to_json_file("ionpulse_seq.json", header)
 
     if args.jsononly:
         exit(0)
@@ -269,7 +331,7 @@ if __name__ == "__main__":
             yticks,
             names
         ) = plot_data_for_channel_sequence(
-            _seq, channelvalue[0], paths=[channelvalue[1]], expand=False
+            main_seq, channelvalue[0], paths=[channelvalue[1]], expand=False
         )
         subfig = subfigs[f]
         axs = subfig.subplots(len(values.keys()),1)

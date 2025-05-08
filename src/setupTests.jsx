@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import "vitest-canvas-mock";
+import "@testing-library/jest-dom/vitest";
 
 window.URL.createObjectURL = vi.fn();
 
@@ -15,4 +16,12 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
+});
+
+vi.mock("react-transition-group", () => {
+  const FakeTransition = vi.fn(({ children }) => children);
+  const FakeCSSTransition = vi.fn((props) =>
+    props.in ? <FakeTransition>{props.children}</FakeTransition> : null,
+  );
+  return { CSSTransition: FakeCSSTransition, Transition: FakeTransition };
 });

@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route } from "react-router-dom";
 import { Hardware } from "./Hardware";
-import { SequencePlotPage } from "./SequencePlotPage";
+import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
+import { Configurator } from "./Configurator";
 
-import settings from "../settings";
-import { socket } from "./socket";
+import { io } from "socket.io-client";
+import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
   const [channelDescription, setChannelDescription] = useState(() => {
@@ -30,25 +31,32 @@ function App() {
     };
     return init;
   });
-  const [sequenceData, setSequenceData] = useState(() => {
-    let init = {};
-    for (const k in channelDescription) {
-      if (k.includes("RF")) {
-        init[k] = {
-          freq: [0],
-          phase: [0],
-          amp: [0],
-          time: [0],
-          names: [{ sequences: [""] }],
-        };
-      } else {
-        init[k] = { time: [0], values: [0] };
-      }
-    }
+  const [ionpulseSequence, setIonpulseSequence] = useState(() => {
+    let init = {
+      Freq: [],
+      Phase: [],
+      Amp: [],
+      Time: [],
+      Event: [],
+      Sequence: [
+        {
+          name: "main",
+          type: "LinearSequence",
+          ch_mask: {
+            rf: 0,
+            digital_io: false,
+            readout: false,
+            qubit: 0,
+          },
+          rf_channel_sequences: {},
+          digital_io: [],
+          readout: [],
+          qubit_sequences: {},
+        },
+      ],
+    };
     return init;
   });
-  var libraryIp = settings["Library ip"];
-  var libraryPort = settings["Library port"];
 
   function updateChannelDescription(description) {
     let newDescription = {};
@@ -63,32 +71,97 @@ function App() {
     setChannelDescription(newDescription);
   }
 
+  const [library, setLibrary] = useState(() => {
+    return {
+      address: localStorage.getItem("libraryAddress") || "localhost",
+      port: localStorage.getItem("libraryPort") || "8003",
+    };
+  });
   useEffect(() => {
-    console.log("Called App effect");
-    const hardware_url = `http://${libraryIp}:${libraryPort}/Hardware`;
+    localStorage.setItem("libraryAddress", library.address);
+    localStorage.setItem("libraryPort", library.port);
+  }, [library]);
 
-    fetch(hardware_url + "/description")
-      .then((response) => response.json())
-      .then((data) => {
-        updateChannelDescription(JSON.parse(data));
-      });
+  const [connectionStatus, setConnectionStatus] = useState(
+    ConnectionStatus.connecting,
+  );
 
-    fetch(hardware_url + "/scope_sequence")
-      .then((response) => response.json())
-      .then((data) => {
-        setSequenceData(JSON.parse(data));
-      });
+  const [connectionErrMsg, setConnectionErrMsg] = useState("");
 
-    function updateSequenceData(value) {
+  useEffect(() => {
+    const url = `${library.address}:${library.port}`;
+    const hardware_url = `http://${url}/Hardware`;
+
+    const socket = io(`ws://${url}`, {
+      path: "/ws/socket.io/",
+      autoConnect: false,
+    });
+
+    function updateIonpulseSequence(value) {
       // Extracting data from the notification
-      if (value.data.name == "Hardware.scope_sequence") {
-        setSequenceData(JSON.parse(value.data.value));
+      if (value.data.name == "Hardware.sequence") {
+        setIonpulseSequence(JSON.parse(value.data.value));
       }
     }
 
-    socket.on("notify", updateSequenceData);
-    return () => socket.off("notify", updateSequenceData);
-  }, []);
+    let isConnectionUp = true;
+    setConnectionStatus(ConnectionStatus.connecting);
+    const controller = new AbortController();
+    const fetchData = async () => {
+      let promise = fetch(hardware_url + "/description", {
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (response.ok) {
+            response.json().then((data) => {
+              if (isConnectionUp) {
+                updateChannelDescription(JSON.parse(data));
+              }
+            });
+            setConnectionStatus(ConnectionStatus.connected);
+          } else {
+            isConnectionUp = false;
+            setConnectionStatus(ConnectionStatus.failed);
+            setConnectionErrMsg(
+              "" + response.status + " " + response.statusText,
+            );
+            console.log(response);
+          }
+        })
+        .catch((exception) => {
+          if (exception instanceof TypeError) {
+            setConnectionStatus(ConnectionStatus.failed);
+            setConnectionErrMsg(exception.message);
+          }
+          isConnectionUp = false;
+        });
+      fetch(hardware_url + "/sequence", { signal: controller.signal })
+        .then((response) => response.json())
+        .then((data) => {
+          if (isConnectionUp) {
+            setIonpulseSequence(JSON.parse(data));
+          }
+        })
+        .catch((response) => {
+          isConnectionUp = false;
+        });
+
+      await promise;
+
+      if (isConnectionUp) {
+        socket.connect();
+        socket.on("notify", updateIonpulseSequence);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isConnectionUp = false;
+      controller.abort();
+      socket.off("notify", updateIonpulseSequence);
+    };
+  }, [library]);
 
   return (
     <>
@@ -97,9 +170,11 @@ function App() {
         <Route
           path="/plot"
           element={
-            <SequencePlotPage
+            <IonpulseSequenceVisualiser
               channelDescription={channelDescription}
-              sequenceData={sequenceData}
+              ionpulseSequence={ionpulseSequence}
+              connectionStatus={connectionStatus}
+              connectionErrMsg={connectionErrMsg}
             />
           }
         />
@@ -108,6 +183,16 @@ function App() {
           element={<Hardware channelDescription={channelDescription} />}
         />
         <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
+        <Route
+          path="/config"
+          element={
+            <Configurator
+              library={library}
+              setLibrary={setLibrary}
+              connectionStatus={connectionStatus}
+            />
+          }
+        />
       </Routes>
     </>
   );

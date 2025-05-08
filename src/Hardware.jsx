@@ -1,3 +1,4 @@
+import { Container } from "react-bootstrap";
 import AOM from "./Aom";
 let Hardware = function (input) {
   let ret = [];
@@ -7,7 +8,7 @@ let Hardware = function (input) {
     }
   }
 
-  return ret;
+  return <Container>{ret}</Container>;
 };
 
 export { Hardware };

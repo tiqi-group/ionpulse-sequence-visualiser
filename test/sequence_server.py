@@ -13,9 +13,9 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
-    parser.add_argument("--file", required=False, default="ionpulse_seq_plot.json")
+    parser.add_argument("--plot", required=False, default="ionpulse_seq_plot.json")
+    parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     args = parser.parse_args()
-    plot_json_filename = args.file
 
     protocols = ["http://"]
     hosts = ["localhost"]
@@ -43,21 +43,36 @@ if __name__ == "__main__":
     # wrap with a WSGI application
     app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app, socketio_path='ws/socket.io')
 
+    def get_channel_name(channel_map, i):
+        for key in channel_map:
+            if channel_map[key] == i:
+                return key
+
+            if isinstance(channel_map[key], list):
+                for map_idx, sub_map in enumerate(channel_map[key]):
+                    for sub_key in sub_map:
+                        if sub_map[sub_key] == i:
+                            return f"{key} Unit {map_idx} {sub_key}"
+        return f"RF {i}"
+
     @app.route("/Hardware/description")
     def description() -> str:
         n_ttls = 32
         n_rfs = 32
         n_pmts = 8
+        channel_index_to_name = {}
         try:
-            with open(plot_json_filename) as f:
+            with open(args.file) as f:
                 data = f.read()
                 if len(data) > 0:
                     try:
                         seq = json.loads(data)
-                        ch_keys = list(seq.keys())
-                        n_ttls = len([s for s in ch_keys if "TTL" in s])
-                        n_rfs = len([s for s in ch_keys if "RF" in s])
-                        n_pmts = len([s for s in ch_keys if "PMT" in s])
+                        main_seq = seq["Sequence"][-1]
+                        n_ttls = 32 if main_seq["ch_mask"]["digital_io"] else 0
+                        n_pmts = 8 if main_seq["ch_mask"]["digital_io"] else 0
+                        n_rfs = main_seq["ch_mask"]["rf"].bit_count()
+                        for i in range(n_rfs):
+                            channel_index_to_name[i] = get_channel_name(seq["Header"]["channel_map"], i)
                     except:
                         pass
         except:
@@ -65,8 +80,10 @@ if __name__ == "__main__":
         d = dict()
         d["RFs"] = dict()
         for i in range(n_rfs):
+            if i not in channel_index_to_name:
+                channel_index_to_name[i] = f"RF {i}"
             d["RFs"][f"RF{i}"] = {
-                    "name": f"RF {i}",
+                    "name": channel_index_to_name[i],
                     "type": "single pass",
                     "central_frequency": 100,
                     "order": 1,
@@ -85,16 +102,16 @@ if __name__ == "__main__":
                     "name": f"PMT {i}"
                     }
         
-        out = dict()
-        out = json.dumps(d)
-        return f'{json.dumps(out)}'
+        # Double dump to return a properly escaped string
+        return json.dumps(json.dumps(d))
 
-    @app.route("/Hardware/scope_sequence")
-    def scope_sequence() -> str:
+    @app.route("/Hardware/sequence")
+    def sequence() -> str:
         try:
-            with open(plot_json_filename) as f:
-                data = f.read()
-            return json.dumps(data)
+            with open(args.file) as f:
+                data = json.load(f)
+            # Double dump to return a properly escaped string
+            return json.dumps(json.dumps(data))
         except:
             pass
 
@@ -105,22 +122,27 @@ if __name__ == "__main__":
         return "Index page"
     
     class JsonChangeHandler(FileSystemEventHandler):
+        def __init__(self, name, filename):
+            self.name = name
+            self.filename = filename
+
         def safe_emit(self):
             sleep(1)
             try:
-                with open(plot_json_filename) as f:
+                with open(self.filename) as f:
                     data = f.read()
                     if len(data) > 0:
                         try:
                             json.loads(data)
                             sio.emit("notify",{"data": {
-                                "name": "Hardware.scope_sequence",
+                                "name": f"Hardware.{self.name}",
                                 "value": data
                                 }})
                         except:
-                            pass
+                            print(f"Can't emit notification for change in file {self.filename}")
+
             except:
-                pass
+                print(f"Can't open file {self.filename}")
 
         def on_modified(self, event):
             self.safe_emit()
@@ -130,14 +152,23 @@ if __name__ == "__main__":
             self.safe_emit()
             return super().on_created(event)
 
-    if not isfile(plot_json_filename):
-        print(f"File {plot_json_filename} doesn't exist")
-        exit(1)
-    jsonChangeHandler = JsonChangeHandler()
+    files = [args.file]
+    file_types = ["sequence"]
     observer = Observer()
-    observer.schedule(jsonChangeHandler, plot_json_filename)
+    handlers = []
+    for file, file_type in zip(files, file_types):
+        if not isfile(file):
+            print(f"File {file} doesn't exist")
+            exit(1)
+        handler = JsonChangeHandler(file_type, file)
+        # Recursive is needed on mac for example. In any case, it doesn't hurt
+        observer.schedule(handler, file, recursive=True)
+        handlers.append(handler)
+
     observer.start()
 
-    app.run(host="0.0.0.0", port=8003, debug=args.debug)
-    observer.stop()
-    observer.join()
+    try:
+        app.run(host="0.0.0.0", port=8003, debug=args.debug)
+    finally:
+        observer.stop()
+        observer.join()

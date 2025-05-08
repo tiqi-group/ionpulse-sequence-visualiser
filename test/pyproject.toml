@@ -12,8 +12,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 numpy = ">=1.24.2"
-msgpack = ">=1.0.5"
-ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", branch = "master", develop = true}
+msgpack = ">=1.0.3"
+ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "e176ee1", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
@@ -34,7 +34,7 @@ optional=false
 [tool.poetry.group.plot.dependencies]
 python-socketio = "^5.11.0"
 flask = "^3.0.1"
-watchdog = "^3.0.0"
+watchdog = "^4.0.0"
 flask-cors = "^4.0.0"
 matplotlib = ">=3.6.0"
 
