@@ -25,7 +25,7 @@ if __name__ == "__main__":
         print("Can't retrieve local ip");
     hosts += [socket.gethostname()]
     hosts += [socket.gethostname()+".lab"]
-    ports = [8003, 3000]
+    ports = [8003, 3000, 3006]
     ports = [ f":{port}" for port in ports ]
 
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 d["TTLs"] = dict()
                 for i in range(32):
                     d["TTLs"][f"TTL{i}"] = {
-                            "name": hw_ch.get("name", f"TTL {i}"),
+                            "name": hw_ch.get("name", f"TTL {i:02d}"),
                             "hw_channels": [hw_ch],
                             "sub_channel": i,
                             }
@@ -92,13 +92,13 @@ if __name__ == "__main__":
                 d["PMTs"] = dict()
                 for i in range(8):
                     d["PMTs"][f"PMT{i}"] = {
-                            "name": hw_ch.get("name", f"PMT {i}"),
+                            "name": hw_ch.get("name", f"PMT {i:02d}"),
                             "hw_channels": [hw_ch],
                             "sub_channel": i,
                             }
             elif hw_ch["hardware"] == "QuenchHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
-                        "name": hw_ch.get("name", f"Quench RF {rf_idx}"),
+                        "name": hw_ch.get("name", f"Quench RF {rf_idx:02d}"),
                         "type": "single pass",
                         "central_frequency": 100,
                         "order": 1,
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                 rf_idx = rf_idx + 1
             elif hw_ch["hardware"] == "DDSHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
-                        "name": hw_ch.get("name", f"DDS {rf_idx}"),
+                        "name": hw_ch.get("name", f"DDS {rf_idx:02d}"),
                         "type": "single pass",
                         "central_frequency": 100,
                         "order": 1,
