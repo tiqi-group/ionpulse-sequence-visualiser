@@ -27,7 +27,7 @@ test("Root page renders title", () => {
   expect(linkElement).toBeDefined();
 });
 
-test("Hardware page displays AOM information", () => {
+test("Hardware page displays AOM information", async () => {
   render(
     <MemoryRouter
       initialEntries={["/hardware"]}
@@ -39,6 +39,7 @@ test("Hardware page displays AOM information", () => {
       <App />
     </MemoryRouter>,
   );
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const element = screen.getAllByText(/Central frequency:/i);
   expect(element).toBeDefined();
 });
