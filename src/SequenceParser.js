@@ -6,6 +6,8 @@ const ChannelType = {
   qubit: "Qubit",
 };
 
+const N_INPUT_GATE_CHANNELS = 8;
+
 /**
  * getChannelKey converts hardware channel to a unique string
  *
@@ -41,6 +43,7 @@ class SequenceParser {
   #sequenceConfig;
   #plotData;
   #isUpToDate;
+  #inputGateCounter;
   RF_PROPERTIES = [
     "freq",
     "phase",
@@ -55,6 +58,7 @@ class SequenceParser {
     "input_gate_state",
     "input_gate_mask",
   ];
+  READOUT_PROPERTIES = ["pmt_channel"];
   constructor(ionpulseSequence, externalConfig) {
     if (Object.hasOwn(ionpulseSequence, "header")) {
       const sequenceDescriptionVersion =
@@ -122,11 +126,12 @@ class SequenceParser {
     this.#mainSequenceBlockData = this.#sequenceBlockData.at(-1);
     this.#mainSequenceBlockData["maxDepth"] = 0;
     this.#isUpToDate = false;
+    this.#inputGateCounter = [...Array(N_INPUT_GATE_CHANNELS)].map(() => 1);
   }
 
   generatePlotData() {
     let ch_mask = new Set(this.#main["sequence"].at(-1)["ch_mask"]);
-    ch_mask.delete(0);
+    // ch_mask.delete(0);
 
     let plotData = {};
     for (let ch of ch_mask) {
@@ -152,6 +157,10 @@ class SequenceParser {
         for (const key of this.DIO_PROPERTIES) {
           data[key] = [0];
         }
+      } else if (hw["hardware"] == ChannelType.readout) {
+        for (const key of this.READOUT_PROPERTIES) {
+          data[key] = [0];
+        }
       }
       plotData[ch] = data;
     }
@@ -174,9 +183,53 @@ class SequenceParser {
       }
       value["names"].pop();
     }
+
+    this.#main["header"]["channel_idx_to_hw"].forEach((hw, ch) => {
+      if (hw["hardware"] === ChannelType.dio) {
+        let inputGateTimes = [...Array(N_INPUT_GATE_CHANNELS)].map(() => [0]);
+        let lastGate = 0;
+        plotData[ch]["time"].forEach((time, idx) => {
+          let newGate =
+            (lastGate & ~plotData[ch]["input_gate_mask"][idx]) |
+            plotData[ch]["input_gate_state"][idx];
+          let closingGate = ~newGate & lastGate;
+          for (let i = 0; i < N_INPUT_GATE_CHANNELS; i++) {
+            if (closingGate & (1 << i)) {
+              inputGateTimes[i].push(time);
+            }
+          }
+          lastGate = newGate;
+        });
+        this.#main["header"]["channel_idx_to_hw"].forEach((hw, ch) => {
+          if (hw["hardware"] === ChannelType.readout) {
+            plotData[ch]["time"] = plotData[ch]["time"].map(
+              (gate_idx, idx) =>
+                inputGateTimes[plotData[ch]["pmt_channel"][idx]][gate_idx],
+            );
+          }
+        });
+      }
+    });
     // console.log("sequence block data: ", this.#sequenceBlockData);
-    // console.log("plot data: ", plotData);
+    console.log("plot data: ", plotData);
     return plotData;
+  }
+
+  /**
+   * Get the first channel index that is not a readout channel
+   * @param {Set} channelMask Set of channel indices
+   * @return {int} Index of the first channel that is not a readout channel
+   */
+  getFirstChannel(channelMask) {
+    let channelMaskIter = channelMask.values();
+    let ch = channelMaskIter.next().value;
+    while (
+      this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ===
+      ChannelType.readout
+    ) {
+      ch = channelMaskIter.next().value;
+    }
+    return ch;
   }
 
   /**
@@ -220,9 +273,8 @@ class SequenceParser {
     }
 
     if (!this.#sequenceBlockData[idx]["refChannel"]) {
-      this.#sequenceBlockData[idx]["refChannel"] = channelMask
-        .values()
-        .next().value;
+      this.#sequenceBlockData[idx]["refChannel"] =
+        this.getFirstChannel(channelMask);
     }
     let seqArray;
     if (isConditionalSeq) {
@@ -260,7 +312,7 @@ class SequenceParser {
       if (key === "startTime") {
         this.#sequenceBlockData[idx]["calls"].push({
           startTime:
-            data[channelMask.values().next().value]["timeDomain"].at(-1),
+            data[this.getFirstChannel(channelMask)]["timeDomain"].at(-1),
           depth: depth,
           name: iterationName,
           data: {},
@@ -270,7 +322,7 @@ class SequenceParser {
         }
       } else {
         this.#sequenceBlockData[idx]["calls"].at(-1)[key] =
-          data[channelMask.values().next().value]["timeDomain"].at(-1);
+          data[this.getFirstChannel(channelMask)]["timeDomain"].at(-1);
       }
       for (let ch of channelMask) {
         console.assert(
@@ -304,7 +356,8 @@ class SequenceParser {
       }
     };
 
-    const lastDataLength = data[channelMask.values().next().value].time.length;
+    // TODO This should be handled per channel
+    const lastDataLength = data[this.getFirstChannel(channelMask)].time.length;
     for (let i = 0; i < iterations; i++) {
       const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       let iterationName = baseName;
@@ -584,7 +637,15 @@ class SequenceParser {
         // TODO Properly implement
         break;
       case "PopPMTFIFO":
-        // TODO Properly implement
+        for (let ch of event["ch_mask"]) {
+          console.assert(
+            this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ==
+              ChannelType.readout,
+            "Found PopPMTFIFO event with hardware channel not equal to 'Readout'",
+          );
+          data[ch]["time"].push(this.#inputGateCounter[event["pmt_channel"]]++);
+          data[ch]["pmt_channel"].push(event["pmt_channel"]);
+        }
         break;
       default:
         console.error("Encountered unexpected event: " + event["type"]);

@@ -12,6 +12,9 @@ function App() {
   const [channelDescription, setChannelDescription] = useState({});
   const [ionpulseSequence, setIonpulseSequence] = useState(() => {
     let init = {
+      header: {
+        channel_idx_to_hw: [],
+      },
       freq: [],
       phase: [],
       amp: [],
