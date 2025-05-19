@@ -344,6 +344,10 @@ const data_templates = {
   phase: data_template_phase,
   PMT: data_template_PMT,
   TTL: data_template_TTL,
+  Readout: {
+    ...data_template_PMT,
+    marker: { color: "lightgreen" },
+  },
   sample: {
     type: "scatter",
     mode: "lines",

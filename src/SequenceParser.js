@@ -648,6 +648,8 @@ class SequenceParser {
           );
           data[ch]["time"].push(data[ch]["time"].at(-1));
           data[ch]["pmt_channel"].push(data[ch]["pmt_channel"].at(-1));
+          // Increment offset time as multiple discriminators might follow
+          // a poppmtfifo event
           data[ch]["offset_time"].push(data[ch]["offset_time"].at(-1) + 0.5);
         }
         // TODO Properly implement
