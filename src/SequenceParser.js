@@ -212,7 +212,7 @@ class SequenceParser {
       }
     });
     // console.log("sequence block data: ", this.#sequenceBlockData);
-    console.log("plot data: ", plotData);
+    // console.log("plot data: ", plotData);
     return plotData;
   }
 
@@ -326,6 +326,11 @@ class SequenceParser {
           data[this.getFirstChannel(channelMask)]["timeDomain"].at(-1);
       }
       for (let ch of channelMask) {
+        if (
+          this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ===
+          ChannelType.readout
+        )
+          continue;
         console.assert(
           this.#sequenceBlockData[idx]["calls"].some((call) => {
             return (
@@ -351,7 +356,7 @@ class SequenceParser {
         //     );
         //   })
         // ) {
-        //   console.log(data[ch]);
+        //   console.log(data[ch]["time"], data[ch]["timeDomain"]);
         //   console.log(this.#sequenceBlockData[idx]);
         // }
       }
