@@ -58,7 +58,7 @@ class SequenceParser {
     "input_gate_state",
     "input_gate_mask",
   ];
-  READOUT_PROPERTIES = ["pmt_channel"];
+  READOUT_PROPERTIES = ["pmt_channel", "offset_time"];
   constructor(ionpulseSequence, externalConfig) {
     if (Object.hasOwn(ionpulseSequence, "header")) {
       const sequenceDescriptionVersion =
@@ -204,7 +204,8 @@ class SequenceParser {
           if (hw["hardware"] === ChannelType.readout) {
             plotData[ch]["time"] = plotData[ch]["time"].map(
               (gate_idx, idx) =>
-                inputGateTimes[plotData[ch]["pmt_channel"][idx]][gate_idx],
+                inputGateTimes[plotData[ch]["pmt_channel"][idx]][gate_idx] +
+                plotData[ch]["offset_time"][idx],
             );
           }
         });
@@ -634,6 +635,16 @@ class SequenceParser {
         }
         break;
       case "Discriminator":
+        for (let ch of event["ch_mask"]) {
+          console.assert(
+            this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ==
+              ChannelType.readout,
+            "Found Discriminator event with hardware channel not equal to 'Readout'",
+          );
+          data[ch]["time"].push(data[ch]["time"].at(-1));
+          data[ch]["pmt_channel"].push(data[ch]["pmt_channel"].at(-1));
+          data[ch]["offset_time"].push(data[ch]["offset_time"].at(-1) + 0.5);
+        }
         // TODO Properly implement
         break;
       case "PopPMTFIFO":
@@ -645,6 +656,7 @@ class SequenceParser {
           );
           data[ch]["time"].push(this.#inputGateCounter[event["pmt_channel"]]++);
           data[ch]["pmt_channel"].push(event["pmt_channel"]);
+          data[ch]["offset_time"].push(0);
         }
         break;
       default:
