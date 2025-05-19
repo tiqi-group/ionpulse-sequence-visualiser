@@ -362,8 +362,10 @@ class SequenceParser {
       }
     };
 
-    // TODO This should be handled per channel
-    const lastDataLength = data[this.getFirstChannel(channelMask)].time.length;
+    const lastDataLength = Object.keys(data).reduce((prev, ch) => {
+      prev[ch] = data[ch].time.length;
+      return prev;
+    }, {});
     for (let i = 0; i < iterations; i++) {
       const callIndex = this.#sequenceBlockData[idx]["callIndex"];
       let iterationName = baseName;
@@ -407,8 +409,8 @@ class SequenceParser {
                   lastChannelData[dataType] = channelData[dataType].slice(-1);
                 } else {
                   lastChannelData[dataType] = channelData[dataType].slice(
-                    lastDataLength - 1,
-                    lastDataLength,
+                    lastDataLength[channel] - 1,
+                    lastDataLength[channel],
                   );
                 }
                 return lastChannelData;
