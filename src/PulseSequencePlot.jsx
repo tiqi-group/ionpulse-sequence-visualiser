@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ChannelType, expandToWaveform } from "./SequenceParser";
+import { channelGroups } from "./Hardware";
 import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
 import Plotly from "plotly.js-basic-dist-min";
 import createPlotlyComponent from "react-plotly.js/factory";
@@ -134,7 +135,10 @@ function createLayout(
   }
 
   // PMT channels are treated as TTL channels here
-  const numberTTLAxes = enabledKeys["PMT"].length + enabledKeys["TTL"].length;
+  const numberTTLAxes =
+    enabledKeys["PMT"].length +
+    enabledKeys["TTL"].length +
+    enabledKeys["Readout"].length;
 
   const grid_params = {
     rows: numberRFAxes + numberTTLAxes,
@@ -219,13 +223,6 @@ function createLayout(
 
   for (let i = 0; i < numberTTLAxes; i++) {
     const axisIdx = i + 1;
-    if (i < enabledKeys["TTL"].length) {
-      channelToAxisIdx[enabledKeys["TTL"][i]] = [axisIdx];
-    } else {
-      channelToAxisIdx[enabledKeys["PMT"][i - enabledKeys["TTL"].length]] = [
-        axisIdx,
-      ];
-    }
     the_layout["yaxis" + axisIdx] = {
       ...TTL_yaxis_params,
     };
@@ -234,6 +231,21 @@ function createLayout(
       (totalHeight - i * (pad + ttlAxisHeight)) / totalHeight,
     ];
     the_layout["yaxis" + axisIdx].anchor = "x" + axisIdx;
+
+    if (i < enabledKeys["TTL"].length) {
+      channelToAxisIdx[enabledKeys["TTL"][i]] = [axisIdx];
+    } else if (i < enabledKeys["TTL"].length + enabledKeys["PMT"].length) {
+      channelToAxisIdx[enabledKeys["PMT"][i - enabledKeys["TTL"].length]] = [
+        axisIdx,
+      ];
+    } else {
+      channelToAxisIdx[
+        enabledKeys["Readout"][
+          i - enabledKeys["TTL"].length - enabledKeys["PMT"].length
+        ]
+      ] = [axisIdx];
+      the_layout["yaxis" + axisIdx].range = [0, 8];
+    }
   }
   return [the_layout, channelToAxisIdx, numberRFAxes];
 }
@@ -419,7 +431,10 @@ const PulseSequencePlot = function SequencePlot({
       }
       return enabledKeys;
     },
-    { RF: [], TTL: [], PMT: [] },
+    channelGroups.reduce((prev, group) => {
+      prev[group] = [];
+      return prev;
+    }, {}),
   );
 
   let dataXLimits = [0, 0];
@@ -475,7 +490,9 @@ const PulseSequencePlot = function SequencePlot({
         ...data_templates[channelDescription[channel].group],
       };
       trace.x = value.time;
-      trace.y = value.values;
+      trace.y = Object.hasOwn(value, "pmt_channel")
+        ? value.pmt_channel
+        : value.values;
       //object_to_add.xaxis = "x" + index;
       trace.yaxis = "y" + index;
       //trace.xaxis = "x" + index;

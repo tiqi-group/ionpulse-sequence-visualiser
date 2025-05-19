@@ -114,6 +114,12 @@ if __name__ == "__main__":
                         "hw_channels":[hw_ch]
                         }
                 rf_idx = rf_idx + 1
+            elif hw_ch["hardware"] == "Readout":
+                d["Readouts"] = dict()
+                d["Readouts"][0] = {
+                        "name": "Readout 0",
+                        "hw_channels": [hw_ch]
+                        }
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
