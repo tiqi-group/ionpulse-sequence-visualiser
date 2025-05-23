@@ -454,21 +454,49 @@ class SequenceParser {
       }
     }
 
+    let events = [event];
+    let nameSuffix = [""];
     switch (event["type"]) {
       case "SingleToneRFEvent":
-        for (let type of this.RF_PROPERTIES.concat(["time"])) {
-          if (type in event && event[type] !== null) {
-            data = this.getParamValue(
-              type,
-              event[type],
-              channelMask,
-              data,
-              loopIteration,
-              recordEvents,
-            );
-          } else if (recordEvents) {
+        if (event["slope_time"] !== null) {
+          events = [{ ...event }, { ...event }, { ...event }, { ...event }];
+          events[0]["slope_time"] = null;
+          events[1]["time"] = event["slope_start_delay"];
+          nameSuffix.push(" slope start delay");
+          events[2]["slope_time"] = null;
+          events[2]["time"] = event["slope_time"];
+          nameSuffix.push(" slope");
+          events[3]["slope_time"] = null;
+          events[3]["time"] = event["slope_end_delay"];
+          nameSuffix.push(" slope end delay");
+        }
+        for (let i = 0; i < events.length; i++) {
+          for (let type of this.RF_PROPERTIES.concat(["time"])) {
+            if (type in events[i] && events[i][type] !== null) {
+              data = this.getParamValue(
+                type,
+                events[i][type],
+                channelMask,
+                data,
+                loopIteration,
+                recordEvents,
+              );
+            } else if (recordEvents) {
+              for (const ch of channelMask) {
+                data[ch][type].push(0);
+              }
+            }
+          }
+          if (i !== events.length - 1) {
             for (const ch of channelMask) {
-              data[ch][type].push(0);
+              data[ch]["names"].push([...data[ch]["names"].at(-1)]);
+              if (this.hasNames) {
+                data[ch]["names"]
+                  .at(-2)
+                  .push(stripIdxFromName(event["name"]) + nameSuffix[i]);
+              } else {
+                data[ch]["names"].at(-2).push("Event " + idx + nameSuffix[i]);
+              }
             }
           }
         }
