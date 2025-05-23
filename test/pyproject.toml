@@ -4,16 +4,18 @@ version = "0.1.0"
 description = ""
 authors = [
   "Alfredo Ricci <aricci@phys.ethz.ch>",
-  "Martin Stadler <mstadle@phys.ethz.ch>",
+  "Martin Stadler <mastadle@phys.ethz.ch>",
 ]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numpy = ">=1.24.2"
-msgpack = ">=1.0.3"
-ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "e176ee1", develop = true}
+python-socketio = "^5.11.0"
+flask = "^3.0.1"
+watchdog = "^4.0.0"
+flask-cors = "^4.0.0"
+ionpulse_sequence_generator = {git = "git@gitlab.phys.ethz.ch:tiqi-projects/ionpulse_sequence_generator.git", rev = "fix/code-style", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
@@ -27,16 +29,6 @@ flake8-pep604 = "^0.1.0"
 flake8-eradicate = "^1.4.0"
 mypy = "^1.1.1"
 
-
-[tool.poetry.group.plot]
-optional=false
-
-[tool.poetry.group.plot.dependencies]
-python-socketio = "^5.11.0"
-flask = "^3.0.1"
-watchdog = "^4.0.0"
-flask-cors = "^4.0.0"
-matplotlib = ">=3.6.0"
 
 [build-system]
 requires = ["poetry-core"]

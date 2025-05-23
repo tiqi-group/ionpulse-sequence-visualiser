@@ -56,7 +56,10 @@ const SequenceVisualiser = function SequenceVisualiser({
   }
 
   const minimumSequenceTime = 20;
-  const totalTime = sequenceBlockData.at(-1)["calls"].at(-1)["endTime"];
+  const totalTime =
+    sequenceBlockData.at(-1)["calls"].length > 0
+      ? sequenceBlockData.at(-1)["calls"].at(-1)["endTime"]
+      : 0;
   const xDomains = sequenceBlockData.slice(0, -1).reduce(
     (domain, seq) => {
       if (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { N_RF_CHANNELS, expandToWaveform } from "./SequenceParser";
+import { ChannelType, expandToWaveform } from "./SequenceParser";
 import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
 import Plotly from "plotly.js-basic-dist-min";
 import createPlotlyComponent from "react-plotly.js/factory";
@@ -251,6 +251,48 @@ function filter(object_to_filter, filter) {
   return filtered;
 }
 
+function getPlotData(sequenceData, channelDescription) {
+  return Object.fromEntries(
+    Object.entries(channelDescription).map(([key, desc]) => {
+      // TODO: Add support for multi hw channel operations (subtract/add etc.)
+      let channelData = {
+        timeDomain: [0, 0],
+      };
+      if (
+        desc["hw_channels"].length > 0 &&
+        Object.hasOwn(sequenceData, desc["hw_channels"][0])
+      ) {
+        if (Object.hasOwn(desc, "sub_channel")) {
+          const type = desc["group"] === "TTL" ? "output" : "input_gate";
+          let last = 0;
+          channelData = {
+            names: sequenceData[desc["hw_channels"][0]]["names"],
+            time: sequenceData[desc["hw_channels"][0]]["time"],
+            timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
+            values: sequenceData[desc["hw_channels"][0]][type + "_state"].map(
+              (vals, idx) => {
+                const mask =
+                  (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
+                    (1 << desc["sub_channel"])) !==
+                  0;
+                const val = (vals & (1 << desc["sub_channel"])) !== 0;
+                console.assert(
+                  !(val & !mask),
+                  `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
+                );
+                return (last = (last & ~mask) | val);
+              },
+            ),
+          };
+        } else {
+          channelData = sequenceData[desc["hw_channels"][0]];
+        }
+      }
+      return [key, channelData];
+    }),
+  );
+}
+
 let data_template_TTL = {
   line: { shape: "hv" },
   type: "scatter",
@@ -369,7 +411,7 @@ const PulseSequencePlot = function SequencePlot({
     setChannelYDataType(newChannelYDataType);
   }
 
-  sequenceData = filter(sequenceData, Object.keys(channelDescription));
+  const plotData = getPlotData(sequenceData, channelDescription);
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
       if (channelEnabled[key] == true) {
@@ -381,13 +423,13 @@ const PulseSequencePlot = function SequencePlot({
   );
 
   let dataXLimits = [0, 0];
-  for (const [channel, data] of Object.entries(sequenceData)) {
+  for (const [channel, data] of Object.entries(plotData)) {
     if (channelEnabled[channel]) {
       dataXLimits[1] = Math.max(dataXLimits[1], data["timeDomain"].at(-1));
     }
   }
   dataXLimits[0] = dataXLimits[1];
-  for (const [channel, data] of Object.entries(sequenceData)) {
+  for (const [channel, data] of Object.entries(plotData)) {
     if (channelEnabled[channel]) {
       dataXLimits[0] = Math.min(dataXLimits[0], data["timeDomain"].at(0));
     }
@@ -426,7 +468,7 @@ const PulseSequencePlot = function SequencePlot({
     },
   };
 
-  for (const [channel, value] of Object.entries(sequenceData)) {
+  for (const [channel, value] of Object.entries(plotData)) {
     if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
       const index = channelToAxisIdx[channel][0];
       let trace = {
@@ -464,12 +506,17 @@ const PulseSequencePlot = function SequencePlot({
 
   let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
 
-  for (const [channel, value] of Object.entries(sequenceData)) {
+  for (const [channel, value] of Object.entries(plotData)) {
     if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
       const index = channelToAxisIdx[channel][0];
       let object_to_add = structuredClone(
         data_templates[channelYDataType[channel]],
       );
+
+      if (object_to_add == null) {
+        continue; // need to wait for the hardware data to load
+      }
+
       if (channelYDataType[channel] === "sample") {
         const waveform = expandToWaveform(value);
         object_to_add.x = waveform[0];
@@ -596,20 +643,27 @@ const PulseSequencePlot = function SequencePlot({
       let yDataPairs = [];
       let startYData;
       if (
-        sequence["ch_mask"]["digital_io"] &&
+        sequence["ch_mask"].has(ChannelType.dio + " (0,0)") &&
         (enabledKeys["TTL"].length || enabledKeys["PMT"])
       ) {
         startYData = 1;
       }
       let axisIdx = enabledKeys["TTL"].length + enabledKeys["PMT"].length + 1;
-      for (let rf_idx = 0; rf_idx < N_RF_CHANNELS; ++rf_idx) {
-        const key = "RF" + rf_idx;
+      for (let key of enabledKeys["RF"]) {
         if (!channelEnabled[key]) continue;
         if (startYData === undefined) {
-          if ((1 << rf_idx) & sequence["ch_mask"]["rf"]) {
+          if (
+            channelDescription[key]["hw_channels"].some((ch) =>
+              sequence["ch_mask"].has(ch),
+            )
+          ) {
             startYData = axisIdx;
           }
-        } else if ((1 << rf_idx) & ~sequence["ch_mask"]["rf"]) {
+        } else if (
+          channelDescription[key]["hw_channels"].every(
+            (hw_ch) => !sequence["ch_mask"].has(hw_ch),
+          )
+        ) {
           yDataPairs.push([startYData, axisIdx - 1]);
           startYData = undefined;
         }
@@ -685,8 +739,9 @@ const PulseSequencePlot = function SequencePlot({
       (sequence["display"] === "minimized" ||
         sequence["display"] === "contracted")
     ) {
-      for (const call of sequence["calls"]) {
-        for (const [channel, value] of Object.entries(call["data"])) {
+      for (const call of sequence["calls"].slice(1)) {
+        let plotData = getPlotData(call["data"], channelDescription);
+        for (const [channel, value] of Object.entries(plotData)) {
           if (
             channelDescription[channel].group === "RF" &&
             channelEnabled[channel]
@@ -835,12 +890,13 @@ const PulseSequencePlot = function SequencePlot({
               variant="primary"
               className="m-1"
               onClick={() => {
-                const plotText =
-                  document.getElementsByClassName("js-plotly-plot");
-                navigator.clipboard.writeText(plotText[0].firstChild.innerHTML);
+                Plotly.downloadImage(
+                  { data: data, layout: layout_to_use, config: figureConfig },
+                  { format: "svg" },
+                );
               }}
             >
-              Copy Pulse sequence plot
+              Download sequence plot svg
             </Button>
           </Accordion.Body>
         </Accordion.Item>

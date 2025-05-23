@@ -6,6 +6,7 @@ import {
   Row,
   Col,
 } from "react-bootstrap";
+import { channelGroups } from "./Hardware";
 
 const EnableChannel = memo(function EnableChannel({
   channelName,
@@ -36,27 +37,41 @@ const EnablingGroup = memo(function EnablingGroup({
   channelEnabled,
   onEvent,
 }) {
-  const nRows = Object.values(channelDescription).reduce(
-    (count, val) => (count += val.group === "RF"),
-    0,
+  let elementKeyByGroup = Object.entries(channelDescription).reduce(
+    (prev, kv_tuple) => {
+      prev[kv_tuple[1]["group"]].push(kv_tuple[0]);
+      return prev;
+    },
+    channelGroups.reduce((prev, group) => {
+      prev[group] = [];
+      return prev;
+    }, {}),
   );
+  let nRows = 0;
+  for (const type of channelGroups) {
+    elementKeyByGroup[type].sort((a, b) =>
+      ("" + channelDescription[a].name).localeCompare(
+        channelDescription[b].name,
+      ),
+    );
+    nRows = Math.max(elementKeyByGroup[type].length, nRows);
+  }
 
-  const rows = Array.from(Array(Math.max(nRows, 32)).keys()).map((row) => {
+  const rows = Array.from(Array(nRows).keys()).map((row) => {
     let cols = [];
-    for (const type of ["RF", "TTL", "PMT"]) {
-      let elementKey = type + row;
-      if (elementKey in channelDescription) {
+    for (const type of channelGroups) {
+      if (row < elementKeyByGroup[type].length) {
         cols.push(
           <EnableChannel
-            channelName={elementKey}
-            displayName={channelDescription[elementKey].name}
+            channelName={elementKeyByGroup[type][row]}
+            displayName={channelDescription[elementKeyByGroup[type][row]].name}
             onClick={onEvent}
-            isEnabled={channelEnabled[elementKey]}
-            key={"enableCol" + elementKey}
+            isEnabled={channelEnabled[elementKeyByGroup[type][row]]}
+            key={"enableCol" + elementKeyByGroup[type][row]}
           />,
         );
       } else {
-        cols.push(<Col key={"enableCol" + elementKey}></Col>);
+        cols.push(<Col key={"enableCol" + type + row}></Col>);
       }
     }
     return (
