@@ -41,7 +41,14 @@ class SequenceParser {
   #sequenceConfig;
   #plotData;
   #isUpToDate;
-  RF_PROPERTIES = ["freq", "phase", "amp", "slope_time"];
+  RF_PROPERTIES = [
+    "freq",
+    "phase",
+    "amp",
+    "slope_time",
+    "slope_start_delay",
+    "slope_end_delay",
+  ];
   DIO_PROPERTIES = [
     "output_state",
     "output_mask",
@@ -389,7 +396,7 @@ class SequenceParser {
       // value is a list of index and name
       value = value[0];
     }
-    const mainType = type === "slope_time" ? "time" : type;
+    const mainType = type.endsWith("time") ? "time" : type;
 
     if (Object.hasOwn(this.#main, mainType)) {
       // value points to a parameter
@@ -400,7 +407,7 @@ class SequenceParser {
       value = value[loopIteration % value.length];
     }
     let scaling = 1;
-    if (type === "time" || type === "slope_time") {
+    if (type.endsWith("time")) {
       scaling = 1 / 1000;
     } else if (type === "amp") {
       scaling = 100 / (Math.pow(2, 14) - 1);
