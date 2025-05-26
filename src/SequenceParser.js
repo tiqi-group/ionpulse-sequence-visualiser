@@ -56,6 +56,29 @@ class SequenceParser {
     "input_gate_mask",
   ];
   constructor(ionpulseSequence, externalConfig) {
+    if (Object.hasOwn(ionpulseSequence, "header")) {
+      const sequenceDescriptionVersion =
+        ionpulseSequence["header"]["version"].split(".");
+      const minimumVersion = [2, 0, 4];
+      for (let i = 0; i < minimumVersion.length; i++) {
+        console.assert(
+          sequenceDescriptionVersion[i] >= minimumVersion[i],
+          "Sequence description " +
+            sequenceDescriptionVersion +
+            " is below minimum version " +
+            minimumVersion,
+        );
+      }
+      const maximumMajorVersion = 2;
+      console.assert(
+        sequenceDescriptionVersion[0] <= maximumMajorVersion,
+        "Sequence description " +
+          sequenceDescriptionVersion +
+          " exceeds major version " +
+          maximumMajorVersion,
+      );
+    }
+
     this.#main = ionpulseSequence;
     this.hasNames =
       this.#main["sequence"].length > 0 &&
