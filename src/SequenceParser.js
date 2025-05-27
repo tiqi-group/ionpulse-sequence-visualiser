@@ -41,7 +41,14 @@ class SequenceParser {
   #sequenceConfig;
   #plotData;
   #isUpToDate;
-  RF_PROPERTIES = ["freq", "phase", "amp", "slope_time"];
+  RF_PROPERTIES = [
+    "freq",
+    "phase",
+    "amp",
+    "slope_time",
+    "slope_start_delay",
+    "slope_end_delay",
+  ];
   DIO_PROPERTIES = [
     "output_state",
     "output_mask",
@@ -49,6 +56,29 @@ class SequenceParser {
     "input_gate_mask",
   ];
   constructor(ionpulseSequence, externalConfig) {
+    if (Object.hasOwn(ionpulseSequence, "header")) {
+      const sequenceDescriptionVersion =
+        ionpulseSequence["header"]["version"].split(".");
+      const minimumVersion = [2, 0, 4];
+      for (let i = 0; i < minimumVersion.length; i++) {
+        console.assert(
+          sequenceDescriptionVersion[i] >= minimumVersion[i],
+          "Sequence description " +
+            sequenceDescriptionVersion +
+            " is below minimum version " +
+            minimumVersion,
+        );
+      }
+      const maximumMajorVersion = 2;
+      console.assert(
+        sequenceDescriptionVersion[0] <= maximumMajorVersion,
+        "Sequence description " +
+          sequenceDescriptionVersion +
+          " exceeds major version " +
+          maximumMajorVersion,
+      );
+    }
+
     this.#main = ionpulseSequence;
     this.hasNames =
       this.#main["sequence"].length > 0 &&
@@ -389,7 +419,7 @@ class SequenceParser {
       // value is a list of index and name
       value = value[0];
     }
-    const mainType = type === "slope_time" ? "time" : type;
+    const mainType = type.endsWith("time") ? "time" : type;
 
     if (Object.hasOwn(this.#main, mainType)) {
       // value points to a parameter
@@ -400,7 +430,7 @@ class SequenceParser {
       value = value[loopIteration % value.length];
     }
     let scaling = 1;
-    if (type === "time" || type === "slope_time") {
+    if (type.endsWith("time")) {
       scaling = 1 / 1000;
     } else if (type === "amp") {
       scaling = 100 / (Math.pow(2, 14) - 1);
@@ -447,21 +477,49 @@ class SequenceParser {
       }
     }
 
+    let events = [event];
+    let nameSuffix = [""];
     switch (event["type"]) {
       case "SingleToneRFEvent":
-        for (let type of this.RF_PROPERTIES.concat(["time"])) {
-          if (type in event && event[type] !== null) {
-            data = this.getParamValue(
-              type,
-              event[type],
-              channelMask,
-              data,
-              loopIteration,
-              recordEvents,
-            );
-          } else if (recordEvents) {
+        if (event["slope_time"] !== null) {
+          events = [{ ...event }, { ...event }, { ...event }, { ...event }];
+          events[0]["slope_time"] = null;
+          events[1]["time"] = event["slope_start_delay"];
+          nameSuffix.push(" slope start delay");
+          events[2]["slope_time"] = null;
+          events[2]["time"] = event["slope_time"];
+          nameSuffix.push(" slope");
+          events[3]["slope_time"] = null;
+          events[3]["time"] = event["slope_end_delay"];
+          nameSuffix.push(" slope end delay");
+        }
+        for (let i = 0; i < events.length; i++) {
+          for (let type of this.RF_PROPERTIES.concat(["time"])) {
+            if (type in events[i] && events[i][type] !== null) {
+              data = this.getParamValue(
+                type,
+                events[i][type],
+                channelMask,
+                data,
+                loopIteration,
+                recordEvents,
+              );
+            } else if (recordEvents) {
+              for (const ch of channelMask) {
+                data[ch][type].push(0);
+              }
+            }
+          }
+          if (i !== events.length - 1) {
             for (const ch of channelMask) {
-              data[ch][type].push(0);
+              data[ch]["names"].push([...data[ch]["names"].at(-1)]);
+              if (this.hasNames) {
+                data[ch]["names"]
+                  .at(-2)
+                  .push(stripIdxFromName(event["name"]) + nameSuffix[i]);
+              } else {
+                data[ch]["names"].at(-2).push("Event " + idx + nameSuffix[i]);
+              }
             }
           }
         }
