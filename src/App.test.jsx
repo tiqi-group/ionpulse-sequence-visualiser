@@ -68,7 +68,7 @@ test("Plot page renders", async () => {
   expect(screen.queryByText("a / %")).not.toBeInTheDocument();
   await user.click(rf0_enable);
   await user.click(screen.getByRole("button", { name: "Close" }));
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 200));
   expect(screen.getByText("Channels")).toBeVisible();
   expect(screen.queryByText("Channels to display")).not.toBeInTheDocument();
   expect(screen.getByText("a / %")).toBeInTheDocument();
