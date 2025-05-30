@@ -244,7 +244,7 @@ function createLayout(
           i - enabledKeys["TTL"].length - enabledKeys["PMT"].length
         ]
       ] = [axisIdx];
-      the_layout["yaxis" + axisIdx].range = [0, 8];
+      the_layout["yaxis" + axisIdx].range = [-1, 8];
     }
   }
   return [the_layout, channelToAxisIdx, numberRFAxes];
@@ -346,7 +346,11 @@ const data_templates = {
   TTL: data_template_TTL,
   Readout: {
     ...data_template_PMT,
-    marker: { color: "lightgreen" },
+    mode: "markers",
+    marker: {
+      color: "rgba(0%,30%,0%,1)",
+    },
+    fill: "none",
   },
   sample: {
     type: "scatter",

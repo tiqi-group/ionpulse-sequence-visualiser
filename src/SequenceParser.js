@@ -653,6 +653,7 @@ class SequenceParser {
           // Increment offset time as multiple discriminators might follow
           // a poppmtfifo event
           data[ch]["offset_time"].push(data[ch]["offset_time"].at(-1) + 0.5);
+          data[ch]["names"].at(-2).push("Discriminator");
         }
         // TODO Properly implement
         break;
@@ -666,6 +667,7 @@ class SequenceParser {
           data[ch]["time"].push(this.#inputGateCounter[event["pmt_channel"]]++);
           data[ch]["pmt_channel"].push(event["pmt_channel"]);
           data[ch]["offset_time"].push(0);
+          data[ch]["names"].at(-2).push("PopPMTFIFO");
         }
         break;
       default:
