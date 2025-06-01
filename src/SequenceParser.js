@@ -727,33 +727,38 @@ function blackman(t) {
 
 const freqScaling = 0.002;
 
-function expandToWaveform(sequenceData) {
+function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   const samplingRate = 10;
   let nSamples = 0;
-  for (let i = 0; i < sequenceData["time"].length - 1; i++) {
-    let a = sequenceData["amp"][i];
+  for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
+    let a = sequenceDataChannel["amp"][i];
     if (a === 0) {
       nSamples += 2;
     } else {
       const segmentSamples = Math.ceil(
-        (sequenceData["time"][i + 1] - sequenceData["time"][i]) * samplingRate,
+        (sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i]) *
+          samplingRate,
       );
       nSamples += segmentSamples;
     }
   }
 
   const time = new Array(nSamples).fill(0);
-  const value = new Array(nSamples).fill(0);
+  const value = targets.reduce((key, last) => {
+    last[key] = new Array(nSamples).fill(0);
+    return last;
+  }, {});
   let currentIdx = 0;
-  for (let i = 0; i < sequenceData["time"].length - 1; i++) {
-    const duration = sequenceData["time"][i + 1] - sequenceData["time"][i];
+  for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
+    const duration =
+      sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i];
     // Unfold waveforms
-    const f = sequenceData["freq"][i];
-    const p = sequenceData["phase"][i];
-    const a = sequenceData["amp"][i];
-    const t = sequenceData["time"][i];
-    const slopeTime = sequenceData["slope_time"][i];
+    const f = sequenceDataChannel["freq"][i];
+    const p = sequenceDataChannel["phase"][i];
+    const a = sequenceDataChannel["amp"][i];
+    const t = sequenceDataChannel["time"][i];
+    const slopeTime = sequenceDataChannel["slope_time"][i];
 
     let getTimeArray = (t0, duration) => {
       const nSamples = Math.ceil(duration * samplingRate);
@@ -769,24 +774,52 @@ function expandToWaveform(sequenceData) {
         const times = getTimeArray(0, slopeTime);
         times.forEach((timeVal, idx) => {
           time[currentIdx + idx] = timeVal + t;
-          value[currentIdx + idx] =
-            sequenceData["amp"][i - 1] *
-            blackman(1 - timeVal / slopeTime) *
-            Math.cos(
-              2 *
-                Math.PI *
-                (sequenceData["freq"][i - 1] * freqScaling * (timeVal + t) +
-                  sequenceData["phase"][i - 1] / 360),
-            );
+          for (let key of targets) {
+            switch (key) {
+              case "samples":
+                value[key][currentIdx + idx] =
+                  sequenceDataChannel["amp"][i - 1] *
+                  blackman(1 - timeVal / slopeTime) *
+                  Math.cos(
+                    2 *
+                      Math.PI *
+                      (sequenceDataChannel["freq"][i - 1] *
+                        freqScaling *
+                        (timeVal + t) +
+                        sequenceDataChannel["phase"][i - 1] / 360),
+                  );
+                break;
+              case "amp":
+                value[key][currentIdx + idx] =
+                  sequenceDataChannel["amp"][i - 1] *
+                  blackman(1 - timeVal / slopeTime);
+                break;
+              case "freq":
+                value[key][currentIdx + idx] =
+                  sequenceDataChannel["freq"][i - 1];
+                break;
+              case "phase":
+                value[key][currentIdx + idx] =
+                  sequenceDataChannel["phase"][i - 1];
+                break;
+              default:
+                console.error("Unexpected waveform expansion target: " + key);
+                break;
+            }
+          }
         });
         currentIdx += times.length;
       } else {
         time[currentIdx] = t;
-        value[currentIdx] = 0;
+        for (let key of targets) {
+          value[key][currentIdx] = 0;
+        }
         currentIdx++;
       }
-      time[currentIdx] = sequenceData["time"][i + 1];
-      value[currentIdx] = 0;
+      time[currentIdx] = sequenceDataChannel["time"][i + 1];
+      for (let key of targets) {
+        value[key][currentIdx] = 0;
+      }
       currentIdx++;
     } else {
       const times = getTimeArray(t, duration);
@@ -794,10 +827,33 @@ function expandToWaveform(sequenceData) {
       // Optionally use relative time
       times.forEach((timeVal, idx) => {
         time[currentIdx + idx] = timeVal;
-        value[currentIdx + idx] =
-          (timeVal < slopeTime + t ? blackman((timeVal - t) / slopeTime) : 1) *
-          a *
-          Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
+        for (let key of targets) {
+          switch (key) {
+            case "samples":
+              value[key][currentIdx + idx] =
+                (timeVal < slopeTime + t
+                  ? blackman((timeVal - t) / slopeTime)
+                  : 1) *
+                a *
+                Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
+              break;
+            case "amp":
+              value[key][currentIdx + idx] =
+                (timeVal < slopeTime + t
+                  ? blackman((timeVal - t) / slopeTime)
+                  : 1) * a;
+              break;
+            case "freq":
+              value[key][currentIdx + idx] = f;
+              break;
+            case "phase":
+              value[key][currentIdx + idx] = p;
+              break;
+            default:
+              console.error("Unexpected waveform expansion target: " + key);
+              break;
+          }
+        }
       });
       currentIdx += times.length;
     }
