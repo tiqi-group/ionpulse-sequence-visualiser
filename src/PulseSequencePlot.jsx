@@ -740,7 +740,6 @@ const PulseSequencePlot = function SequencePlot({
     loopData["annotations"],
   );
 
-  console.log(sequenceBlockData);
   sequenceBlockData.forEach((sequence) => {
     if (
       sequence["type"] === "LoopSequence" &&

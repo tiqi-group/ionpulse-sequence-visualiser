@@ -727,6 +727,46 @@ function blackman(t) {
 
 const freqScaling = 0.002;
 
+const clockRate = 250;
+function accumulate(ppoly, tArray, order = 3) {
+  const ticks = tArray.map((t) => Math.ceil(t * clockRate));
+  let pieceIdx = 0;
+  let accumulator = Array.from(Array(order + 1).keys()).map(
+    (i) => ppoly["x" + [i]][pieceIdx],
+  );
+  let tickUntilPiece = 0;
+  let piecewiseTick = 0;
+  return tArray.map((t) => {
+    while (piecewiseTick + tickUntilPiece < t * clockRate) {
+      if (ppoly.length[pieceIdx] === 0) {
+        // End of accumulation sequence
+        break;
+      }
+      if (piecewiseTick == ppoly.length[pieceIdx]) {
+        if (pieceIdx < ppoly.length.length) {
+          pieceIdx++;
+          accumulator = Array.from(Array(order + 1).keys()).map(
+            (i) => ppoly["x" + [i]][pieceIdx],
+          );
+          tickUntilPiece += piecewiseTick;
+          piecewiseTick = 0;
+        } else {
+          console.error(
+            "Reached unexpected end of accumulation sequence.\n" +
+              "Expected to end with 0 length segment",
+          );
+          break;
+        }
+      }
+      for (let o = 0; o < order; o++) {
+        accumulator[o] += accumulator[o + 1];
+      }
+      piecewiseTick++;
+    }
+    return accumulator[0];
+  });
+}
+
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   const samplingRate = 10;
