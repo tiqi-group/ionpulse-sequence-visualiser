@@ -318,21 +318,19 @@ let data_template_PMT = structuredClone(data_template_TTL);
 data_template_PMT.marker.color = "lightblue";
 
 let data_template_freq = {
-  line: { shape: "hv" },
   type: "scatter",
-  mode: "lines+markers",
+  mode: "markers",
   marker: { color: "red" },
   showlegend: false,
   fill: "none",
 };
 
 let data_template_amp = {
-  line: { shape: "hv" },
   type: "scatter",
-  mode: "lines+markers",
+  mode: "markers",
   marker: { color: "blue" },
   showlegend: false,
-  fill: "tozeroy",
+  fill: "none",
 };
 
 const data_template_phase = structuredClone(data_template_freq);
@@ -354,7 +352,7 @@ const data_templates = {
   },
   sample: {
     type: "scatter",
-    mode: "lines",
+    mode: "markers",
     marker: {
       color: "green",
       size: 2,
@@ -491,23 +489,69 @@ const PulseSequencePlot = function SequencePlot({
     },
   };
 
-  for (const [channel, value] of Object.entries(plotData)) {
-    if (channelEnabled[channel] && channelDescription[channel].group !== "RF") {
-      const index = channelToAxisIdx[channel][0];
-      let trace = {
-        ...data_templates[channelDescription[channel].group],
-      };
-      trace.x = value.time;
-      trace.y = Object.hasOwn(value, "pmt_channel")
-        ? value.pmt_channel
-        : value.values;
-      //object_to_add.xaxis = "x" + index;
-      trace.yaxis = "y" + index;
-      //trace.xaxis = "x" + index;
-      trace.text = compileEventName(value.names);
+  let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
 
-      // layout["yaxis" + index] = yaxis_params;
-      // layout["xaxis" + index] = xAxisParams;
+  for (const [channel, value] of Object.entries(plotData)) {
+    if (!channelEnabled[channel]) continue;
+    for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
+      const index = channelToAxisIdx[channel][i];
+
+      let plotType =
+        channelDescription[channel].group === "RF"
+          ? i === 0
+            ? channelYDataType[channel]
+            : "amp"
+          : channelDescription[channel].group;
+
+      let trace = structuredClone(data_templates[plotType]);
+      trace.yaxis = "y" + index;
+      for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
+        if (channelDescription[channel].name.includes(wavelength)) {
+          trace["marker"]["color"] = colour;
+        }
+      }
+      if (["sample", "freq", "phase", "amp"].includes(plotType)) {
+        let lineTrace = structuredClone(trace);
+        lineTrace.mode = "lines";
+        let yData;
+        [lineTrace.x, yData] = expandToWaveform(value, [plotType]);
+        lineTrace.y = yData[plotType];
+        trace.y = value.time.map((t) => lineTrace.y[lineTrace.x.indexOf(t)]);
+        if (plotType === "amp") {
+          if (lineTrace.marker.color.startsWith("rgba")) {
+            lineTrace.fillcolor = setOpacity(lineTrace.marker.color, 0.5);
+          }
+          lineTrace.fill = "tozeroy";
+          axisGroupedWithPrevious[index] = true;
+        }
+        console.log(i, lineTrace);
+        data.push(lineTrace);
+      }
+
+      trace.x = value.time;
+      switch (plotType) {
+        case "Readout":
+          trace.y = value.pmt_channel;
+          break;
+        case "sample":
+        case "freq":
+        case "phase":
+        case "amp":
+          // Already set
+          break;
+        default:
+          trace.y = value.values;
+          break;
+      }
+      trace.text = compileEventName(value.names);
+      trace.name = channelDescription[channel].name + " " + plotType;
+
+      data.push(trace);
+
+      layout_to_use["xaxis" + index] = {
+        ...xAxisParams,
+        range: xLimits.slice(),
+      };
 
       let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
       let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
@@ -521,104 +565,6 @@ const PulseSequencePlot = function SequencePlot({
         x:
           (axisAnnotationDefault["x"] +
             (isAnnotation90 ? 0 : isPlotMode ? -50 : -15)) /
-          layout_to_use.width,
-      };
-      layout_to_use.annotations.push(annotation_to_add);
-
-      data.push(trace);
-    }
-  }
-
-  let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
-
-  for (const [channel, value] of Object.entries(plotData)) {
-    if (channelDescription[channel].group === "RF" && channelEnabled[channel]) {
-      const index = channelToAxisIdx[channel][0];
-      let object_to_add = structuredClone(
-        data_templates[channelYDataType[channel]],
-      );
-
-      if (object_to_add == null) {
-        continue; // need to wait for the hardware data to load
-      }
-
-      if (channelYDataType[channel] === "sample") {
-        const waveform = expandToWaveform(value);
-        object_to_add.x = waveform[0];
-        object_to_add.y = waveform[1];
-
-        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
-          if (channelDescription[channel].name.includes(wavelength)) {
-            object_to_add["marker"]["color"] = colour;
-          }
-        }
-      } else {
-        object_to_add.x = value.time;
-        object_to_add.y = value[channelYDataType[channel]];
-        object_to_add.text = compileEventName(value.names);
-
-        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
-          if (channelDescription[channel].name.includes(wavelength)) {
-            object_to_add["marker"]["color"] = colour;
-          }
-        }
-      }
-      object_to_add.name =
-        channelDescription[channel].name + " " + channelYDataType[channel];
-      object_to_add.yaxis = "y" + index;
-
-      for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
-        if (channelDescription[channel].name.includes(wavelength)) {
-          object_to_add["marker"]["color"] = colour;
-        }
-      }
-
-      layout_to_use["xaxis" + index] = {
-        ...xAxisParams,
-        range: xLimits.slice(),
-      };
-
-      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-
-      data.push(object_to_add);
-
-      if (channelYDataType[channel] !== "sample") {
-        const index = channelToAxisIdx[channel][1];
-        axisGroupedWithPrevious[index] = true;
-        let amp_to_add = structuredClone(data_templates["amp"]);
-        amp_to_add.x = value.time;
-        amp_to_add.y = value.amp;
-        amp_to_add.text = compileEventName(value.names);
-        amp_to_add.yaxis = "y" + index;
-        amp_to_add.name = channelDescription[channel].name + " amp";
-
-        for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
-          if (channelDescription[channel].name.includes(wavelength)) {
-            amp_to_add["marker"]["color"] = colour;
-            amp_to_add["fillcolor"] = setOpacity(colour, 0.5);
-          }
-        }
-
-        layout_to_use["xaxis" + index] = {
-          ...xAxisParams,
-          range: xLimits.slice(),
-        };
-        annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-        data.push(amp_to_add);
-      }
-
-      let annotation_position =
-        (annotation_position_1 + annotation_position_2) / 2;
-      let annotation_to_add = {
-        ...axisAnnotationDefault,
-        y: annotation_position,
-        text: channelDescription[channel].name,
-        captureevents: true,
-        textangle: isAnnotation90 ? -90 : 0,
-        x:
-          (axisAnnotationDefault["x"] +
-            (isAnnotation90 ? 0 : isPlotMode ? -30 : -15)) /
           layout_to_use.width,
       };
       layout_to_use.annotations.push(annotation_to_add);
