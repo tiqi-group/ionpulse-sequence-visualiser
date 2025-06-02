@@ -327,7 +327,7 @@ function getTraces(
     [lineTrace.x, yData] = expandToWaveform(channelPlotData, [plotType]);
     lineTrace.y = yData[plotType];
     trace.y = channelPlotData.time.map(
-      (t) => lineTrace.y[lineTrace.x.indexOf(t)],
+      (t) => lineTrace.y[lineTrace.x.lastIndexOf(t)],
     );
     if (plotType === "amp") {
       if (lineTrace.marker.color.startsWith("rgba")) {

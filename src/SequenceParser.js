@@ -729,7 +729,6 @@ const freqScaling = 0.002;
 
 const clockRate = 250;
 function accumulate(ppoly, tArray, order = 3) {
-  const ticks = tArray.map((t) => Math.ceil(t * clockRate));
   let pieceIdx = 0;
   let accumulator = Array.from(Array(order + 1).keys()).map(
     (i) => ppoly["x" + [i]][pieceIdx],
@@ -794,131 +793,74 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
     const duration =
       sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i];
     // Unfold waveforms
-    const f = sequenceDataChannel["freq"][i];
-    const p = sequenceDataChannel["phase"][i];
-    const a = sequenceDataChannel["amp"][i];
-    const t = sequenceDataChannel["time"][i];
-    const slopeTime = sequenceDataChannel["slope_time"][i];
+    let f = sequenceDataChannel["freq"][i];
+    let p = sequenceDataChannel["phase"][i];
+    let a = sequenceDataChannel["amp"][i];
+    let t = sequenceDataChannel["time"][i];
+    let slopeTime = sequenceDataChannel["slope_time"][i];
 
+    const isOffEvent = a === 0;
+    if (slopeTime > 0 && isOffEvent) {
+      f = sequenceDataChannel["freq"][i - 1];
+      p = sequenceDataChannel["phase"][i - 1];
+      a = sequenceDataChannel["amp"][i - 1];
+    }
+
+    // Create an array of times uniformly spaced by
+    // 1 / samplingRate in the intervall [t0, t0+duration]
+    // (note the including limits up and down to create steep edges
+    // in the line plot later)
     let getTimeArray = (t0, duration) => {
       const nSamples = Math.ceil(duration * samplingRate);
       return Array.from(
         { length: nSamples },
-        (_, idx) => t0 + idx * (duration / nSamples),
+        (_, idx) => t0 + idx * (duration / (nSamples - 1)),
       );
     };
 
-    if (a === 0) {
-      // console.log(`Expanding ${0} amplitude from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}`);
-      if (slopeTime > 0) {
-        const times = getTimeArray(0, slopeTime);
-        times.forEach((timeVal, idx) => {
-          time[currentIdx + idx] = timeVal + t;
-          for (let key of targets) {
-            switch (key) {
-              case "sample":
-                value[key][currentIdx + idx] =
-                  sequenceDataChannel["amp"][i - 1] *
-                  blackman(1 - timeVal / slopeTime) *
-                  Math.cos(
-                    2 *
-                      Math.PI *
-                      (sequenceDataChannel["freq"][i - 1] *
-                        freqScaling *
-                        (timeVal + t) +
-                        sequenceDataChannel["phase"][i - 1] / 360),
-                  );
-                break;
-              case "amp":
-                value[key][currentIdx + idx] =
-                  sequenceDataChannel["amp"][i - 1] *
-                  blackman(1 - timeVal / slopeTime);
-                break;
-              case "freq":
-                value[key][currentIdx + idx] =
-                  sequenceDataChannel["freq"][i - 1];
-                break;
-              case "phase":
-                value[key][currentIdx + idx] =
-                  sequenceDataChannel["phase"][i - 1];
-                break;
-              default:
-                console.error("Unexpected waveform expansion target: " + key);
-                break;
-            }
-          }
-        });
-        currentIdx += times.length;
-      } else {
-        time[currentIdx] = t;
-        for (let key of targets) {
-          switch (key) {
-            case "freq":
-              value[key][currentIdx] = f;
-              break;
-            case "phase":
-              value[key][currentIdx] = p;
-              break;
-            default:
-              value[key][currentIdx] = 0;
-              break;
-          }
-        }
-        currentIdx++;
-      }
-      time[currentIdx] = sequenceDataChannel["time"][i + 1];
+    const times = getTimeArray(t, duration);
+    // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
+    // Optionally use relative time
+
+    times.forEach((timeVal, idx) => {
+      time[currentIdx + idx] = timeVal;
       for (let key of targets) {
-        for (let key of targets) {
-          switch (key) {
-            case "freq":
-              value[key][currentIdx] = f;
-              break;
-            case "phase":
-              value[key][currentIdx] = p;
-              break;
-            default:
-              value[key][currentIdx] = 0;
-              break;
-          }
+        switch (key) {
+          case "sample":
+            value[key][currentIdx + idx] =
+              (timeVal < slopeTime + t
+                ? isOffEvent
+                  ? blackman((t + slopeTime - timeVal) / slopeTime)
+                  : blackman((timeVal - t) / slopeTime)
+                : isOffEvent
+                  ? 0
+                  : 1) *
+              a *
+              Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
+            break;
+          case "amp":
+            value[key][currentIdx + idx] =
+              (timeVal < slopeTime + t
+                ? isOffEvent
+                  ? blackman((t + slopeTime - timeVal) / slopeTime)
+                  : blackman((timeVal - t) / slopeTime)
+                : isOffEvent
+                  ? 0
+                  : 1) * a;
+            break;
+          case "freq":
+            value[key][currentIdx + idx] = f;
+            break;
+          case "phase":
+            value[key][currentIdx + idx] = p;
+            break;
+          default:
+            console.error("Unexpected waveform expansion target: " + key);
+            break;
         }
       }
-      currentIdx++;
-    } else {
-      const times = getTimeArray(t, duration);
-      // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
-      // Optionally use relative time
-      times.forEach((timeVal, idx) => {
-        time[currentIdx + idx] = timeVal;
-        for (let key of targets) {
-          switch (key) {
-            case "sample":
-              value[key][currentIdx + idx] =
-                (timeVal < slopeTime + t
-                  ? blackman((timeVal - t) / slopeTime)
-                  : 1) *
-                a *
-                Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
-              break;
-            case "amp":
-              value[key][currentIdx + idx] =
-                (timeVal < slopeTime + t
-                  ? blackman((timeVal - t) / slopeTime)
-                  : 1) * a;
-              break;
-            case "freq":
-              value[key][currentIdx + idx] = f;
-              break;
-            case "phase":
-              value[key][currentIdx + idx] = p;
-              break;
-            default:
-              console.error("Unexpected waveform expansion target: " + key);
-              break;
-          }
-        }
-      });
-      currentIdx += times.length;
-    }
+    });
+    currentIdx += times.length;
   }
 
   return [time, value];
