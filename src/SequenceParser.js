@@ -756,7 +756,7 @@ function blackman(t) {
 const freqScaling = 0.002;
 
 const clockRate = 250;
-const samplingRate = 10;
+const samplingRate = 25;
 const lengthBits = 16;
 function accumulate(ppoly, tArray, order = 3) {
   let pieceIdx = 0;
@@ -766,7 +766,7 @@ function accumulate(ppoly, tArray, order = 3) {
   let tickUntilPiece = 0;
   let piecewiseTick = 0;
   return tArray.map((t) => {
-    while (piecewiseTick + tickUntilPiece < (t * clockRate) / samplingRate) {
+    while (piecewiseTick + tickUntilPiece < (t - tArray[0]) * clockRate) {
       if (ppoly.segment_length[pieceIdx] === 0) {
         // End of accumulation sequence
         break;
