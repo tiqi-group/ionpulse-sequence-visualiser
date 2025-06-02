@@ -493,6 +493,8 @@ const PulseSequencePlot = function SequencePlot({
 
   for (const [channel, value] of Object.entries(plotData)) {
     if (!channelEnabled[channel]) continue;
+    let annotation_position_1;
+    let annotation_position_2;
     for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
       const index = channelToAxisIdx[channel][i];
 
@@ -553,40 +555,40 @@ const PulseSequencePlot = function SequencePlot({
         range: xLimits.slice(),
       };
 
-      let annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
-      let annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
-      let annotation_position =
-        (annotation_position_1 + annotation_position_2) / 2;
-      let annotation_to_add = {
-        ...axisAnnotationDefault,
-        y: annotation_position,
-        text: channelDescription[channel].name,
-        textangle: isAnnotation90 ? -90 : 0,
-        x:
-          (axisAnnotationDefault["x"] +
-            (isAnnotation90 ? 0 : isPlotMode ? -50 : -15)) /
-          layout_to_use.width,
-      };
-      layout_to_use.annotations.push(annotation_to_add);
+      if (plotType !== "amp") {
+        annotation_position_1 = layout_to_use["yaxis" + index].domain[1];
+      }
+      if (!["freq", "phase"].includes(plotType)) {
+        annotation_position_2 = layout_to_use["yaxis" + index].domain[0];
+        let annotation_position =
+          (annotation_position_1 + annotation_position_2) / 2;
+        let annotation_to_add = {
+          ...axisAnnotationDefault,
+          y: annotation_position,
+          text: channelDescription[channel].name,
+          textangle: isAnnotation90 ? -90 : 0,
+          x:
+            (axisAnnotationDefault["x"] +
+              (isAnnotation90 ? 0 : isPlotMode ? -50 : -15)) /
+            layout_to_use.width,
+        };
+        layout_to_use.annotations.push(annotation_to_add);
+      }
     }
   }
 
   let greyBackground = true;
-  for (let i = 0; i < numberRFAxes; i++) {
-    greyBackground ^= !axisGroupedWithPrevious[i];
+  for (const channel of enabledKeys["RF"]) {
+    const axisIndices = channelToAxisIdx[channel];
     if (greyBackground) {
-      const annotation_position_1 = axisGroupedWithPrevious[i]
-        ? layout_to_use["yaxis" + (i - 1)].domain[0]
-        : layout_to_use["yaxis" + i].domain[1];
-      const annotation_position_2 = layout_to_use["yaxis" + i].domain[0];
       const shape_to_add = {
         type: "rect",
         xref: "paper",
         yref: "paper",
         x0: 0,
-        y0: annotation_position_1,
+        y0: layout_to_use["yaxis" + axisIndices[1]].domain[0],
         x1: 1,
-        y1: annotation_position_2,
+        y1: layout_to_use["yaxis" + axisIndices[0]].domain[1],
         fillcolor: "#d3d3d3",
         opacity: 0.7,
         line: {
@@ -596,6 +598,7 @@ const PulseSequencePlot = function SequencePlot({
       };
       layout_to_use.shapes.push(shape_to_add);
     }
+    greyBackground = !greyBackground;
   }
 
   // Create Loop/Fork annotations (repeat and branch indicators)
