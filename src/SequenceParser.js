@@ -727,7 +727,7 @@ function blackman(t) {
 
 const freqScaling = 0.002;
 
-function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
+function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   const samplingRate = 10;
   let nSamples = 0;
@@ -745,7 +745,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
   }
 
   const time = new Array(nSamples).fill(0);
-  const value = targets.reduce((key, last) => {
+  const value = targets.reduce((last, key) => {
     last[key] = new Array(nSamples).fill(0);
     return last;
   }, {});
@@ -776,7 +776,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
           time[currentIdx + idx] = timeVal + t;
           for (let key of targets) {
             switch (key) {
-              case "samples":
+              case "sample":
                 value[key][currentIdx + idx] =
                   sequenceDataChannel["amp"][i - 1] *
                   blackman(1 - timeVal / slopeTime) *
@@ -812,13 +812,35 @@ function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
       } else {
         time[currentIdx] = t;
         for (let key of targets) {
-          value[key][currentIdx] = 0;
+          switch (key) {
+            case "freq":
+              value[key][currentIdx] = f;
+              break;
+            case "phase":
+              value[key][currentIdx] = p;
+              break;
+            default:
+              value[key][currentIdx] = 0;
+              break;
+          }
         }
         currentIdx++;
       }
       time[currentIdx] = sequenceDataChannel["time"][i + 1];
       for (let key of targets) {
-        value[key][currentIdx] = 0;
+        for (let key of targets) {
+          switch (key) {
+            case "freq":
+              value[key][currentIdx] = f;
+              break;
+            case "phase":
+              value[key][currentIdx] = p;
+              break;
+            default:
+              value[key][currentIdx] = 0;
+              break;
+          }
+        }
       }
       currentIdx++;
     } else {
@@ -829,7 +851,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["samples"]) {
         time[currentIdx + idx] = timeVal;
         for (let key of targets) {
           switch (key) {
-            case "samples":
+            case "sample":
               value[key][currentIdx + idx] =
                 (timeVal < slopeTime + t
                   ? blackman((timeVal - t) / slopeTime)
