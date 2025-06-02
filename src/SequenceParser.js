@@ -484,12 +484,18 @@ class SequenceParser {
 
     if (Object.hasOwn(this.#main, mainType)) {
       // value points to a parameter
-      value = this.#main[mainType][value].value;
+      if (value <= this.#main[mainType].length) {
+        value = this.#main[mainType][value].value;
+        if (typeof value === "object") {
+          value = value[loopIteration % value.length];
+        }
+      } else {
+        if (Object.hasOwn(this.#main, mainType + "_spline_parameter")) {
+          value = this.#main[mainType + "_spline_parameter"][value];
+        }
+      }
     }
 
-    if (typeof value === "object") {
-      value = value[loopIteration % value.length];
-    }
     let scaling = 1;
     if (type.endsWith("time")) {
       scaling = 1 / 1000;
@@ -512,8 +518,22 @@ class SequenceParser {
           data[ch][type].push(data[ch]["timeDomain"].at(-1));
         }
       } else {
-        for (const ch of channelMask) {
-          data[ch][type].push(value * scaling);
+        if (typeof value === "object") {
+          // Is PPoly
+          for (const ch of channelMask) {
+            data[ch][type] = {
+              segment_length: value["segment_length"],
+            };
+            for (let o = 0; o < 3; o++) {
+              data[ch][type]["x" + o] = value["x" + o]
+                ? value["x" + o].map((x) => x * scaling)
+                : null;
+            }
+          }
+        } else {
+          for (const ch of channelMask) {
+            data[ch][type].push(value * scaling);
+          }
         }
       }
     }
@@ -622,7 +642,12 @@ class SequenceParser {
                   // if (type === "slope_time") {
                   data[ch][type].push(0);
                 } else {
-                  data[ch][type].push(data[ch][type].at(-1));
+                  // TODO handle accumulator settings properly
+                  if (typeof data[ch][type].at(-1) === "object") {
+                    data[ch][type].push(data[ch][type].at(-1).x0.at(-1));
+                  } else {
+                    data[ch][type].push(data[ch][type].at(-1));
+                  }
                 }
               }
             }
@@ -767,6 +792,10 @@ function accumulate(ppoly, tArray, order = 3) {
 }
 
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
+  targets.forEach((target) => {
+    if (!["freq", "phase", "amp", "sample"].includes(target))
+      console.error("Unexpected waveform expansion target: " + key);
+  });
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   const samplingRate = 10;
   let nSamples = 0;
@@ -799,7 +828,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
     let t = sequenceDataChannel["time"][i];
     let slopeTime = sequenceDataChannel["slope_time"][i];
 
-    const isOffEvent = a === 0;
+    const isOffEvent = a === 0 || (Object.hasOwn(a, "x0") && a.x0.at(-1) === 0);
     if (slopeTime > 0 && isOffEvent) {
       f = sequenceDataChannel["freq"][i - 1];
       p = sequenceDataChannel["phase"][i - 1];
@@ -822,43 +851,88 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
     // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
     // Optionally use relative time
 
+    const paramKeys = ["freq", "phase", "amp"];
+    let paramArrays = {};
+    const storeSample = targets.includes("sample");
+    const accumulatorOrder = {
+      freq: 1,
+      phase: 0,
+      amp: 3,
+    };
+
+    const paramObj = {
+      freq: f,
+      phase: p,
+      amp: a,
+    };
+
+    for (let key of paramKeys) {
+      const storeKey = targets.includes(key);
+      if (storeKey || storeSample) {
+        if (typeof paramObj[key] === "object") {
+          paramArrays[key] = accumulate(
+            paramObj[key],
+            times,
+            accumulatorOrder[key],
+          );
+        } else {
+          if (key === "amp" && slopeTime > 0) {
+            paramArrays[key] = times.map((timeVal) => {
+              return (
+                (timeVal < slopeTime + t
+                  ? isOffEvent
+                    ? blackman((t + slopeTime - timeVal) / slopeTime)
+                    : blackman((timeVal - t) / slopeTime)
+                  : isOffEvent
+                    ? 0
+                    : 1) * a
+              );
+            });
+          } else {
+            paramArrays[key] = [paramObj[key]];
+          }
+        }
+        if (storeKey)
+          times.forEach(
+            (_, idx) =>
+              (value[key][currentIdx + idx] =
+                paramArrays[key][idx % paramArrays[key].length]),
+          );
+      }
+    }
+
+    if (storeSample) {
+      if (paramArrays["freq"].length > 1) {
+        let cumSumPhase = 0;
+        const dt = times[1] - times[0];
+        times.forEach((_, idx) => {
+          value["sample"][currentIdx + idx] =
+            paramArrays["amp"][idx % paramsArrays["amp"].length] *
+            Math.cos(
+              2 *
+                Math.PI *
+                (cumSumPhase +
+                  paramArrays["phase"][idx % paramArrays["phase"].length] /
+                    360),
+            );
+          cumSumPhase += paramsArrays["freq"][idx] * freqScaling * dt;
+        });
+      } else {
+        times.forEach((timeVal, idx) => {
+          value["sample"][currentIdx + idx] =
+            paramArrays["amp"][idx % paramsArrays["amp"].length] *
+            Math.cos(
+              2 *
+                Math.PI *
+                (f * freqScaling * timeVal +
+                  paramArrays["phase"][idx % paramArrays["phase"].length] /
+                    360),
+            );
+        });
+      }
+    }
     times.forEach((timeVal, idx) => {
       time[currentIdx + idx] = timeVal;
-      for (let key of targets) {
-        switch (key) {
-          case "sample":
-            value[key][currentIdx + idx] =
-              (timeVal < slopeTime + t
-                ? isOffEvent
-                  ? blackman((t + slopeTime - timeVal) / slopeTime)
-                  : blackman((timeVal - t) / slopeTime)
-                : isOffEvent
-                  ? 0
-                  : 1) *
-              a *
-              Math.cos(2 * Math.PI * (f * freqScaling * timeVal + p / 360));
-            break;
-          case "amp":
-            value[key][currentIdx + idx] =
-              (timeVal < slopeTime + t
-                ? isOffEvent
-                  ? blackman((t + slopeTime - timeVal) / slopeTime)
-                  : blackman((timeVal - t) / slopeTime)
-                : isOffEvent
-                  ? 0
-                  : 1) * a;
-            break;
-          case "freq":
-            value[key][currentIdx + idx] = f;
-            break;
-          case "phase":
-            value[key][currentIdx + idx] = p;
-            break;
-          default:
-            console.error("Unexpected waveform expansion target: " + key);
-            break;
-        }
-      }
     });
     currentIdx += times.length;
   }
