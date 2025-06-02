@@ -526,7 +526,6 @@ const PulseSequencePlot = function SequencePlot({
           lineTrace.fill = "tozeroy";
           axisGroupedWithPrevious[index] = true;
         }
-        console.log(i, lineTrace);
         data.push(lineTrace);
       }
 
@@ -571,6 +570,7 @@ const PulseSequencePlot = function SequencePlot({
             (axisAnnotationDefault["x"] +
               (isAnnotation90 ? 0 : isPlotMode ? -50 : -15)) /
             layout_to_use.width,
+          captureevents: channelDescription[channel].group === "RF",
         };
         layout_to_use.annotations.push(annotation_to_add);
       }
@@ -586,9 +586,9 @@ const PulseSequencePlot = function SequencePlot({
         xref: "paper",
         yref: "paper",
         x0: 0,
-        y0: layout_to_use["yaxis" + axisIndices[1]].domain[0],
+        y0: layout_to_use["yaxis" + axisIndices.at(-1)].domain[0],
         x1: 1,
-        y1: layout_to_use["yaxis" + axisIndices[0]].domain[1],
+        y1: layout_to_use["yaxis" + axisIndices.at(0)].domain[1],
         fillcolor: "#d3d3d3",
         opacity: 0.7,
         line: {
