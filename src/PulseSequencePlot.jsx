@@ -264,45 +264,40 @@ function filter(object_to_filter, filter) {
 }
 
 function getPlotData(sequenceData, channelDescription) {
-  return Object.fromEntries(
-    Object.entries(channelDescription).map(([key, desc]) => {
-      // TODO: Add support for multi hw channel operations (subtract/add etc.)
-      let channelData = {
-        timeDomain: [0, 0],
-      };
-      if (
-        desc["hw_channels"].length > 0 &&
-        Object.hasOwn(sequenceData, desc["hw_channels"][0])
-      ) {
-        if (Object.hasOwn(desc, "sub_channel")) {
-          const type = desc["group"] === "TTL" ? "output" : "input_gate";
-          let last = 0;
-          channelData = {
-            names: sequenceData[desc["hw_channels"][0]]["names"],
-            time: sequenceData[desc["hw_channels"][0]]["time"],
-            timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
-            values: sequenceData[desc["hw_channels"][0]][type + "_state"].map(
-              (vals, idx) => {
-                const mask =
-                  (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
-                    (1 << desc["sub_channel"])) !==
-                  0;
-                const val = (vals & (1 << desc["sub_channel"])) !== 0;
-                console.assert(
-                  !(val & !mask),
-                  `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
-                );
-                return (last = (last & ~mask) | val);
-              },
-            ),
-          };
-        } else {
-          channelData = sequenceData[desc["hw_channels"][0]];
-        }
+  return Object.entries(channelDescription).reduce((out, [key, desc]) => {
+    // TODO: Add support for multi hw channel operations (subtract/add etc.)
+    if (
+      desc["hw_channels"].length > 0 &&
+      Object.hasOwn(sequenceData, desc["hw_channels"][0])
+    ) {
+      if (Object.hasOwn(desc, "sub_channel")) {
+        const type = desc["group"] === "TTL" ? "output" : "input_gate";
+        let last = 0;
+        out[key] = {
+          names: sequenceData[desc["hw_channels"][0]]["names"],
+          time: sequenceData[desc["hw_channels"][0]]["time"],
+          timeDomain: sequenceData[desc["hw_channels"][0]]["timeDomain"],
+          values: sequenceData[desc["hw_channels"][0]][type + "_state"].map(
+            (vals, idx) => {
+              const mask =
+                (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
+                  (1 << desc["sub_channel"])) !==
+                0;
+              const val = (vals & (1 << desc["sub_channel"])) !== 0;
+              console.assert(
+                !(val & !mask),
+                `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
+              );
+              return (last = (last & ~mask) | val);
+            },
+          ),
+        };
+      } else {
+        out[key] = sequenceData[desc["hw_channels"][0]];
       }
-      return [key, channelData];
-    }),
-  );
+    }
+    return out;
+  }, {});
 }
 
 function getTraces(
@@ -456,7 +451,9 @@ const PulseSequencePlot = function SequencePlot({
   const [isPlotMode, setIsPlotMode] = useState(false);
 
   const channelYDataTypeKeys = Object.keys(channelYDataType);
-  const channelDescKeys = Object.keys(channelDescription);
+  const channelDescKeys = Object.keys(channelDescription).filter(
+    (key) => channelDescription[key].group === "RF",
+  );
   const allKeys = channelYDataTypeKeys.concat(channelDescKeys);
   const union = new Set(allKeys);
 
@@ -557,7 +554,9 @@ const PulseSequencePlot = function SequencePlot({
       let plotType =
         channelDescription[channel].group === "RF"
           ? i === 0
-            ? channelYDataType[channel]
+            ? Object.hasOwn(channelYDataType, "channel")
+              ? channelYDataType["channel"]
+              : "freq"
             : "amp"
           : channelDescription[channel].group;
 

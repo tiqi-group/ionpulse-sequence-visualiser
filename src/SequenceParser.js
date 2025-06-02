@@ -484,14 +484,17 @@ class SequenceParser {
 
     if (Object.hasOwn(this.#main, mainType)) {
       // value points to a parameter
-      if (value <= this.#main[mainType].length) {
+      if (value < this.#main[mainType].length) {
         value = this.#main[mainType][value].value;
         if (typeof value === "object") {
           value = value[loopIteration % value.length];
         }
       } else {
         if (Object.hasOwn(this.#main, mainType + "_spline_parameter")) {
-          value = this.#main[mainType + "_spline_parameter"][value];
+          value =
+            this.#main[mainType + "_spline_parameter"][
+              value - this.#main[mainType].length
+            ];
         }
       }
     }
@@ -521,11 +524,11 @@ class SequenceParser {
         if (typeof value === "object") {
           // Is PPoly
           for (const ch of channelMask) {
-            data[ch][type] = {
+            data[ch][type].push({
               segment_length: value["segment_length"],
-            };
-            for (let o = 0; o < 3; o++) {
-              data[ch][type]["x" + o] = value["x" + o]
+            });
+            for (let o = 0; o <= 3; o++) {
+              data[ch][type].at(-1)["x" + o] = value["x" + o]
                 ? value["x" + o].map((x) => x * scaling)
                 : null;
             }
@@ -753,24 +756,26 @@ function blackman(t) {
 const freqScaling = 0.002;
 
 const clockRate = 250;
+const samplingRate = 10;
+const lengthBits = 16;
 function accumulate(ppoly, tArray, order = 3) {
   let pieceIdx = 0;
   let accumulator = Array.from(Array(order + 1).keys()).map(
-    (i) => ppoly["x" + [i]][pieceIdx],
+    (i) => ppoly["x" + i][pieceIdx],
   );
   let tickUntilPiece = 0;
   let piecewiseTick = 0;
   return tArray.map((t) => {
-    while (piecewiseTick + tickUntilPiece < t * clockRate) {
-      if (ppoly.length[pieceIdx] === 0) {
+    while (piecewiseTick + tickUntilPiece < (t * clockRate) / samplingRate) {
+      if (ppoly.segment_length[pieceIdx] === 0) {
         // End of accumulation sequence
         break;
       }
-      if (piecewiseTick == ppoly.length[pieceIdx]) {
-        if (pieceIdx < ppoly.length.length) {
-          pieceIdx++;
+      if (piecewiseTick == ppoly.segment_length[pieceIdx]) {
+        pieceIdx++;
+        if (pieceIdx < ppoly.segment_length.length) {
           accumulator = Array.from(Array(order + 1).keys()).map(
-            (i) => ppoly["x" + [i]][pieceIdx],
+            (i) => ppoly["x" + i][pieceIdx],
           );
           tickUntilPiece += piecewiseTick;
           piecewiseTick = 0;
@@ -783,7 +788,7 @@ function accumulate(ppoly, tArray, order = 3) {
         }
       }
       for (let o = 0; o < order; o++) {
-        accumulator[o] += accumulator[o + 1];
+        accumulator[o] += accumulator[o + 1] / 2 ** lengthBits;
       }
       piecewiseTick++;
     }
@@ -797,7 +802,6 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       console.error("Unexpected waveform expansion target: " + key);
   });
   // time is in units of us so sampling rate of 10 equal 10 MSPS
-  const samplingRate = 10;
   let nSamples = 0;
   for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
     let a = sequenceDataChannel["amp"][i];
