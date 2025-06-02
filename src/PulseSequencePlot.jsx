@@ -305,6 +305,64 @@ function getPlotData(sequenceData, channelDescription) {
   );
 }
 
+function getTraces(
+  axisIdx,
+  plotType,
+  channelPlotData,
+  channelName,
+  opacity = 0.5,
+) {
+  let data = [];
+  let trace = structuredClone(data_templates[plotType]);
+  trace.yaxis = "y" + axisIdx;
+  for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
+    if (channelName.includes(wavelength)) {
+      trace["marker"]["color"] = colour;
+    }
+  }
+  if (["sample", "freq", "phase", "amp"].includes(plotType)) {
+    let lineTrace = structuredClone(trace);
+    lineTrace.mode = "lines";
+    let yData;
+    [lineTrace.x, yData] = expandToWaveform(channelPlotData, [plotType]);
+    lineTrace.y = yData[plotType];
+    trace.y = channelPlotData.time.map(
+      (t) => lineTrace.y[lineTrace.x.indexOf(t)],
+    );
+    if (plotType === "amp") {
+      if (lineTrace.marker.color.startsWith("rgba")) {
+        lineTrace.fillcolor = setOpacity(lineTrace.marker.color, opacity);
+      } else {
+        lineTrace.opacity = opacity;
+      }
+      lineTrace.fill = "tozeroy";
+    }
+    lineTrace.name = channelName + " " + plotType + " line";
+    data.push(lineTrace);
+  }
+
+  trace.x = channelPlotData.time;
+  switch (plotType) {
+    case "Readout":
+      trace.y = channelPlotData.pmt_channel;
+      break;
+    case "sample":
+    case "freq":
+    case "phase":
+    case "amp":
+      // Already set
+      break;
+    default:
+      trace.y = channelPlotData.values;
+      break;
+  }
+  trace.text = compileEventName(channelPlotData.names);
+  trace.name = channelName + " " + plotType;
+
+  data.push(trace);
+  return data;
+}
+
 let data_template_TTL = {
   line: { shape: "hv" },
   type: "scatter",
@@ -489,8 +547,6 @@ const PulseSequencePlot = function SequencePlot({
     },
   };
 
-  let axisGroupedWithPrevious = new Array(numberRFAxes).fill(false);
-
   for (const [channel, value] of Object.entries(plotData)) {
     if (!channelEnabled[channel]) continue;
     let annotation_position_1;
@@ -505,49 +561,12 @@ const PulseSequencePlot = function SequencePlot({
             : "amp"
           : channelDescription[channel].group;
 
-      let trace = structuredClone(data_templates[plotType]);
-      trace.yaxis = "y" + index;
-      for (const [wavelength, colour] of Object.entries(wavelengthColours)) {
-        if (channelDescription[channel].name.includes(wavelength)) {
-          trace["marker"]["color"] = colour;
-        }
-      }
-      if (["sample", "freq", "phase", "amp"].includes(plotType)) {
-        let lineTrace = structuredClone(trace);
-        lineTrace.mode = "lines";
-        let yData;
-        [lineTrace.x, yData] = expandToWaveform(value, [plotType]);
-        lineTrace.y = yData[plotType];
-        trace.y = value.time.map((t) => lineTrace.y[lineTrace.x.indexOf(t)]);
-        if (plotType === "amp") {
-          if (lineTrace.marker.color.startsWith("rgba")) {
-            lineTrace.fillcolor = setOpacity(lineTrace.marker.color, 0.5);
-          }
-          lineTrace.fill = "tozeroy";
-          axisGroupedWithPrevious[index] = true;
-        }
-        data.push(lineTrace);
-      }
-
-      trace.x = value.time;
-      switch (plotType) {
-        case "Readout":
-          trace.y = value.pmt_channel;
-          break;
-        case "sample":
-        case "freq":
-        case "phase":
-        case "amp":
-          // Already set
-          break;
-        default:
-          trace.y = value.values;
-          break;
-      }
-      trace.text = compileEventName(value.names);
-      trace.name = channelDescription[channel].name + " " + plotType;
-
-      data.push(trace);
+      getTraces(
+        index,
+        plotType,
+        value,
+        channelDescription[channel].name,
+      ).forEach((trace) => data.push(trace));
 
       layout_to_use["xaxis" + index] = {
         ...xAxisParams,
@@ -606,7 +625,7 @@ const PulseSequencePlot = function SequencePlot({
   const loopData = sequenceBlockData.reduce(
     (loopData, sequence) => {
       if (
-        sequence["type"] !== "Loop" ||
+        sequence["type"] !== "LoopSequence" ||
         (sequence["display"] !== "minimized" &&
           sequence["display"] !== "contracted")
       )
@@ -617,12 +636,26 @@ const PulseSequencePlot = function SequencePlot({
       let yDataPairs = [];
       let startYData;
       if (
-        sequence["ch_mask"].has(ChannelType.dio + " (0,0)") &&
-        (enabledKeys["TTL"].length || enabledKeys["PMT"])
+        (enabledKeys["TTL"].length &&
+          sequence["ch_mask"].has(
+            channelDescription[enabledKeys["TTL"][0]]["hw_channels"][0],
+          )) ||
+        (enabledKeys["PMT"].length &&
+          sequence["ch_mask"].has(
+            channelDescription[enabledKeys["PMT"][0]]["hw_channels"][1],
+          )) ||
+        (enabledKeys["Readout"].length &&
+          sequence["ch_mask"].has(
+            channelDescription[enabledKeys["Readout"][0]]["hw_channels"][0],
+          ))
       ) {
         startYData = 1;
       }
-      let axisIdx = enabledKeys["TTL"].length + enabledKeys["PMT"].length + 1;
+      let axisIdx =
+        enabledKeys["TTL"].length +
+        enabledKeys["PMT"].length +
+        enabledKeys["Readout"].length +
+        1;
       for (let key of enabledKeys["RF"]) {
         if (!channelEnabled[key]) continue;
         if (startYData === undefined) {
@@ -707,95 +740,42 @@ const PulseSequencePlot = function SequencePlot({
     loopData["annotations"],
   );
 
+  console.log(sequenceBlockData);
   sequenceBlockData.forEach((sequence) => {
     if (
-      sequence["type"] === "Loop" &&
+      sequence["type"] === "LoopSequence" &&
       (sequence["display"] === "minimized" ||
         sequence["display"] === "contracted")
     ) {
       for (const call of sequence["calls"].slice(1)) {
         let plotData = getPlotData(call["data"], channelDescription);
         for (const [channel, value] of Object.entries(plotData)) {
-          if (
-            channelDescription[channel].group === "RF" &&
-            channelEnabled[channel]
-          ) {
-            const index = channelToAxisIdx[channel][0];
-            let object_to_add = structuredClone(
-              data_templates[channelYDataType[channel]],
-            );
-            const localData = {
-              ...value,
-              time: value.time.map((t) => {
-                return (
-                  t - (call["startTime"] - sequence["calls"][0]["startTime"])
-                  // t
-                );
-              }),
-            };
+          if (!channelEnabled[channel]) continue;
+          const localData = {
+            ...value,
+            time: value.time.map((t) => {
+              return (
+                t - (call["startTime"] - sequence["calls"][0]["startTime"])
+                // t
+              );
+            }),
+          };
 
-            if (channelYDataType[channel] === "sample") {
-              const waveform = expandToWaveform(localData);
-              object_to_add.x = waveform[0];
-              object_to_add.y = waveform[1];
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  object_to_add["marker"]["color"] = colour;
-                }
-              }
-            } else {
-              object_to_add.x = localData.time;
-              object_to_add.y = localData[channelYDataType[channel]];
-              object_to_add.text = compileEventName(value.names);
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  object_to_add["marker"]["color"] = colour;
-                }
-              }
-            }
-            object_to_add.name =
-              channelDescription[channel].name + channelYDataType[channel];
-            object_to_add.yaxis = "y" + index;
-
-            for (const [wavelength, colour] of Object.entries(
-              wavelengthColours,
-            )) {
-              if (channelDescription[channel].name.includes(wavelength)) {
-                object_to_add["marker"]["color"] = colour;
-              }
-            }
-
-            data.push(object_to_add);
-
-            if (channelYDataType[channel] !== "sample") {
-              const index = channelToAxisIdx[channel][1];
-              let amp_to_add = structuredClone(data_templates["amp"]);
-              amp_to_add.x = localData.time;
-              amp_to_add.y = localData.amp;
-              amp_to_add.text = compileEventName(value.names);
-              amp_to_add.yaxis = "y" + index;
-              amp_to_add.name = channelDescription[channel].name + " amp";
-
-              for (const [wavelength, colour] of Object.entries(
-                wavelengthColours,
-              )) {
-                if (channelDescription[channel].name.includes(wavelength)) {
-                  amp_to_add["marker"]["color"] = colour;
-                  amp_to_add["fillcolor"] = setOpacity(
-                    colour,
-                    0.5 / sequence["calls"].length,
-                  );
-                }
-              }
-
-              data.push(amp_to_add);
-            }
+          for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
+            const index = channelToAxisIdx[channel][i];
+            let plotType =
+              channelDescription[channel].group === "RF"
+                ? i === 0
+                  ? channelYDataType[channel]
+                  : "amp"
+                : channelDescription[channel].group;
+            getTraces(
+              index,
+              plotType,
+              localData,
+              channelDescription[channel].name,
+              0.5 / sequence["calls"].length,
+            ).forEach((trace) => data.push(trace));
           }
         }
       }
