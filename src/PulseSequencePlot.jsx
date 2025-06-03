@@ -316,24 +316,28 @@ function getTraces(
     }
   }
   if (["sample", "freq", "phase", "amp"].includes(plotType)) {
-    let lineTrace = structuredClone(trace);
-    lineTrace.mode = "lines";
-    let yData;
-    [lineTrace.x, yData] = expandToWaveform(channelPlotData, [plotType]);
-    lineTrace.y = yData[plotType];
-    trace.y = channelPlotData.time.map(
-      (t) => lineTrace.y[lineTrace.x.lastIndexOf(t)],
-    );
-    if (plotType === "amp") {
-      if (lineTrace.marker.color.startsWith("rgba")) {
-        lineTrace.fillcolor = setOpacity(lineTrace.marker.color, opacity);
-      } else {
-        lineTrace.opacity = opacity;
+    const [time, yData] = expandToWaveform(channelPlotData, [plotType]);
+    for (let toneIdx = 0; toneIdx < yData[plotType].length; toneIdx++) {
+      let lineTrace = structuredClone(trace);
+      lineTrace.mode = "lines";
+      lineTrace.x = time;
+      lineTrace.y = yData[plotType][toneIdx];
+      if (toneIdx === 0) {
+        trace.y = channelPlotData.time.map(
+          (t) => lineTrace.y[lineTrace.x.lastIndexOf(t)],
+        );
       }
-      lineTrace.fill = "tozeroy";
+      if (plotType === "amp") {
+        if (lineTrace.marker.color.startsWith("rgba")) {
+          lineTrace.fillcolor = setOpacity(lineTrace.marker.color, opacity);
+        } else {
+          lineTrace.opacity = opacity;
+        }
+        lineTrace.fill = "tozeroy";
+      }
+      lineTrace.name = channelName + " " + plotType + " " + toneIdx + " line";
+      data.push(lineTrace);
     }
-    lineTrace.name = channelName + " " + plotType + " line";
-    data.push(lineTrace);
   }
 
   trace.x = channelPlotData.time;

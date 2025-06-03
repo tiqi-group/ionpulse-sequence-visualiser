@@ -8,6 +8,8 @@ const ChannelType = {
 
 const N_INPUT_GATE_CHANNELS = 8;
 
+const N_TONES_PER_QUENCH_CHANNEL = 4;
+
 /**
  * getChannelKey converts hardware channel to a unique string
  *
@@ -146,21 +148,32 @@ class SequenceParser {
         // If the whole sequence is plotted it will have 2 entries in the end, [0, sequenceLength]
         timeDomain: [0],
       };
-      if (
-        hw["hardware"] == ChannelType.quench ||
-        hw["hardware"] == ChannelType.dds
-      ) {
-        for (const key of this.RF_PROPERTIES) {
-          data[key] = [0];
-        }
-      } else if (hw["hardware"] == ChannelType.dio) {
-        for (const key of this.DIO_PROPERTIES) {
-          data[key] = [0];
-        }
-      } else if (hw["hardware"] == ChannelType.readout) {
-        for (const key of this.READOUT_PROPERTIES) {
-          data[key] = [0];
-        }
+      switch (hw["hardware"]) {
+        case ChannelType.quench:
+          for (const key of this.RF_PROPERTIES) {
+            data[key] = Array.from(Array(N_TONES_PER_QUENCH_CHANNEL)).map(
+              () => [0],
+            );
+          }
+          break;
+        case ChannelType.dds:
+          for (const key of this.RF_PROPERTIES) {
+            data[key] = [[0]];
+          }
+          break;
+        case ChannelType.dio:
+          for (const key of this.DIO_PROPERTIES) {
+            data[key] = [0];
+          }
+          break;
+        case ChannelType.readout:
+          for (const key of this.READOUT_PROPERTIES) {
+            data[key] = [0];
+          }
+          break;
+        default:
+          console.error("Unknown channel type: " + hw["hardware"]);
+          break;
       }
       plotData[ch] = data;
     }
@@ -435,6 +448,7 @@ class SequenceParser {
 
       for (let event of seqArray) {
         if (typeof event === "object") {
+          // Debug mode. the sequence array contains tuples of indices and sequence names
           event = event[0];
         }
         if (event < this.#main["event"].length) {
@@ -475,10 +489,17 @@ class SequenceParser {
     return data;
   }
 
-  getParamValue(type, value, channelMask, data, loopIteration, recordEvents) {
+  getParamValue(
+    type,
+    value,
+    channelMask,
+    data,
+    loopIteration,
+    recordEvents,
+    dataChannelIdx = 0,
+  ) {
     if (typeof value === "object") {
-      // value is a list of index and name
-      value = value[0];
+      value = value[dataChannelIdx];
     }
     const mainType = type.endsWith("time") ? "time" : type;
 
@@ -522,20 +543,24 @@ class SequenceParser {
         }
       } else {
         if (typeof value === "object") {
-          // Is PPoly
+          // Is PPoly, Only used on quench channels
           for (const ch of channelMask) {
-            data[ch][type].push({
+            data[ch][type][dataChannelIdx].push({
               segment_length: value["segment_length"],
             });
             for (let o = 0; o <= 3; o++) {
-              data[ch][type].at(-1)["x" + o] = value["x" + o]
+              data[ch][type][dataChannelIdx].at(-1)["x" + o] = value["x" + o]
                 ? value["x" + o].map((x) => x * scaling)
                 : null;
             }
           }
         } else {
           for (const ch of channelMask) {
-            data[ch][type].push(value * scaling);
+            if (Object.hasOwn(data[ch][type][0], "length")) {
+              data[ch][type][dataChannelIdx].push(value * scaling);
+            } else {
+              data[ch][type].push(value * scaling);
+            }
           }
         }
       }
@@ -610,19 +635,30 @@ class SequenceParser {
         break;
       case "MultiToneRFEvent":
         // TODO Properly implement
-        for (let type of this.RF_PROPERTIES.concat(["time"])) {
+        data = this.getParamValue(
+          "time",
+          event["time"],
+          channelMask,
+          data,
+          loopIteration,
+          recordEvents,
+        );
+        for (let type of this.RF_PROPERTIES) {
           if (type in event && event[type] !== null) {
-            data = this.getParamValue(
-              type,
-              event[type],
-              channelMask,
-              data,
-              loopIteration,
-              recordEvents,
-            );
+            for (let toneIdx = 0; toneIdx < event[type].length; toneIdx++) {
+              data = this.getParamValue(
+                type,
+                event[type][toneIdx],
+                channelMask,
+                data,
+                loopIteration,
+                recordEvents,
+                toneIdx,
+              );
+            }
           } else if (recordEvents) {
             for (const ch of channelMask) {
-              data[ch][type].push(0);
+              data[ch][type].forEach((toneParam) => toneParam.push(0));
             }
           }
         }
@@ -638,19 +674,28 @@ class SequenceParser {
           recordEvents,
         );
         if (recordEvents) {
-          for (let type of this.RF_PROPERTIES.concat(this.DIO_PROPERTIES)) {
-            for (const ch of channelMask) {
-              if (type in data[ch]) {
+          for (const ch of channelMask) {
+            if (
+              this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ==
+              ChannelType.dio
+            ) {
+              for (let type of this.DIO_PROPERTIES) {
+                data[ch][type].push(data[ch][type].at(-1));
+              }
+            } else {
+              // Quench or DDS
+              for (let type of this.RF_PROPERTIES) {
                 if (type === "slope_time" && data[ch]["amp"].at(-1) !== 0) {
-                  // if (type === "slope_time") {
-                  data[ch][type].push(0);
+                  data[ch][type].forEach((toneParam) => toneParam.push(0));
                 } else {
-                  // TODO handle accumulator settings properly
-                  if (typeof data[ch][type].at(-1) === "object") {
-                    data[ch][type].push(data[ch][type].at(-1).x0.at(-1));
-                  } else {
-                    data[ch][type].push(data[ch][type].at(-1));
-                  }
+                  data[ch][type].forEach((toneParam) => {
+                    // TODO handle accumulator settings properly
+                    if (typeof toneParam.at(-1) === "object") {
+                      toneParam.push(toneParam.at(-1).x0.at(-1));
+                    } else {
+                      toneParam.push(toneParam.at(-1));
+                    }
+                  });
                 }
               }
             }
@@ -799,12 +844,12 @@ function accumulate(ppoly, tArray, order = 3) {
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   targets.forEach((target) => {
     if (!["freq", "phase", "amp", "sample"].includes(target))
-      console.error("Unexpected waveform expansion target: " + key);
+      console.error("Unexpected waveform expansion target: " + target);
   });
   // time is in units of us so sampling rate of 10 equal 10 MSPS
   let nSamples = 0;
   for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
-    let a = sequenceDataChannel["amp"][i];
+    let a = sequenceDataChannel["amp"][0][i];
     if (a === 0) {
       nSamples += 2;
     } else {
@@ -816,123 +861,131 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
     }
   }
 
+  // Create an array of times uniformly spaced by
+  // 1 / samplingRate in the intervall [t0, t0+duration]
+  // (note the including limits up and down to create steep edges
+  // in the line plot later)
+  let getTimeArray = (t0, duration) => {
+    const nSamples = Math.ceil(duration * samplingRate);
+    return Array.from(
+      { length: nSamples },
+      (_, idx) => t0 + idx * (duration / (nSamples - 1)),
+    );
+  };
+
   const time = new Array(nSamples).fill(0);
   const value = targets.reduce((last, key) => {
-    last[key] = new Array(nSamples).fill(0);
+    last[key] = sequenceDataChannel[key].map(() => new Array(nSamples).fill(0));
     return last;
   }, {});
   let currentIdx = 0;
   for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
     const duration =
       sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i];
-    // Unfold waveforms
-    let f = sequenceDataChannel["freq"][i];
-    let p = sequenceDataChannel["phase"][i];
-    let a = sequenceDataChannel["amp"][i];
-    let t = sequenceDataChannel["time"][i];
-    let slopeTime = sequenceDataChannel["slope_time"][i];
-
-    const isOffEvent = a === 0 || (Object.hasOwn(a, "x0") && a.x0.at(-1) === 0);
-    if (slopeTime > 0 && isOffEvent) {
-      f = sequenceDataChannel["freq"][i - 1];
-      p = sequenceDataChannel["phase"][i - 1];
-      a = sequenceDataChannel["amp"][i - 1];
-    }
-
-    // Create an array of times uniformly spaced by
-    // 1 / samplingRate in the intervall [t0, t0+duration]
-    // (note the including limits up and down to create steep edges
-    // in the line plot later)
-    let getTimeArray = (t0, duration) => {
-      const nSamples = Math.ceil(duration * samplingRate);
-      return Array.from(
-        { length: nSamples },
-        (_, idx) => t0 + idx * (duration / (nSamples - 1)),
-      );
-    };
-
+    const t = sequenceDataChannel["time"][i];
     const times = getTimeArray(t, duration);
-    // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
-    // Optionally use relative time
 
-    const paramKeys = ["freq", "phase", "amp"];
-    let paramArrays = {};
-    const storeSample = targets.includes("sample");
-    const accumulatorOrder = {
-      freq: 1,
-      phase: 0,
-      amp: 3,
-    };
+    for (
+      let toneIdx = 0;
+      toneIdx < sequenceDataChannel["freq"].length;
+      toneIdx++
+    ) {
+      // Unfold waveforms
+      let f = sequenceDataChannel["freq"][toneIdx][i];
+      let p = sequenceDataChannel["phase"][toneIdx][i];
+      let a = sequenceDataChannel["amp"][toneIdx][i];
+      let slopeTime = sequenceDataChannel["slope_time"][toneIdx][i];
 
-    const paramObj = {
-      freq: f,
-      phase: p,
-      amp: a,
-    };
-
-    for (let key of paramKeys) {
-      const storeKey = targets.includes(key);
-      if (storeKey || storeSample) {
-        if (typeof paramObj[key] === "object") {
-          paramArrays[key] = accumulate(
-            paramObj[key],
-            times,
-            accumulatorOrder[key],
-          );
-        } else {
-          if (key === "amp" && slopeTime > 0) {
-            paramArrays[key] = times.map((timeVal) => {
-              return (
-                (timeVal < slopeTime + t
-                  ? isOffEvent
-                    ? blackman((t + slopeTime - timeVal) / slopeTime)
-                    : blackman((timeVal - t) / slopeTime)
-                  : isOffEvent
-                    ? 0
-                    : 1) * a
-              );
-            });
-          } else {
-            paramArrays[key] = [paramObj[key]];
-          }
-        }
-        if (storeKey)
-          times.forEach(
-            (_, idx) =>
-              (value[key][currentIdx + idx] =
-                paramArrays[key][idx % paramArrays[key].length]),
-          );
+      const isOffEvent =
+        a === 0 || (Object.hasOwn(a, "x0") && a.x0.at(-1) === 0);
+      if (slopeTime > 0 && isOffEvent) {
+        f = sequenceDataChannel["freq"][toneIdx][i - 1];
+        p = sequenceDataChannel["phase"][toneIdx][i - 1];
+        a = sequenceDataChannel["amp"][toneIdx][i - 1];
       }
-    }
 
-    if (storeSample) {
-      if (paramArrays["freq"].length > 1) {
-        let cumSumPhase = 0;
-        const dt = times[1] - times[0];
-        times.forEach((_, idx) => {
-          value["sample"][currentIdx + idx] =
-            paramArrays["amp"][idx % paramsArrays["amp"].length] *
-            Math.cos(
-              2 *
-                Math.PI *
-                (cumSumPhase +
-                  paramArrays["phase"][idx % paramArrays["phase"].length] /
-                    360),
+      // console.log(`Expanding ${times.length} samples from ${t.toFixed(3)} to ${(t + duration).toFixed(3)}, f: ${f.toFixed(2)}, a: ${a.toFixed(2)}, p: ${p.toFixed(2)}`);
+      // Optionally use relative time
+
+      const paramKeys = ["freq", "phase", "amp"];
+      let paramArrays = {};
+      const storeSample = targets.includes("sample");
+      const accumulatorOrder = {
+        freq: 1,
+        phase: 0,
+        amp: 3,
+      };
+
+      const paramObj = {
+        freq: f,
+        phase: p,
+        amp: a,
+      };
+
+      for (let key of paramKeys) {
+        const storeKey = targets.includes(key);
+        if (storeKey || storeSample) {
+          if (typeof paramObj[key] === "object") {
+            paramArrays[key] = accumulate(
+              paramObj[key],
+              times,
+              accumulatorOrder[key],
             );
-          cumSumPhase += paramsArrays["freq"][idx] * freqScaling * dt;
-        });
-      } else {
-        times.forEach((timeVal, idx) => {
-          value["sample"][currentIdx + idx] =
-            paramArrays["amp"][idx % paramsArrays["amp"].length] *
-            Math.cos(
-              2 *
-                Math.PI *
-                (f * freqScaling * timeVal +
-                  paramArrays["phase"][idx % paramArrays["phase"].length] /
-                    360),
+          } else {
+            if (key === "amp" && slopeTime > 0) {
+              paramArrays[key] = times.map((timeVal) => {
+                return (
+                  (timeVal < slopeTime + t
+                    ? isOffEvent
+                      ? blackman((t + slopeTime - timeVal) / slopeTime)
+                      : blackman((timeVal - t) / slopeTime)
+                    : isOffEvent
+                      ? 0
+                      : 1) * a
+                );
+              });
+            } else {
+              paramArrays[key] = [paramObj[key]];
+            }
+          }
+          if (storeKey)
+            times.forEach(
+              (_, idx) =>
+                (value[key][toneIdx][currentIdx + idx] =
+                  paramArrays[key][idx % paramArrays[key].length]),
             );
-        });
+        }
+      }
+
+      if (storeSample) {
+        if (paramArrays["freq"].length > 1) {
+          let cumSumPhase = 0;
+          const dt = times[1] - times[0];
+          times.forEach((_, idx) => {
+            value["sample"][toneIdx][currentIdx + idx] =
+              paramArrays["amp"][idx % paramsArrays["amp"].length] *
+              Math.cos(
+                2 *
+                  Math.PI *
+                  (cumSumPhase +
+                    paramArrays["phase"][idx % paramArrays["phase"].length] /
+                      360),
+              );
+            cumSumPhase += paramsArrays["freq"][idx] * freqScaling * dt;
+          });
+        } else {
+          times.forEach((timeVal, idx) => {
+            value["sample"][toneIdx][currentIdx + idx] =
+              paramArrays["amp"][idx % paramsArrays["amp"].length] *
+              Math.cos(
+                2 *
+                  Math.PI *
+                  (f * freqScaling * timeVal +
+                    paramArrays["phase"][idx % paramArrays["phase"].length] /
+                      360),
+              );
+          });
+        }
       }
     }
     times.forEach((timeVal, idx) => {
@@ -944,4 +997,9 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   return [time, value];
 }
 
-export { SequenceParser, expandToWaveform, ChannelType };
+export {
+  SequenceParser,
+  expandToWaveform,
+  ChannelType,
+  N_TONES_PER_QUENCH_CHANNEL,
+};
