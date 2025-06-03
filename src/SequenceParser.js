@@ -225,7 +225,7 @@ class SequenceParser {
       }
     });
     // console.log("sequence block data: ", this.#sequenceBlockData);
-    // console.log("plot data: ", plotData);
+    console.log("plot data: ", plotData);
     return plotData;
   }
 
@@ -615,7 +615,7 @@ class SequenceParser {
               );
             } else if (recordEvents) {
               for (const ch of channelMask) {
-                data[ch][type].push(0);
+                data[ch][type].forEach((toneParam) => toneParam.push(0));
               }
             }
           }
@@ -685,7 +685,7 @@ class SequenceParser {
             } else {
               // Quench or DDS
               for (let type of this.RF_PROPERTIES) {
-                if (type === "slope_time" && data[ch]["amp"].at(-1) !== 0) {
+                if (type === "slope_time" && data[ch]["amp"][0].at(-1) !== 0) {
                   data[ch][type].forEach((toneParam) => toneParam.push(0));
                 } else {
                   data[ch][type].forEach((toneParam) => {
