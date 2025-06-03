@@ -214,7 +214,7 @@ class SequenceParser {
           lastGate = newGate;
         });
         this.#main["header"]["channel_idx_to_hw"].forEach((hw, ch) => {
-          if (hw["hardware"] === ChannelType.readout) {
+          if (hw["hardware"] === ChannelType.readout && ch_mask.has(ch)) {
             plotData[ch]["time"] = plotData[ch]["time"].map(
               (gate_idx, idx) =>
                 inputGateTimes[plotData[ch]["pmt_channel"][idx]][gate_idx] +
@@ -225,7 +225,7 @@ class SequenceParser {
       }
     });
     // console.log("sequence block data: ", this.#sequenceBlockData);
-    console.log("plot data: ", plotData);
+    // console.log("plot data: ", plotData);
     return plotData;
   }
 
@@ -656,6 +656,22 @@ class SequenceParser {
                 toneIdx,
               );
             }
+            for (
+              let toneIdx = event[type].length;
+              toneIdx < N_TONES_PER_QUENCH_CHANNEL;
+              toneIdx++
+            ) {
+              for (const ch of channelMask) {
+                // TODO handle accumulator settings properly
+                if (typeof data[ch][type][toneIdx].at(-1) === "object") {
+                  data[ch][type][toneIdx].push(
+                    data[ch][type][toneIdx].at(-1).x0.at(-1),
+                  );
+                } else {
+                  data[ch][type][toneIdx].push(data[ch][type][toneIdx].at(-1));
+                }
+              }
+            }
           } else if (recordEvents) {
             for (const ch of channelMask) {
               data[ch][type].forEach((toneParam) => toneParam.push(0));
@@ -837,7 +853,8 @@ function accumulate(ppoly, tArray, order = 3) {
       }
       piecewiseTick++;
     }
-    return accumulator[0];
+    // TODO Handle amplitude units appropriately
+    return accumulator[0] / (order == 3 ? 4 : 1);
   });
 }
 
