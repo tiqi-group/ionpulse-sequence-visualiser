@@ -62,7 +62,11 @@ class SequenceParser {
   ];
   READOUT_PROPERTIES = ["pmt_channel", "offset_time"];
   constructor(ionpulseSequence, externalConfig) {
-    if (Object.hasOwn(ionpulseSequence, "header")) {
+    if (
+      Object.hasOwn(ionpulseSequence, "header") &&
+      Object.hasOwn(ionpulseSequence["header"], "version")
+    ) {
+      console.log(ionpulseSequence);
       const sequenceDescriptionVersion =
         ionpulseSequence["header"]["version"].split(".");
       const minimumVersion = [2, 0, 4];
@@ -501,7 +505,8 @@ class SequenceParser {
     if (typeof value === "object") {
       value = value[dataChannelIdx];
     }
-    const mainType = type.endsWith("time") ? "time" : type;
+    const mainType =
+      type.endsWith("time") || type.endsWith("delay") ? "time" : type;
 
     if (Object.hasOwn(this.#main, mainType)) {
       // value points to a parameter
@@ -521,7 +526,7 @@ class SequenceParser {
     }
 
     let scaling = 1;
-    if (type.endsWith("time")) {
+    if (mainType === "time") {
       scaling = 1 / 1000;
     } else if (type === "amp") {
       scaling = 100 / (Math.pow(2, 14) - 1);
@@ -530,7 +535,7 @@ class SequenceParser {
     } else if (type === "freq") {
       scaling = 1e3 / Math.pow(2, 32);
     }
-    if (type === "time") {
+    if (mainType === "time") {
       for (const ch of channelMask) {
         data[ch]["timeDomain"][data[ch]["timeDomain"].length - 1] +=
           value * scaling;
@@ -586,55 +591,34 @@ class SequenceParser {
       }
     }
 
-    let events = [event];
-    let nameSuffix = [""];
     switch (event["type"]) {
       case "SingleToneRFEvent":
-        if (event["slope_time"] !== null) {
-          events = [{ ...event }, { ...event }, { ...event }, { ...event }];
-          events[0]["slope_time"] = null;
-          events[1]["time"] = event["slope_start_delay"];
-          nameSuffix.push(" slope start delay");
-          events[2]["slope_time"] = null;
-          events[2]["time"] = event["slope_time"];
-          nameSuffix.push(" slope");
-          events[3]["slope_time"] = null;
-          events[3]["time"] = event["slope_end_delay"];
-          nameSuffix.push(" slope end delay");
-        }
-        for (let i = 0; i < events.length; i++) {
-          for (let type of this.RF_PROPERTIES.concat(["time"])) {
-            if (type in events[i] && events[i][type] !== null) {
-              data = this.getParamValue(
-                type,
-                events[i][type],
-                channelMask,
-                data,
-                loopIteration,
-                recordEvents,
-              );
-            } else if (recordEvents) {
-              for (const ch of channelMask) {
-                data[ch][type].forEach((toneParam) => toneParam.push(0));
-              }
-            }
-          }
-          if (i !== events.length - 1) {
+        data = this.getParamValue(
+          "time",
+          event["time"],
+          channelMask,
+          data,
+          loopIteration,
+          recordEvents,
+        );
+        for (let type of this.RF_PROPERTIES) {
+          if (type in event && event[type] !== null) {
+            data = this.getParamValue(
+              type,
+              event[type],
+              channelMask,
+              data,
+              loopIteration,
+              recordEvents,
+            );
+          } else if (recordEvents) {
             for (const ch of channelMask) {
-              data[ch]["names"].push([...data[ch]["names"].at(-1)]);
-              if (this.hasNames) {
-                data[ch]["names"]
-                  .at(-2)
-                  .push(stripIdxFromName(event["name"]) + nameSuffix[i]);
-              } else {
-                data[ch]["names"].at(-2).push("Event " + idx + nameSuffix[i]);
-              }
+              data[ch][type].forEach((toneParam) => toneParam.push(0));
             }
           }
         }
         break;
       case "MultiToneRFEvent":
-        // TODO Properly implement
         data = this.getParamValue(
           "time",
           event["time"],
@@ -897,6 +881,8 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   }, {});
   let currentIdx = 0;
   for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
+    // slope_time is always single tone, so only one tone has to be checked
+    const slopeTime = sequenceDataChannel["slope_time"][0][i];
     const duration =
       sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i];
     const t = sequenceDataChannel["time"][i];
@@ -911,7 +897,6 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       let f = sequenceDataChannel["freq"][toneIdx][i];
       let p = sequenceDataChannel["phase"][toneIdx][i];
       let a = sequenceDataChannel["amp"][toneIdx][i];
-      let slopeTime = sequenceDataChannel["slope_time"][toneIdx][i];
 
       const isOffEvent =
         a === 0 || (Object.hasOwn(a, "x0") && a.x0.at(-1) === 0);
@@ -951,14 +936,21 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
           } else {
             if (key === "amp" && slopeTime > 0) {
               paramArrays[key] = times.map((timeVal) => {
+                const slopeRatioNormalised =
+                  (timeVal -
+                    sequenceDataChannel["slope_start_delay"][toneIdx][i] -
+                    t) /
+                  slopeTime;
                 return (
-                  (timeVal < slopeTime + t
+                  (slopeRatioNormalised <= 0
                     ? isOffEvent
-                      ? blackman((t + slopeTime - timeVal) / slopeTime)
-                      : blackman((timeVal - t) / slopeTime)
-                    : isOffEvent
-                      ? 0
-                      : 1) * a
+                    : slopeRatioNormalised < 1
+                      ? blackman(
+                          isOffEvent
+                            ? 1 - slopeRatioNormalised
+                            : slopeRatioNormalised,
+                        )
+                      : !isOffEvent) * a
                 );
               });
             } else {
