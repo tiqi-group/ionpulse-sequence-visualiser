@@ -558,8 +558,8 @@ const PulseSequencePlot = function SequencePlot({
       let plotType =
         channelDescription[channel].group === "RF"
           ? i === 0
-            ? Object.hasOwn(channelYDataType, "channel")
-              ? channelYDataType["channel"]
+            ? Object.hasOwn(channelYDataType, channel)
+              ? channelYDataType[channel]
               : "freq"
             : "amp"
           : channelDescription[channel].group;
