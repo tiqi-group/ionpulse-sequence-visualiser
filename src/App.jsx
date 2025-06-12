@@ -35,16 +35,18 @@ function App() {
   function updateChannelDescription(description) {
     let newDescription = {};
     for (const group of channelGroups) {
-      for (const [key, value] of Object.entries(description[group + "s"])) {
-        newDescription[key] = {
-          ...value,
-          group: group,
-        };
-        newDescription[key]["hw_channels"] = newDescription[key][
-          "hw_channels"
-        ].map((v) => {
-          return "" + v["device"] + " " + v["hardware"] + " " + v["channel"];
-        });
+      if (Object.hasOwn(description, group + "s")) {
+        for (const [key, value] of Object.entries(description[group + "s"])) {
+          newDescription[key] = {
+            ...value,
+            group: group,
+          };
+          newDescription[key]["hw_channels"] = newDescription[key][
+            "hw_channels"
+          ].map((v) => {
+            return "" + v["device"] + " " + v["hardware"] + " " + v["channel"];
+          });
+        }
       }
     }
     setChannelDescription(newDescription);
