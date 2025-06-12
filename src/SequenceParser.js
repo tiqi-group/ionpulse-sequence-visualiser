@@ -66,7 +66,6 @@ class SequenceParser {
       Object.hasOwn(ionpulseSequence, "header") &&
       Object.hasOwn(ionpulseSequence["header"], "version")
     ) {
-      console.log(ionpulseSequence);
       const sequenceDescriptionVersion =
         ionpulseSequence["header"]["version"].split(".");
       const minimumVersion = [2, 0, 4];
@@ -876,7 +875,13 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
 
   const time = new Array(nSamples).fill(0);
   const value = targets.reduce((last, key) => {
-    last[key] = sequenceDataChannel[key].map(() => new Array(nSamples).fill(0));
+    if (key === "sample") {
+      last[key] = [new Array(nSamples).fill(0)];
+    } else {
+      last[key] = sequenceDataChannel[key].map(() =>
+        new Array(nSamples).fill(0),
+      );
+    }
     return last;
   }, {});
   let currentIdx = 0;
@@ -971,7 +976,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
           let cumSumPhase = 0;
           const dt = times[1] - times[0];
           times.forEach((_, idx) => {
-            value["sample"][toneIdx][currentIdx + idx] =
+            value["sample"][0][currentIdx + idx] +=
               paramArrays["amp"][idx % paramsArrays["amp"].length] *
               Math.cos(
                 2 *
@@ -984,8 +989,8 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
           });
         } else {
           times.forEach((timeVal, idx) => {
-            value["sample"][toneIdx][currentIdx + idx] =
-              paramArrays["amp"][idx % paramsArrays["amp"].length] *
+            value["sample"][0][currentIdx + idx] +=
+              paramArrays["amp"][idx % paramArrays["amp"].length] *
               Math.cos(
                 2 *
                   Math.PI *
