@@ -847,19 +847,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       console.error("Unexpected waveform expansion target: " + target);
   });
   // time is in units of us so sampling rate of 10 equal 10 MSPS
-  let nSamples = 0;
-  for (let i = 0; i < sequenceDataChannel["time"].length - 1; i++) {
-    let a = sequenceDataChannel["amp"][0][i];
-    if (a === 0) {
-      nSamples += 2;
-    } else {
-      const segmentSamples = Math.ceil(
-        (sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i]) *
-          samplingRate,
-      );
-      nSamples += segmentSamples;
-    }
-  }
+  const nSamples = Math.ceil(sequenceDataChannel["time"].at(-1) * samplingRate);
 
   // Create an array of times uniformly spaced by
   // 1 / samplingRate in the intervall [t0, t0+duration]
