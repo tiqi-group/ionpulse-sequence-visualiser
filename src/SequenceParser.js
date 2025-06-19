@@ -70,6 +70,7 @@ class SequenceParser {
         ionpulseSequence["header"]["version"].split(".");
       const minimumVersion = [2, 0, 4];
       for (let i = 0; i < minimumVersion.length; i++) {
+        if (sequenceDescriptionVersion[i] > minimumVersion[i]) break;
         console.assert(
           sequenceDescriptionVersion[i] >= minimumVersion[i],
           "Sequence description " +
