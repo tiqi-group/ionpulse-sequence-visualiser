@@ -11,6 +11,6 @@ let Hardware = function (input) {
   return <Container>{ret}</Container>;
 };
 
-const channelGroups = ["RF", "TTL", "PMT"];
+const channelGroups = ["RF", "TTL", "PMT", "Readout"];
 
 export { Hardware, channelGroups };

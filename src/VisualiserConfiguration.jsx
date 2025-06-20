@@ -75,7 +75,7 @@ const EnablingGroup = memo(function EnablingGroup({
       }
     }
     return (
-      <Row key={"enableRow" + row} xs={1} sm={3} md={3}>
+      <Row key={"enableRow" + row} xs={1} sm={4} md={4}>
         {cols}
       </Row>
     );
