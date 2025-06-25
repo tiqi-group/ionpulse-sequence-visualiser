@@ -30,6 +30,8 @@ if __name__ == "__main__":
 
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
 
+    origins += ["https://tiqidocs.phys.ethz.ch"]
+
     app = Flask("Sequence server")
     CORS(app, origins=origins)
     # create a Socket.IO server
