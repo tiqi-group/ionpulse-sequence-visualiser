@@ -1,6 +1,6 @@
 {
   "name": "sequence-visualiser",
-  "version": "0.1.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -36,7 +36,7 @@
   "scripts": {
     "preinstall": "./scripts/preinstall.sh",
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build --base=./",
     "serve": "vite preview",
     "test": "./scripts/run-test-server.sh",
     "prettier": "prettier --write ."
