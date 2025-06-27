@@ -1,4 +1,4 @@
-# Library Visualiser
+# Ionpulse Sequence Visualiser
 
 This is the sequence visualiser used to have a nice real-time visualisation of your pulse sequences created using the Experiment Library, PyCrystal and the ionpulse sequence generator.
 For example, running the CoolDet from the Cryo setup looks like this:
@@ -7,21 +7,8 @@ For example, running the CoolDet from the Cryo setup looks like this:
 
 ## Getting Started
 
-- git clone this repo in a suittable location.
-- Install Node.js 22 (LTS Jod)
-
-  - I recommend the [Node Version Manager](https://github.com/nvm-sh/nvm)
-  - Or [n](https://github.com/tj/n) for a system wide installation
-  - Also see https://nodejs.org/en/download
-
-- Setup the environment with `npm install` in the repo
-- `npm run build` to build the static content
-- `npm run serve` to start a webserver that exposes the library visualiser.
-  By default, you can access it via
-
-```
-http://localhost:3000
-```
+The Sequence Visualiser is automatically deployed to [tiqidocs](tiqidocs.phys.ethz.ch/visualiser/main/).
+By default, you will be served the build of the latest commit to main. You can access specific version by navigating to tiqidocs.phys.ethz.ch/visualiser/ and selecting the appropriate subfolder.
 
 ## Configuration
 
@@ -44,7 +31,9 @@ You can however use the "Channels" button to decide which channels to show and h
 
 Under the tab "Hardware" you can find the hardware description of your setup.
 
-## Deployment
+## Deployment on an nginx server
+
+**Try to use the globally maintained tiqidocs.phys.ethz.ch/visualiser deployment if you can**
 
 To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
 
@@ -75,13 +64,23 @@ To deploy the library visualiser, you can download the latest build artifacts an
 
 ## Development
 
-Use the development server instead of serving the static content by running
+- git clone this repo in a suittable location.
+- Install Node.js 22 (LTS Jod)
+
+  - I recommend the [Node Version Manager](https://github.com/nvm-sh/nvm)
+  - Or [n](https://github.com/tj/n) for a system wide installation
+  - Also see https://nodejs.org/en/download
+
+- Setup the environment with `npm install` in the repo
+
+- Use the development server instead of serving the static content by running
 
 ```
 npm start
 ```
 
-This will automatically build and update the visualiser. `npm run build` and `npm run serve` are not necessary in that case.
+This will automatically build and update the visualiser.
+If you want to test the deployment you can use `npm run build` and `npm run serve` instead of `npm start`.
 
 Once you have installed the visualiser, a pre-commit hook is added that uses `prettier` to check the code formatting before committing.
 If you get an error from the pre-commit hook, run `npm run prettier`
