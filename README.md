@@ -1,5 +1,7 @@
 # Ionpulse Sequence Visualiser
 
+**Deployed at [tiqidocs.phys.ethz.ch](https://tiqidocs.phys.ethz.ch/visualiser/main/). Enjoy**
+
 This is the sequence visualiser used to have a nice real-time visualisation of your pulse sequences created using the Experiment Library, PyCrystal and the ionpulse sequence generator.
 For example, running the CoolDet from the Cryo setup looks like this:
 
@@ -7,12 +9,12 @@ For example, running the CoolDet from the Cryo setup looks like this:
 
 ## Getting Started
 
-The Sequence Visualiser is automatically deployed to [tiqidocs](tiqidocs.phys.ethz.ch/visualiser/main/).
-By default, you will be served the build of the latest commit to main. You can access specific version by navigating to tiqidocs.phys.ethz.ch/visualiser/ and selecting the appropriate subfolder.
+By default, you will be served the build of the latest commit to main.
+You can access specific version by navigating to https://tiqidocs.phys.ethz.ch/visualiser/ and selecting the appropriate subfolder.
 
 ## Configuration
 
-The library visualiser uses cookies to store the address and port of the experiment library.
+The sequence visualiser uses cookies to store the address and port of the experiment library.
 Just go to the _Configure_ menu entry and fill in the details of the form and click _Connect_.
 The form will indicate whether the visualiser could connect or not.
 
@@ -26,41 +28,10 @@ Give it a try by using the `update_zedboard_sequence` in any of the experiments 
 The Visualiser is based on [plotly.js](https://plotly.com/javascript/) which gives us a great flexibility in its use.
 Try zooming in, and out of your sequence.
 
-The Visualiser will read your the `Hardware/hardware_desciption` attribute from your Library to know which RF and TTL channes are used, and will automatically enable this channels and hide the rest.
+The Visualiser will read your the `Hardware/hardware_description` attribute from your Library to know which RF and TTL channes are used, and will automatically enable this channels and hide the rest.
 You can however use the "Channels" button to decide which channels to show and hide.
 
 Under the tab "Hardware" you can find the hardware description of your setup.
-
-## Deployment on an nginx server
-
-**Try to use the globally maintained tiqidocs.phys.ethz.ch/visualiser deployment if you can**
-
-To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
-
-- Extract the artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
-- Add an nginx server configuration into the http section of `/etc/nginx/nginx.conf`
-
-```
-   server {
-        listen 80;
-        root /var/www/html/library-visualiser/dist/;
-        index index.html;
-        server_name library-visualiser.lab;
-
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-    }
-```
-
-- Restart nginx (`systemctl restart nginx`)
-- Configure your router to forward this URL to the nginx server.
-  If you're using an edgerouter, add
-  ```
-  address=/library-visualiser.lab/<server-ip-address>
-  ```
-  to `Config Tree: service -> dns -> forwarding (options)`
-- Enjoy
 
 ## Development
 
@@ -89,3 +60,33 @@ There is a rudimentary set of tests that makes sure that the hardware page and t
 
 For convenience, there is a Flask server that emulates the used endpoints of the Experiment Library.
 See [test/README.md](test/README.md) for usage.
+
+## Local deployment on an nginx server
+
+**Try to use the globally maintained tiqidocs.phys.ethz.ch/visualiser deployment if you can**
+
+To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
+
+- Extract the artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
+- Add an nginx server configuration into the http section of `/etc/nginx/nginx.conf`
+
+```
+   server {
+        listen 80;
+        root /var/www/html/library-visualiser/dist/;
+        index index.html;
+        server_name library-visualiser.lab;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+```
+
+- Restart nginx (`systemctl restart nginx`)
+- Configure your router to forward this URL to the nginx server.
+  If you're using an edgerouter, add
+  ```
+  address=/library-visualiser.lab/<server-ip-address>
+  ```
+  to `Config Tree: service -> dns -> forwarding (options)`
