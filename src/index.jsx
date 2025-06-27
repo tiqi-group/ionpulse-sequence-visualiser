@@ -6,6 +6,8 @@ import "./App.scss";
 //import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from "react-router-dom";
 
+const getBasename = (path) => path.substr(0, path.lastIndexOf("/"));
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
@@ -14,6 +16,7 @@ root.render(
         v7_relativeSplatPath: true,
         v7_startTransition: true,
       }}
+      basename={getBasename(window.location.pathname)}
     >
       <App />
     </BrowserRouter>
