@@ -12,6 +12,14 @@ For example, running the CoolDet from the Cryo setup looks like this:
 By default, you will be served the build of the latest commit to main.
 You can access specific version by navigating to https://tiqidocs.phys.ethz.ch/visualiser/ and selecting the appropriate subfolder.
 
+### Help with connection issues
+
+If the visualiser cannot connect to your ionpulse experiment library instance that might be because your browser is blocking it.
+This is caused by tiqidocs providing SSL encryption while the experiment library does not.
+
+On Chrome, you have to allow the webpage to access "insecure content" in the site settings permissions: https://support.google.com/chrome/answer/114662  
+On Firefox, this should work by default: https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox
+
 ## Configuration
 
 The sequence visualiser uses cookies to store the address and port of the experiment library.
