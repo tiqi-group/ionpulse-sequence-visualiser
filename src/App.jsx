@@ -71,9 +71,9 @@ function App() {
 
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
-    const hardware_url = `https://${url}/Hardware`;
+    const hardware_url = `http://${url}/Hardware`;
 
-    const socket = io(`wss://${url}`, {
+    const socket = io(`ws://${url}`, {
       path: "/ws/socket.io/",
       autoConnect: false,
     });
