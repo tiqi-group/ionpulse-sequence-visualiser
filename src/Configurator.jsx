@@ -9,6 +9,26 @@ function Configurator({ library, setLibrary, connectionStatus }) {
     redirect.current = false;
   }
 
+  let postElements = [];
+  if (
+    location.protocol === "https:" &&
+    connectionStatus === ConnectionStatus.failed
+  ) {
+    postElements.push(
+      <div>
+        Please make sure that mixed/insecure content is enabled. Click the
+        lock/settings icon left of the URL in your browser
+      </div>,
+    );
+  }
+  if (connectionStatus === ConnectionStatus.connecting) {
+    postElements.push(
+      <Spinner className="m-3" animation="border" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </Spinner>,
+    );
+  }
+
   return (
     <Container>
       <Form
@@ -41,13 +61,7 @@ function Configurator({ library, setLibrary, connectionStatus }) {
         </Form.Group>
         <Button type="submit">Connect</Button>
       </Form>
-      {connectionStatus === ConnectionStatus.connecting ? (
-        <Spinner className="m-3" animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      ) : (
-        <></>
-      )}
+      {postElements}
     </Container>
   );
 }
