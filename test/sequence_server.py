@@ -31,6 +31,7 @@ if __name__ == "__main__":
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
 
     origins += ["https://tiqidocs.phys.ethz.ch"]
+    origins += ["http://tiqidocs.phys.ethz.ch"]
 
     app = Flask("Sequence server")
     CORS(app, origins=origins)
@@ -189,7 +190,7 @@ if __name__ == "__main__":
     observer.start()
 
     try:
-        app.run(host="0.0.0.0", port=8003, debug=args.debug)
+        app.run(host="0.0.0.0", port=8003, debug=args.debug, ssl_context='adhoc')
     finally:
         observer.stop()
         observer.join()
