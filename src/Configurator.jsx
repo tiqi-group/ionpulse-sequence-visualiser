@@ -15,9 +15,23 @@ function Configurator({ library, setLibrary, connectionStatus }) {
     connectionStatus === ConnectionStatus.failed
   ) {
     postElements.push(
-      <div>
+      <div class="alert alert-warning mt-3" role="alert">
         Please make sure that mixed/insecure content is enabled. Click the
         lock/settings icon left of the URL in your browser
+        <ul>
+          <li>
+            Chrome:{" "}
+            <a href="https://support.google.com/chrome/answer/114662">
+              https://support.google.com/chrome/answer/114662
+            </a>{" "}
+          </li>
+          <li>
+            Firefox:{" "}
+            <a href="https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox">
+              https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox
+            </a>
+          </li>
+        </ul>
       </div>,
     );
   }

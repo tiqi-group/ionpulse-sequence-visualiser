@@ -18,7 +18,7 @@ If the visualiser cannot connect to your ionpulse experiment library instance th
 This is caused by tiqidocs providing SSL encryption while the experiment library does not.
 
 On Chrome, you have to allow the webpage to access "insecure content" in the site settings permissions: https://support.google.com/chrome/answer/114662  
-On Firefox, this should work by default: https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox
+On Firefox, you have to disable the protection that blocks "mixed content" : https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox
 
 ## Configuration
 
