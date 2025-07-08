@@ -60,7 +60,11 @@ const Hardware = function ({ channelDescription }) {
       cardIdx = cardIdx + cardsPerRow
     ) {
       if (cardIdx == 0) {
-        cardRows.push(<h2 className="mt-2">{group}</h2>);
+        cardRows.push(
+          <h2 key={"title" + group} className="mt-2">
+            {group}
+          </h2>,
+        );
       }
       cardRows.push(
         <Row key={"" + group + cardIdx} sm={cardsPerRow}>
