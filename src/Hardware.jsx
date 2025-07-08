@@ -61,13 +61,13 @@ const Hardware = function ({ channelDescription }) {
     ) {
       if (cardIdx == 0) {
         cardRows.push(
-          <h2 key={"title" + group} className="mt-2">
+          <h2 key={"title" + group} className="mt-5">
             {group}
           </h2>,
         );
       }
       cardRows.push(
-        <Row key={"" + group + cardIdx} sm={cardsPerRow}>
+        <Row key={"" + group + cardIdx} sm={cardsPerRow} className="mt-4">
           {cards[group].slice(cardIdx, cardIdx + cardsPerRow)}
         </Row>,
       );
