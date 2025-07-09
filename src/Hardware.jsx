@@ -36,7 +36,7 @@ const Hardware = function ({ channelDescription }) {
       case "Readout":
         cards[value.group].push(
           <Col key={key}>
-            <Card style={{ width: "18rem" }}>
+            <Card>
               <Card.Body>
                 <Card.Title>{value.name}</Card.Title>
                 <Card.Subtitle>Hardware channels</Card.Subtitle>
@@ -67,14 +67,20 @@ const Hardware = function ({ channelDescription }) {
         );
       }
       cardRows.push(
-        <Row key={"" + group + cardIdx} sm={cardsPerRow} className="mt-4">
+        <Row
+          key={"" + group + cardIdx}
+          sm="2"
+          xs="1"
+          md={cardsPerRow}
+          className="mt-4"
+        >
           {cards[group].slice(cardIdx, cardIdx + cardsPerRow)}
         </Row>,
       );
     }
   }
 
-  return <Container>{cardRows}</Container>;
+  return <Container className="mb-4">{cardRows}</Container>;
 };
 
 export { Hardware, channelGroups };

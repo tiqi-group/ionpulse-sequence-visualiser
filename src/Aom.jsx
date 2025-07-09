@@ -2,7 +2,7 @@ import Card from "react-bootstrap/Card";
 
 function AOM(input) {
   return (
-    <Card style={{ width: "18rem" }}>
+    <Card>
       <Card.Body>
         <Card.Title>{input.aomConfiguration.name}</Card.Title>
         <Card.Subtitle className="mb-2 text-muted">
