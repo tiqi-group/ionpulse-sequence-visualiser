@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import NavBar from "./Header";
-import { Link, Routes, Route } from "react-router-dom";
+import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
@@ -163,7 +163,17 @@ function App() {
           path="/hardware"
           element={<Hardware channelDescription={channelDescription} />}
         />
-        <Route path="/" element={<Link to="/plot">Go to plot</Link>} />
+        <Route
+          exact
+          path="/"
+          element={
+            connectionStatus == ConnectionStatus.failed ? (
+              <Navigate to="/config" />
+            ) : (
+              <Navigate to="/plot" />
+            )
+          }
+        />
         <Route
           path="/config"
           element={

@@ -15,7 +15,7 @@ function Configurator({ library, setLibrary, connectionStatus }) {
     connectionStatus === ConnectionStatus.failed
   ) {
     postElements.push(
-      <div class="alert alert-warning mt-3" role="alert">
+      <div key="0" class="alert alert-warning mt-3" role="alert">
         Please make sure that mixed/insecure content is enabled. Click the
         lock/settings icon left of the URL in your browser
         <ul>
@@ -37,7 +37,7 @@ function Configurator({ library, setLibrary, connectionStatus }) {
   }
   if (connectionStatus === ConnectionStatus.connecting) {
     postElements.push(
-      <Spinner className="m-3" animation="border" role="status">
+      <Spinner key="1" className="m-3" animation="border" role="status">
         <span className="visually-hidden">Loading...</span>
       </Spinner>,
     );
