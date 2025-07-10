@@ -491,7 +491,10 @@ const PulseSequencePlot = function SequencePlot({
   const plotData = getPlotData(sequenceData, channelDescription);
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
-      if (channelEnabled[key] == true) {
+      if (
+        channelEnabled[key] == true &&
+        Object.hasOwn(sequenceData, channelDescription[key].hw_channels[0])
+      ) {
         enabledKeys[channelDescription[key].group].push(key);
       }
       return enabledKeys;
