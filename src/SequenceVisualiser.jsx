@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { lazy, Suspense } from "react";
 
-import EnablingGroupOff from "./OffCanvas";
+import ChannelEnableOffcanvas from "./ChannelEnableOffcanvas";
 import { Row, Col, Spinner } from "react-bootstrap";
 
 const PulseSequencePlot = lazy(() => import("./PulseSequencePlot"));
@@ -134,7 +134,7 @@ const SequenceVisualiser = function SequenceVisualiser({
 
   return (
     <div className="mx-3">
-      <EnablingGroupOff
+      <ChannelEnableOffcanvas
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
         handleEnableChange={handleEnableChange}
