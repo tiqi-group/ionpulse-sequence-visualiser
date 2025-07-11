@@ -132,11 +132,23 @@ const SequenceVisualiser = function SequenceVisualiser({
 
   const totalWidth = window.innerWidth - 100;
 
+  const availableChannels = Object.entries(channelDescription).reduce(
+    (channelAvailable, [key, desc]) => {
+      channelAvailable[key] = Object.hasOwn(
+        pulseSequenceData,
+        desc.hw_channels[0],
+      );
+      return channelAvailable;
+    },
+    {},
+  );
+
   return (
     <div className="mx-3">
       <ChannelEnableOffcanvas
         channelDescription={channelDescription}
         channelEnabled={channelEnabled}
+        availableChannels={availableChannels}
         handleEnableChange={handleEnableChange}
       />
       <Row>

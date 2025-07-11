@@ -6,6 +6,7 @@ import { EnablingGroup } from "./VisualiserConfiguration";
 const ChannelEnableOffcanvas = memo(function EnablingGroupOff({
   channelDescription,
   channelEnabled,
+  availableChannels,
   handleEnableChange,
 }) {
   const [show, setShow] = useState(false);
@@ -35,6 +36,7 @@ const ChannelEnableOffcanvas = memo(function EnablingGroupOff({
           <EnablingGroup
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
+            availableChannels={availableChannels}
             onEvent={handleEnableChange}
           />
         </Offcanvas.Body>

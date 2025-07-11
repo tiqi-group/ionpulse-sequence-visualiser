@@ -14,6 +14,7 @@ const EnableChannel = memo(function EnableChannel({
   channelName,
   displayName,
   isEnabled,
+  isAvailable,
   onClick,
 }) {
   return (
@@ -24,6 +25,7 @@ const EnableChannel = memo(function EnableChannel({
         variant="outline-primary"
         value="1"
         checked={isEnabled}
+        disabled={!isEnabled && !isAvailable}
         onClick={() => {
           onClick({ name: channelName });
         }}
@@ -40,6 +42,7 @@ const EnableChannel = memo(function EnableChannel({
 const EnablingGroup = memo(function EnablingGroup({
   channelDescription,
   channelEnabled,
+  availableChannels,
   onEvent,
 }) {
   let elementKeyByGroup = Object.entries(channelDescription).reduce(
@@ -75,6 +78,7 @@ const EnablingGroup = memo(function EnablingGroup({
               displayName={channelDescription[elementKey].name}
               onClick={onEvent}
               isEnabled={channelEnabled[elementKey]}
+              isAvailable={availableChannels[elementKey]}
               key={"enablerow" + elementKey}
             />
           </Row>,
