@@ -8,6 +8,8 @@ import {
 } from "react-bootstrap";
 import { channelGroups } from "./Hardware";
 
+const maxButtonChars = 10;
+
 const EnableChannel = memo(function EnableChannel({
   channelName,
   displayName,
@@ -25,8 +27,11 @@ const EnableChannel = memo(function EnableChannel({
         onClick={() => {
           onClick({ name: channelName });
         }}
+        title={displayName.length > maxButtonChars ? displayName : ""}
       >
-        {displayName}
+        {displayName.length > maxButtonChars
+          ? displayName.substring(0, maxButtonChars - 2) + "..."
+          : displayName}
       </ToggleButton>
     </ButtonGroup>
   );
