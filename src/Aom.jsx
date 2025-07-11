@@ -1,31 +1,22 @@
-import Card from "react-bootstrap/Card";
+import { Card } from "react-bootstrap";
 
-function AOM(input) {
+function AOM({ aomConfiguration }) {
   return (
     <Card>
       <Card.Body>
-        <Card.Title>{input.aomConfiguration.name}</Card.Title>
-        <Card.Subtitle className="mb-2 text-muted">
-          Type: {input.aomConfiguration.type}
-        </Card.Subtitle>
-        <Card.Subtitle className="mb-2 text-muted">
-          Central frequency: {input.aomConfiguration.central_frequency}
-        </Card.Subtitle>
-        <Card.Subtitle className="mb-2 text-muted">
-          Order: {input.aomConfiguration.order}
-        </Card.Subtitle>
-        <Card.Subtitle className="mb-2 text-muted">
-          Input channels:{" "}
-          {input.aomConfiguration.hw_channels.map((elem) => {
-            return elem + ", "; // Need to think of a better naming
+        <Card.Title>{aomConfiguration.name}</Card.Title>
+        <Card.Subtitle>Details</Card.Subtitle>
+        <ul className="list-unstyled">
+          <li>Type: {aomConfiguration.type}</li>
+          <li>Central frequency: {aomConfiguration.central_frequency} MHz</li>
+          <li>Order: {aomConfiguration.order}</li>
+        </ul>
+        <Card.Subtitle>Hardware channels</Card.Subtitle>
+        <ul>
+          {aomConfiguration.hw_channels.map((elem, i) => {
+            return <li key={i}>{elem}</li>;
           })}
-        </Card.Subtitle>
-        {/* <Card.Text>
-          Some quick example text to build on the card title and make up the
-          bulk of the card's content.
-        </Card.Text> */}
-        {/* <Card.Link href="#">Card Link</Card.Link>
-        <Card.Link href="#">Another Link</Card.Link> */}
+        </ul>
       </Card.Body>
     </Card>
   );

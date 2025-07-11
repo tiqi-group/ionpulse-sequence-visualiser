@@ -44,7 +44,17 @@ function App() {
           newDescription[key]["hw_channels"] = newDescription[key][
             "hw_channels"
           ].map((v) => {
-            return "" + v["device"] + " " + v["hardware"] + " " + v["channel"];
+            if (
+              Object.hasOwn(v, "device") &&
+              Object.hasOwn(v, "device") &&
+              Object.hasOwn(v, "device")
+            ) {
+              return (
+                "" + v["device"] + " " + v["hardware"] + " " + v["channel"]
+              );
+            } else {
+              return 'Incomplete hw channel description: "' + v + '"';
+            }
           });
         }
       }

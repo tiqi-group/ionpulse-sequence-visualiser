@@ -13,7 +13,7 @@ const Hardware = function ({ channelDescription }) {
       case "RF":
         cards[value.group].push(
           <Col key={key}>
-            <AOM key={key} aomConfiguration={value} />
+            <AOM aomConfiguration={value} />
           </Col>,
         );
         break;
@@ -24,10 +24,17 @@ const Hardware = function ({ channelDescription }) {
             <Card>
               <Card.Body>
                 <Card.Title>{value.name}</Card.Title>
-                <Card.Subtitle>Hardware channels</Card.Subtitle>
-                <Card.Text>{value.hw_channels}</Card.Text>
                 <Card.Subtitle>Subchannel</Card.Subtitle>
-                <Card.Text>{value.sub_channel}</Card.Text>
+                <ul className="list-unstyled">
+                  <li>Type: {value.sub_channel.type}</li>
+                  <li>Index: {value.sub_channel.idx}</li>
+                </ul>
+                <Card.Subtitle>Hardware channels</Card.Subtitle>
+                <ul>
+                  {value.hw_channels.map((elem, i) => {
+                    return <li key={i}>{elem}</li>;
+                  })}
+                </ul>
               </Card.Body>
             </Card>
           </Col>,
@@ -40,7 +47,11 @@ const Hardware = function ({ channelDescription }) {
               <Card.Body>
                 <Card.Title>{value.name}</Card.Title>
                 <Card.Subtitle>Hardware channels</Card.Subtitle>
-                <Card.Text>{value.hw_channels}</Card.Text>
+                <ul>
+                  {value.hw_channels.map((elem, i) => {
+                    return <li key={i}>{elem}</li>;
+                  })}
+                </ul>
               </Card.Body>
             </Card>
           </Col>,

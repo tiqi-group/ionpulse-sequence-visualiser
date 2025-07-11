@@ -88,7 +88,10 @@ if __name__ == "__main__":
                     d["TTLs"][f"TTL{i}"] = {
                             "name": hw_ch.get("name", f"TTL {i:02d}"),
                             "hw_channels": [hw_ch],
-                            "sub_channel": i,
+                            "sub_channel": {
+                                "idx": i,
+                                "type": "output",
+                                },
                             }
 
                 d["PMTs"] = dict()
@@ -96,7 +99,10 @@ if __name__ == "__main__":
                     d["PMTs"][f"PMT{i}"] = {
                             "name": hw_ch.get("name", f"PMT {i:02d}"),
                             "hw_channels": [hw_ch],
-                            "sub_channel": i,
+                            "sub_channel": {
+                                "idx": i,
+                                "type": "input_gate",
+                                },
                             }
             elif hw_ch["hardware"] == "QuenchHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
