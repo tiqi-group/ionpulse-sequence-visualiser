@@ -154,7 +154,7 @@ if __name__ == "__main__":
             self.filename = filename
 
         def safe_emit(self):
-            sleep(1)
+            sleep(0.5)
             try:
                 with open(self.filename) as f:
                     data = f.read()
