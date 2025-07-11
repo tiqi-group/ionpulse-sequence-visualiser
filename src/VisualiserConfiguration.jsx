@@ -65,7 +65,7 @@ const EnablingGroup = memo(function EnablingGroup({
 
   const cols = [["RF"], ["TTL", "PMT", "Readout"]].map((typeList) => {
     let rows = [
-      <h4 key="0">
+      <h4 key={"colHeader" + typeList[1]}>
         {typeList.reduce((h, el) => (h === "" ? el : h + ", " + el), "")}
       </h4>,
     ];
@@ -79,7 +79,6 @@ const EnablingGroup = memo(function EnablingGroup({
               onClick={onEvent}
               isEnabled={channelEnabled[elementKey]}
               isAvailable={availableChannels[elementKey]}
-              key={"enablerow" + elementKey}
             />
           </Row>,
         );
