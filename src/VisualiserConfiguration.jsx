@@ -8,10 +8,13 @@ import {
 } from "react-bootstrap";
 import { channelGroups } from "./Hardware";
 
+const maxButtonChars = 24;
+
 const EnableChannel = memo(function EnableChannel({
   channelName,
   displayName,
   isEnabled,
+  isAvailable,
   onClick,
 }) {
   return (
@@ -22,11 +25,15 @@ const EnableChannel = memo(function EnableChannel({
         variant="outline-primary"
         value="1"
         checked={isEnabled}
+        disabled={!isEnabled && !isAvailable}
         onClick={() => {
           onClick({ name: channelName });
         }}
+        title={displayName.length > maxButtonChars ? displayName : ""}
       >
-        {displayName}
+        {displayName.length > maxButtonChars
+          ? displayName.substring(0, maxButtonChars - 2) + "..."
+          : displayName}
       </ToggleButton>
     </ButtonGroup>
   );
@@ -35,6 +42,7 @@ const EnableChannel = memo(function EnableChannel({
 const EnablingGroup = memo(function EnablingGroup({
   channelDescription,
   channelEnabled,
+  availableChannels,
   onEvent,
 }) {
   let elementKeyByGroup = Object.entries(channelDescription).reduce(
@@ -47,41 +55,45 @@ const EnablingGroup = memo(function EnablingGroup({
       return prev;
     }, {}),
   );
-  let nRows = 0;
   for (const type of channelGroups) {
     elementKeyByGroup[type].sort((a, b) =>
       ("" + channelDescription[a].name).localeCompare(
         channelDescription[b].name,
       ),
     );
-    nRows = Math.max(elementKeyByGroup[type].length, nRows);
   }
 
-  const rows = Array.from(Array(nRows).keys()).map((row) => {
-    let cols = [];
-    for (const type of channelGroups) {
-      if (row < elementKeyByGroup[type].length) {
-        cols.push(
-          <EnableChannel
-            channelName={elementKeyByGroup[type][row]}
-            displayName={channelDescription[elementKeyByGroup[type][row]].name}
-            onClick={onEvent}
-            isEnabled={channelEnabled[elementKeyByGroup[type][row]]}
-            key={"enableCol" + elementKeyByGroup[type][row]}
-          />,
+  const cols = [["RF"], ["TTL", "PMT", "Readout"]].map((typeList) => {
+    let rows = [
+      <h4 key={"colHeader" + typeList[1]}>
+        {typeList.reduce((h, el) => (h === "" ? el : h + ", " + el), "")}
+      </h4>,
+    ];
+    for (const type of typeList) {
+      for (const elementKey of elementKeyByGroup[type]) {
+        rows.push(
+          <Row key={elementKey}>
+            <EnableChannel
+              channelName={elementKey}
+              displayName={channelDescription[elementKey].name}
+              onClick={onEvent}
+              isEnabled={channelEnabled[elementKey]}
+              isAvailable={availableChannels[elementKey]}
+            />
+          </Row>,
         );
-      } else {
-        cols.push(<Col key={"enableCol" + type + row}></Col>);
       }
     }
-    return (
-      <Row key={"enableRow" + row} xs={1} sm={4} md={4}>
-        {cols}
-      </Row>
-    );
+    return <Col key={"enableCol" + typeList[1]}>{rows}</Col>;
   });
 
-  return <Container>{rows}</Container>;
+  return (
+    <Container>
+      <Row xs={1} sm={2} md={2}>
+        {cols}
+      </Row>
+    </Container>
+  );
 });
 
 export { EnablingGroup };

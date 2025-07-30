@@ -3,9 +3,10 @@ import Button from "react-bootstrap/Button";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import { EnablingGroup } from "./VisualiserConfiguration";
 
-const EnablingGroupOff = memo(function EnablingGroupOff({
+const ChannelEnableOffcanvas = memo(function EnablingGroupOff({
   channelDescription,
   channelEnabled,
+  availableChannels,
   handleEnableChange,
 }) {
   const [show, setShow] = useState(false);
@@ -35,6 +36,7 @@ const EnablingGroupOff = memo(function EnablingGroupOff({
           <EnablingGroup
             channelDescription={channelDescription}
             channelEnabled={channelEnabled}
+            availableChannels={availableChannels}
             onEvent={handleEnableChange}
           />
         </Offcanvas.Body>
@@ -43,4 +45,4 @@ const EnablingGroupOff = memo(function EnablingGroupOff({
   );
 });
 
-export default EnablingGroupOff;
+export default ChannelEnableOffcanvas;

@@ -491,7 +491,10 @@ const PulseSequencePlot = function SequencePlot({
   const plotData = getPlotData(sequenceData, channelDescription);
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
-      if (channelEnabled[key] == true) {
+      if (
+        channelEnabled[key] == true &&
+        Object.hasOwn(sequenceData, channelDescription[key].hw_channels[0])
+      ) {
         enabledKeys[channelDescription[key].group].push(key);
       }
       return enabledKeys;
@@ -514,8 +517,6 @@ const PulseSequencePlot = function SequencePlot({
       dataXLimits[0] = Math.min(dataXLimits[0], data["timeDomain"].at(0));
     }
   }
-
-  const lastDataXLimits = useRef(dataXLimits);
 
   const [xLimits, setXLimits] = useState(() => {
     return JSON.parse(sessionStorage.getItem("xLimits")) || dataXLimits;
@@ -868,10 +869,7 @@ const PulseSequencePlot = function SequencePlot({
           // Adjust whenever we are looking at an interval that is outside
           // of the current data range
           if (
-            ((dataXLimits[1] !== lastDataXLimits.current[1] &&
-              x[1] > dataXLimits[1]) ||
-              (dataXLimits[0] !== lastDataXLimits.current[0] &&
-                x[0] < dataXLimits[0])) &&
+            (x[1] > dataXLimits[1] || x[0] < dataXLimits[0] || x[0] === x[1]) &&
             dataXLimits[0] !== dataXLimits[1]
           ) {
             x = dataXLimits;
@@ -882,7 +880,6 @@ const PulseSequencePlot = function SequencePlot({
           ) {
             setXLimits(x);
           }
-          lastDataXLimits.current = dataXLimits;
         }}
         onClickAnnotation={onClickAnnotation}
       />

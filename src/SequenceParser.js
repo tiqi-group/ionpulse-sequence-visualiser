@@ -68,7 +68,7 @@ class SequenceParser {
     ) {
       const sequenceDescriptionVersion =
         ionpulseSequence["header"]["version"].split(".");
-      const minimumVersion = [2, 0, 4];
+      const minimumVersion = [2, 1, 0];
       for (let i = 0; i < minimumVersion.length; i++) {
         if (sequenceDescriptionVersion[i] > minimumVersion[i]) break;
         console.assert(
@@ -548,14 +548,17 @@ class SequenceParser {
         }
       } else {
         if (typeof value === "object") {
+          const loopIdx = loopIteration % value["segment_length"].length;
           // Is PPoly, Only used on quench channels
           for (const ch of channelMask) {
             data[ch][type][dataChannelIdx].push({
-              segment_length: value["segment_length"],
+              segment_length: value["segment_length"][loopIdx],
             });
             for (let o = 0; o <= 3; o++) {
-              data[ch][type][dataChannelIdx].at(-1)["x" + o] = value["x" + o]
-                ? value["x" + o].map((x) => x * scaling)
+              data[ch][type][dataChannelIdx].at(-1)["x" + o] = value["x" + o][
+                loopIdx
+              ]
+                ? value["x" + o][loopIdx].map((x) => x * scaling)
                 : null;
             }
           }
