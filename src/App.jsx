@@ -45,9 +45,9 @@ function App() {
             "hw_channels"
           ].map((v) => {
             if (
+              Object.hasOwn(v, "channel") &&
               Object.hasOwn(v, "device") &&
-              Object.hasOwn(v, "device") &&
-              Object.hasOwn(v, "device")
+              Object.hasOwn(v, "hardware")
             ) {
               return (
                 "" + v["device"] + " " + v["hardware"] + " " + v["channel"]
