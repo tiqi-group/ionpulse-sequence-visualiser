@@ -271,7 +271,7 @@ function getPlotData(sequenceData, channelDescription) {
       Object.hasOwn(sequenceData, desc["hw_channels"][0])
     ) {
       if (Object.hasOwn(desc, "sub_channel")) {
-        const type = desc["group"] === "TTL" ? "output" : "input_gate";
+        const type = desc["sub_channel"]["type"];
         let last = 0;
         out[key] = {
           names: sequenceData[desc["hw_channels"][0]]["names"],
@@ -281,12 +281,12 @@ function getPlotData(sequenceData, channelDescription) {
             (vals, idx) => {
               const mask =
                 (sequenceData[desc["hw_channels"][0]][type + "_mask"][idx] &
-                  (1 << desc["sub_channel"])) !==
+                  (1 << desc["sub_channel"]["idx"])) !==
                 0;
-              const val = (vals & (1 << desc["sub_channel"])) !== 0;
+              const val = (vals & (1 << desc["sub_channel"]["idx"])) !== 0;
               console.assert(
                 !(val & !mask),
-                `${desc["group"]} channel ${desc["sub_channel"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
+                `${desc["group"]} channel ${desc["sub_channel"]["idx"]} value is ${val} (${vals}) but mask is ${mask} (${sequenceData[desc["hw_channels"][0]][type + "_mask"][idx]})`,
               );
               return (last = (last & ~mask) | val);
             },
