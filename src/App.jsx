@@ -1,15 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
+import { DescriptionOverride } from "./DescriptionOverride";
 
 import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
+  const remoteChannelDescription = useRef();
   const [channelDescription, setChannelDescription] = useState({});
+  const [channelDescriptionOverride, setChannelDescriptionOverrideInternal] =
+    useState(false);
+  const setChannelDescriptionOverride = (newOverride) => {
+    if (!newOverride && channelDescriptionOverride) {
+      setChannelDescription(remoteChannelDescription);
+    }
+    setChannelDescriptionOverrideInternal(newOverride);
+  };
   const [ionpulseSequence, setIonpulseSequence] = useState(() => {
     let init = {
       header: {
@@ -31,8 +41,10 @@ function App() {
     };
     return init;
   });
+  const [sequenceOverride, setSequenceOverride] = useState(false);
 
   function updateChannelDescription(description) {
+    if (channelDescriptionOverride) return;
     let newDescription = {};
     for (const group of channelGroups) {
       if (Object.hasOwn(description, group + "s")) {
@@ -59,7 +71,10 @@ function App() {
         }
       }
     }
-    setChannelDescription(newDescription);
+    if (!channelDescriptionOverride) {
+      setChannelDescription(newDescription);
+    }
+    remoteChannelDescription.current = newDescription;
   }
 
   const [library, setLibrary] = useState(() => {
@@ -171,7 +186,17 @@ function App() {
         />
         <Route
           path="/hardware"
-          element={<Hardware channelDescription={channelDescription} />}
+          element={
+            <div>
+              <Hardware channelDescription={channelDescription} />
+              <DescriptionOverride
+                description={remoteChannelDescription}
+                setDescription={setChannelDescription}
+                overrideOn={channelDescriptionOverride}
+                setOverrideOn={setChannelDescriptionOverride}
+              />
+            </div>
+          }
         />
         <Route
           exact
@@ -187,11 +212,19 @@ function App() {
         <Route
           path="/config"
           element={
-            <Configurator
-              library={library}
-              setLibrary={setLibrary}
-              connectionStatus={connectionStatus}
-            />
+            <div>
+              <Configurator
+                library={library}
+                setLibrary={setLibrary}
+                connectionStatus={connectionStatus}
+              />
+              <DescriptionOverride
+                description={ionpulseSequence}
+                setDescription={setIonpulseSequence}
+                overrideOn={sequenceOverride}
+                setOverrideOn={setSequenceOverride}
+              />
+            </div>
           }
         />
       </Routes>
