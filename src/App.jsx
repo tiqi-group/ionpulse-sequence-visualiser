@@ -174,9 +174,6 @@ function App() {
     };
   }, [library]);
 
-  console.log("ionpulseSequence: ", ionpulseSequence);
-  console.log("remoteionpulseSequence: ", remoteIonpulseSequence.current);
-
   return (
     <>
       <NavBar />

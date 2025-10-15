@@ -23,10 +23,12 @@ function DescriptionOverride({
 
   const setOverrideOnLocal = (newOverrideOn) => {
     if (newOverrideOn && !localDescriptionModified.current) {
+      // Local description needs to be updated, don't touch used description
       setLocalDescription(remoteDescription);
+    } else {
+      setUsedDescription(newOverrideOn ? localDescription : remoteDescription);
     }
     setOverrideOn(newOverrideOn);
-    setUsedDescription(newOverrideOn ? localDescription : remoteDescription);
   };
 
   return (
