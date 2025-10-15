@@ -72,16 +72,18 @@ function DescriptionOverride({
     },
     [setOverrideOnLocal, setData],
   );
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: onDrop,
+    accept: {
+      "application/json": [".json", ".json5"],
+    },
+    maxFiles: 1,
+  });
 
   return (
-    <Container className="my-4">
-      <div {...getRootProps()}>
-        <input {...getInputProps()} />
-        <p>Drag and drop json file</p>
-      </div>
+    <Container className="my-4" {...getRootProps()}>
       <label>
-        <span className="align-middle mx-2">Override</span>
+        <span className="align-middle m-2">Override</span>
         <Switch
           className="align-middle"
           onChange={setOverrideOnLocal}
@@ -89,7 +91,7 @@ function DescriptionOverride({
         />
       </label>
       <Button
-        className="align-middle mx-4"
+        className="align-middle my-2 mx-4"
         onClick={() => {
           setLocalDescription(remoteDescription);
           setUsedDescription(remoteDescription);
@@ -97,7 +99,11 @@ function DescriptionOverride({
       >
         Reset JSON
       </Button>
+      <p className="m-2">
+        Drag and drop json file or edit while override is activated
+      </p>
       <pre
+        className="my-2 border"
         contentEditable={overrideOn ? "plaintext-only" : "false"}
         suppressContentEditableWarning={true}
         onBlur={(e) => {
