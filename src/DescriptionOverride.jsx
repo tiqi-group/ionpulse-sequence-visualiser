@@ -4,36 +4,53 @@ import { JsonEditor } from "json-edit-react";
 import Switch from "react-switch";
 
 function DescriptionOverride({
-  description,
-  setDescription,
+  description: remoteDescription,
+  setDescription: setUsedDescription,
   overrideOn,
   setOverrideOn,
 }) {
-  const [localDescription, setLocalDescription] = useState(description);
+  const [localDescription, setLocalDescription] = useState(remoteDescription);
+
+  const localDescriptionModified = useRef(false);
 
   const setData = (sequence) => {
+    localDescriptionModified.current = true;
     setLocalDescription(sequence);
     if (overrideOn) {
-      setDescription(sequence);
+      setUsedDescription(sequence);
     }
   };
 
+  const setOverrideOnLocal = (newOverrideOn) => {
+    if (newOverrideOn && !localDescriptionModified.current) {
+      setLocalDescription(remoteDescription);
+    }
+    setOverrideOn(newOverrideOn);
+    setUsedDescription(newOverrideOn ? localDescription : remoteDescription);
+  };
+
   return (
-    <Container>
+    <Container className="my-4">
       <label>
-        <span>Override </span>
-        <Switch onChange={setOverrideOn} checked={overrideOn} />
+        <span className="align-middle mx-2">Override</span>
+        <Switch
+          className="align-middle"
+          onChange={setOverrideOnLocal}
+          checked={overrideOn}
+        />
       </label>
       <Button
+        className="align-middle mx-4"
         onClick={() => {
-          setLocalDescription(description);
-          setDescription(description);
+          setLocalDescription(remoteDescription);
+          setUsedDescription(remoteDescription);
         }}
       >
-        Update
+        Reset JSON
       </Button>
       <JsonEditor
-        data={overrideOn ? localDescription : description}
+        className="mt-2"
+        data={overrideOn ? localDescription : remoteDescription}
         setData={setData}
         restrictEdit={!overrideOn}
       />

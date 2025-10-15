@@ -10,17 +10,13 @@ import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
-  const remoteChannelDescription = useRef();
-  const [channelDescription, setChannelDescription] = useState({});
-  const [channelDescriptionOverride, setChannelDescriptionOverrideInternal] =
+  const remoteChannelDescription = useRef({});
+  const [channelDescription, setChannelDescription] = useState(
+    remoteChannelDescription.current,
+  );
+  const [channelDescriptionOverride, setChannelDescriptionOverride] =
     useState(false);
-  const setChannelDescriptionOverride = (newOverride) => {
-    if (!newOverride && channelDescriptionOverride) {
-      setChannelDescription(remoteChannelDescription);
-    }
-    setChannelDescriptionOverrideInternal(newOverride);
-  };
-  const [ionpulseSequence, setIonpulseSequence] = useState(() => {
+  const remoteIonpulseSequence = useRef(() => {
     let init = {
       header: {
         channel_idx_to_hw: [],
@@ -41,10 +37,12 @@ function App() {
     };
     return init;
   });
+  const [ionpulseSequence, setIonpulseSequence] = useState(
+    remoteIonpulseSequence.current,
+  );
   const [sequenceOverride, setSequenceOverride] = useState(false);
 
   function updateChannelDescription(description) {
-    if (channelDescriptionOverride) return;
     let newDescription = {};
     for (const group of channelGroups) {
       if (Object.hasOwn(description, group + "s")) {
@@ -77,6 +75,13 @@ function App() {
     remoteChannelDescription.current = newDescription;
   }
 
+  function updateIonpulseSequence(sequence) {
+    if (!sequenceOverride) {
+      setIonpulseSequence(sequence);
+    }
+    remoteIonpulseSequence.current = sequence;
+  }
+
   const [library, setLibrary] = useState(() => {
     return {
       address: localStorage.getItem("libraryAddress") || "localhost",
@@ -103,11 +108,11 @@ function App() {
       autoConnect: false,
     });
 
-    function updateIonpulseSequence(value) {
+    function updateIonpulseSequenceFromJSON(value) {
       // Extracting data from the notification
       if (value.data.name == "Hardware.sequence") {
         const json_sequence = JSON.parse(value.data.value);
-        setIonpulseSequence(json_sequence);
+        updateIonpulseSequence(json_sequence);
       }
     }
 
@@ -145,7 +150,7 @@ function App() {
         .then((response) => response.json())
         .then((data) => {
           if (isConnectionUp) {
-            setIonpulseSequence(JSON.parse(data));
+            updateIonpulseSequence(JSON.parse(data));
           }
         })
         .catch((response) => {
@@ -156,7 +161,7 @@ function App() {
 
       if (isConnectionUp) {
         socket.connect();
-        socket.on("notify", updateIonpulseSequence);
+        socket.on("notify", updateIonpulseSequenceFromJSON);
       }
     };
 
@@ -165,9 +170,12 @@ function App() {
     return () => {
       isConnectionUp = false;
       controller.abort();
-      socket.off("notify", updateIonpulseSequence);
+      socket.off("notify", updateIonpulseSequenceFromJSON);
     };
   }, [library]);
+
+  console.log("ionpulseSequence: ", ionpulseSequence);
+  console.log("remoteionpulseSequence: ", remoteIonpulseSequence.current);
 
   return (
     <>
@@ -190,7 +198,7 @@ function App() {
             <div>
               <Hardware channelDescription={channelDescription} />
               <DescriptionOverride
-                description={remoteChannelDescription}
+                description={remoteChannelDescription.current}
                 setDescription={setChannelDescription}
                 overrideOn={channelDescriptionOverride}
                 setOverrideOn={setChannelDescriptionOverride}
@@ -219,7 +227,7 @@ function App() {
                 connectionStatus={connectionStatus}
               />
               <DescriptionOverride
-                description={ionpulseSequence}
+                description={remoteIonpulseSequence.current}
                 setDescription={setIonpulseSequence}
                 overrideOn={sequenceOverride}
                 setOverrideOn={setSequenceOverride}
