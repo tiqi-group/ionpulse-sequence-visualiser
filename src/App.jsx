@@ -195,8 +195,9 @@ function App() {
             <div>
               <Hardware channelDescription={channelDescription} />
               <DescriptionOverride
-                description={remoteChannelDescription.current}
-                setDescription={setChannelDescription}
+                prefix="Channel"
+                remoteDescription={remoteChannelDescription.current}
+                setUsedDescription={setChannelDescription}
                 overrideOn={channelDescriptionOverride}
                 setOverrideOn={setChannelDescriptionOverride}
               />
@@ -223,9 +224,11 @@ function App() {
                 setLibrary={setLibrary}
                 connectionStatus={connectionStatus}
               />
+              <div />
               <DescriptionOverride
-                description={remoteIonpulseSequence.current}
-                setDescription={setIonpulseSequence}
+                prefix="Sequence"
+                remoteDescription={remoteIonpulseSequence.current}
+                setUsedDescription={setIonpulseSequence}
                 overrideOn={sequenceOverride}
                 setOverrideOn={setSequenceOverride}
               />

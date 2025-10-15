@@ -1,17 +1,43 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Container, Button } from "react-bootstrap";
 import { JsonEditor } from "json-edit-react";
 import Switch from "react-switch";
+import { useDropzone } from "react-dropzone";
 
 function DescriptionOverride({
-  description: remoteDescription,
-  setDescription: setUsedDescription,
+  prefix,
+  remoteDescription,
+  setUsedDescription,
   overrideOn,
   setOverrideOn,
 }) {
-  const [localDescription, setLocalDescription] = useState(remoteDescription);
+  const localDescriptionKey = prefix + "localDescription";
+  const [localDescription, setLocalDescription] = useState(() => {
+    let init;
+    try {
+      init = JSON.parse(sessionStorage.getItem(localDescriptionKey));
+    } catch {
+      console.warn(
+        "invalid entry in sessionStorage for '" + prefix + " localDescription'",
+      );
+    }
+    if (init == null) {
+      init = {};
+    }
+    return init;
+  });
+  const localDescriptionModified = useRef(
+    sessionStorage.getItem(localDescriptionKey) != null,
+  );
 
-  const localDescriptionModified = useRef(false);
+  useEffect(() => {
+    if (localDescriptionModified) {
+      sessionStorage.setItem(
+        localDescriptionKey,
+        JSON.stringify(localDescription),
+      );
+    }
+  }, [localDescription, localDescriptionModified]);
 
   const setData = (sequence) => {
     localDescriptionModified.current = true;
@@ -31,8 +57,29 @@ function DescriptionOverride({
     setOverrideOn(newOverrideOn);
   };
 
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      acceptedFiles.forEach((file) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          setOverrideOnLocal(true);
+          setData(JSON.parse(new TextDecoder().decode(reader.result)));
+        };
+
+        reader.readAsArrayBuffer(file);
+      });
+    },
+    [setOverrideOnLocal, setData],
+  );
+  const { getRootProps, getInputProps } = useDropzone({ onDrop });
+
   return (
     <Container className="my-4">
+      <div {...getRootProps()}>
+        <input {...getInputProps()} />
+        <p>Drag and drop json file</p>
+      </div>
       <label>
         <span className="align-middle mx-2">Override</span>
         <Switch
@@ -50,12 +97,27 @@ function DescriptionOverride({
       >
         Reset JSON
       </Button>
-      <JsonEditor
-        className="mt-2"
-        data={overrideOn ? localDescription : remoteDescription}
-        setData={setData}
-        restrictEdit={!overrideOn}
-      />
+      <pre
+        contentEditable={overrideOn ? "plaintext-only" : "false"}
+        suppressContentEditableWarning={true}
+        onBlur={(e) => {
+          setData(JSON.parse(e.currentTarget.textContent));
+        }}
+      >
+        {JSON.stringify(
+          overrideOn ? localDescription : remoteDescription,
+          null,
+          2,
+        )}
+      </pre>
+      {
+        // <JsonEditor
+        //   className="mt-2"
+        //   data={overrideOn ? localDescription : remoteDescription}
+        //   setData={setData}
+        //   restrictEdit={!overrideOn}
+        // />
+      }
     </Container>
   );
 }
