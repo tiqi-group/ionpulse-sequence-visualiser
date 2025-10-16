@@ -2,6 +2,7 @@ const ChannelType = {
   quench: "QuenchHardware",
   dds: "DDSHardware",
   dio: "DIOHardware",
+  waveform: "FastinoHardware",
   readout: "Readout",
   qubit: "Qubit",
 };
@@ -60,6 +61,7 @@ class SequenceParser {
     "input_gate_state",
     "input_gate_mask",
   ];
+  WAVEFORM_PROPERTIES = [];
   READOUT_PROPERTIES = ["pmt_channel", "offset_time"];
   constructor(ionpulseSequence, externalConfig) {
     if (
@@ -174,6 +176,10 @@ class SequenceParser {
           for (const key of this.READOUT_PROPERTIES) {
             data[key] = [0];
           }
+          break;
+        case ChannelType.waveform:
+          // Provide binary values array for WaveformEvent timing blocks
+          data["values"] = [0];
           break;
         default:
           console.error("Unknown channel type: " + hw["hardware"]);
@@ -685,6 +691,11 @@ class SequenceParser {
               for (let type of this.DIO_PROPERTIES) {
                 data[ch][type].push(data[ch][type].at(-1));
               }
+            } else if (
+              this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ==
+              ChannelType.waveform
+            ) {
+              data[ch]["values"].push(data[ch]["values"].at(-1));
             } else {
               // Quench or DDS
               for (let type of this.RF_PROPERTIES) {
@@ -715,6 +726,34 @@ class SequenceParser {
             loopIteration,
             recordEvents,
           );
+        }
+        break;
+      case "WaveformEvent":
+        // Represent waveform event as a high block (value = 1) for its duration.
+        if (recordEvents) {
+          for (const ch of channelMask) {
+            // Set high at start by modifying last value (do not create new point)
+            if (data[ch]["values"].length == 1) {
+              // First event on channel
+              data[ch]["values"].push(1);
+            } else {
+              data[ch]["values"][data[ch]["values"].length - 1] = 1;
+            }
+          }
+        }
+        data = this.getParamValue(
+          "time",
+          event["time"],
+          channelMask,
+          data,
+          loopIteration,
+          recordEvents,
+        );
+        if (recordEvents) {
+          for (const ch of channelMask) {
+            // Set low at end
+            data[ch]["values"].push(0);
+          }
         }
         break;
       case "Discriminator":

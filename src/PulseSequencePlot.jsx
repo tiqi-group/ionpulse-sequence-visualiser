@@ -138,6 +138,7 @@ function createLayout(
   const numberTTLAxes =
     enabledKeys["PMT"].length +
     enabledKeys["TTL"].length +
+    enabledKeys["RTD"].length +
     enabledKeys["Readout"].length;
 
   const grid_params = {
@@ -238,10 +239,24 @@ function createLayout(
       channelToAxisIdx[enabledKeys["PMT"][i - enabledKeys["TTL"].length]] = [
         axisIdx,
       ];
+    } else if (
+      i <
+      enabledKeys["TTL"].length +
+        enabledKeys["PMT"].length +
+        enabledKeys["RTD"].length
+    ) {
+      channelToAxisIdx[
+        enabledKeys["RTD"][
+          i - enabledKeys["TTL"].length - enabledKeys["PMT"].length
+        ]
+      ] = [axisIdx];
     } else {
       channelToAxisIdx[
         enabledKeys["Readout"][
-          i - enabledKeys["TTL"].length - enabledKeys["PMT"].length
+          i -
+            enabledKeys["TTL"].length -
+            enabledKeys["PMT"].length -
+            enabledKeys["RTD"].length
         ]
       ] = [axisIdx];
       the_layout["yaxis" + axisIdx].range = [-1, 8];
@@ -352,6 +367,7 @@ function getTraces(
       // Already set
       break;
     default:
+      // RTD and TTL
       trace.y = channelPlotData.values;
       break;
   }
@@ -406,6 +422,10 @@ const data_templates = {
       color: "rgba(0%,30%,0%,1)",
     },
     fill: "none",
+  },
+  RTD: {
+    ...data_template_TTL,
+    marker: { color: "rgba(50%,0%,50%,1)" },
   },
   sample: {
     type: "scatter",
@@ -648,6 +668,10 @@ const PulseSequencePlot = function SequencePlot({
           sequence["ch_mask"].has(
             channelDescription[enabledKeys["PMT"][0]]["hw_channels"][1],
           )) ||
+        (enabledKeys["RTD"].length &&
+          sequence["ch_mask"].has(
+            channelDescription[enabledKeys["RTD"][0]]["hw_channels"][0],
+          )) ||
         (enabledKeys["Readout"].length &&
           sequence["ch_mask"].has(
             channelDescription[enabledKeys["Readout"][0]]["hw_channels"][0],
@@ -658,6 +682,7 @@ const PulseSequencePlot = function SequencePlot({
       let axisIdx =
         enabledKeys["TTL"].length +
         enabledKeys["PMT"].length +
+        enabledKeys["RTD"].length +
         enabledKeys["Readout"].length +
         1;
       for (let key of enabledKeys["RF"]) {
