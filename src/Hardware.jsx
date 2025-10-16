@@ -1,7 +1,7 @@
 import AOM from "./Aom";
 import { Card, CardGroup, Container, Col, Row } from "react-bootstrap";
 
-const channelGroups = ["RF", "TTL", "PMT", "Readout"];
+const channelGroups = ["RF", "TTL", "PMT", "RTD", "Readout"];
 
 const Hardware = function ({ channelDescription }) {
   let cards = channelGroups.reduce((obj, group) => {
@@ -40,6 +40,7 @@ const Hardware = function ({ channelDescription }) {
           </Col>,
         );
         break;
+      case "RTD":
       case "Readout":
         cards[value.group].push(
           <Col key={key}>
