@@ -82,39 +82,51 @@ function DescriptionOverride({
 
   return (
     <Container className="my-4" {...getRootProps()}>
-      <label>
-        <span className="align-middle m-2">Override</span>
-        <Switch
-          className="align-middle"
-          onChange={setOverrideOnLocal}
-          checked={overrideOn}
-        />
-      </label>
-      <Button
-        className="align-middle my-2 mx-4"
-        onClick={() => {
-          setLocalDescription(remoteDescription);
-          setUsedDescription(remoteDescription);
-        }}
-      >
-        Reset JSON
-      </Button>
+      <h2>
+        {overrideOn ? "Local" : "Remote"} JSON {prefix} description
+      </h2>
+      <div className="my-2 height">
+        <label>
+          <span className="align-middle m-2">Override</span>
+          <Switch
+            className="align-middle"
+            onChange={setOverrideOnLocal}
+            checked={overrideOn}
+          />
+        </label>
+        <Button
+          className="align-middle mx-4"
+          onClick={() => {
+            setLocalDescription(remoteDescription);
+            setUsedDescription(remoteDescription);
+          }}
+          disabled={!overrideOn}
+        >
+          Replace local with remote JSON
+        </Button>
+      </div>
       <p className="m-2">
         Drag and drop json file or edit while override is activated
       </p>
       <pre
-        className="my-2 border"
+        className={"my-2 border" + (overrideOn ? "" : " bg-secondary-subtle")}
         contentEditable={overrideOn ? "plaintext-only" : "false"}
         suppressContentEditableWarning={true}
         onBlur={(e) => {
           setData(JSON.parse(e.currentTarget.textContent));
         }}
+        style={{
+          height: "85vh",
+          "overflow-y": "scroll",
+        }}
       >
-        {JSON.stringify(
-          overrideOn ? localDescription : remoteDescription,
-          null,
-          2,
-        )}
+        <code>
+          {JSON.stringify(
+            overrideOn ? localDescription : remoteDescription,
+            null,
+            2,
+          )}
+        </code>
       </pre>
       {
         // <JsonEditor
