@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Container, Button } from "react-bootstrap";
+import { Container, Button, Modal } from "react-bootstrap";
 import { JsonEditor } from "json-edit-react";
 import Switch from "react-switch";
 import { useDropzone } from "react-dropzone";
@@ -11,12 +11,16 @@ function DescriptionOverride({
   overrideOn,
   setOverrideOn,
 }) {
+  const [jsonParserErrorString, setJsonParserErrorString] = useState("");
+  const [lastJsonParserErrorString, setLastJsonParserErrorString] =
+    useState("");
   const localDescriptionKey = prefix + "localDescription";
   const [localDescription, setLocalDescription] = useState(() => {
     let init;
     try {
       init = JSON.parse(sessionStorage.getItem(localDescriptionKey));
-    } catch {
+    } catch (error) {
+      setJsonParserErrorString(error.toString());
       console.warn(
         "invalid entry in sessionStorage for '" + prefix + " localDescription'",
       );
@@ -64,7 +68,14 @@ function DescriptionOverride({
 
         reader.onload = () => {
           setOverrideOnLocal(true);
-          setData(JSON.parse(new TextDecoder().decode(reader.result)));
+          try {
+            const newData = JSON.parse(new TextDecoder().decode(reader.result));
+            setData(newData);
+            setJsonParserErrorString("");
+            setLastJsonParserErrorString("");
+          } catch (error) {
+            setJsonParserErrorString(error.toString());
+          }
         };
 
         reader.readAsArrayBuffer(file);
@@ -108,12 +119,32 @@ function DescriptionOverride({
       <p className="m-2">
         Drag and drop json file or edit while override is activated
       </p>
+      <Modal
+        show={jsonParserErrorString != lastJsonParserErrorString}
+        onHide={() => setLastJsonParserErrorString(jsonParserErrorString)}
+      >
+        <Modal.Header>
+          <Modal.Title>JSON parser error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{jsonParserErrorString}</Modal.Body>
+      </Modal>
       <pre
-        className={"my-2 border" + (overrideOn ? "" : " bg-secondary-subtle")}
+        className={
+          "my-2 border" +
+          (overrideOn ? "" : " bg-secondary-subtle") +
+          (jsonParserErrorString != "" ? " border-danger" : "")
+        }
         contentEditable={overrideOn ? "plaintext-only" : "false"}
         suppressContentEditableWarning={true}
         onBlur={(e) => {
-          setData(JSON.parse(e.currentTarget.textContent));
+          try {
+            const newData = JSON.parse(e.currentTarget.textContent);
+            setData(newData);
+            setJsonParserErrorString("");
+            setLastJsonParserErrorString("");
+          } catch (error) {
+            setJsonParserErrorString(error.toString());
+          }
         }}
         style={{
           height: "85vh",
