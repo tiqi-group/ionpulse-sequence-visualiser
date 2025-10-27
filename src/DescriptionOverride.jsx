@@ -148,7 +148,7 @@ function DescriptionOverride({
         }}
         style={{
           height: "85vh",
-          "overflow-y": "scroll",
+          overflowY: "scroll",
         }}
       >
         <code>
