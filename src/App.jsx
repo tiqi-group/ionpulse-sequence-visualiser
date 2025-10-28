@@ -216,7 +216,8 @@ function App() {
           exact
           path="/"
           element={
-            connectionStatus == ConnectionStatus.failed ? (
+            connectionStatus == ConnectionStatus.failed &&
+            !(channelDescriptionOverride && sequenceOverride) ? (
               <Navigate to="/config" />
             ) : (
               <Navigate to="/plot" />
