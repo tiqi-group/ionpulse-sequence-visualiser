@@ -10,6 +10,7 @@ function DescriptionOverride({
   setUsedDescription,
   overrideOn,
   setOverrideOn,
+  defaultDescription,
 }) {
   const [jsonParserErrorString, setJsonParserErrorString] = useState("");
   const [lastJsonParserErrorString, setLastJsonParserErrorString] =
@@ -115,6 +116,21 @@ function DescriptionOverride({
         >
           Replace local with remote JSON
         </Button>
+        {defaultDescription !== undefined ? (
+          <Button
+            className="align-middle mx-4"
+            onClick={() => {
+              setLocalDescription(defaultDescription);
+              if (overrideOn) {
+                setUsedDescription(defaultDescription);
+              }
+            }}
+          >
+            Use default {prefix} description
+          </Button>
+        ) : (
+          <></>
+        )}
       </div>
       <p className="m-2">
         Drag and drop json file or edit while override is activated

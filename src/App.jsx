@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
+import { generateChannelDescriptionFromSequence } from "./SequenceParser.js";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 import { DescriptionOverride } from "./DescriptionOverride";
@@ -184,7 +185,11 @@ function App() {
             <IonpulseSequenceVisualiser
               channelDescription={channelDescription}
               ionpulseSequence={ionpulseSequence}
-              connectionStatus={connectionStatus}
+              connectionStatus={
+                channelDescriptionOverride && sequenceOverride
+                  ? ConnectionStatus.connected
+                  : connectionStatus
+              }
               connectionErrMsg={connectionErrMsg}
             />
           }
@@ -200,6 +205,9 @@ function App() {
                 setUsedDescription={setChannelDescription}
                 overrideOn={channelDescriptionOverride}
                 setOverrideOn={setChannelDescriptionOverride}
+                defaultDescription={generateChannelDescriptionFromSequence(
+                  ionpulseSequence,
+                )}
               />
             </div>
           }
