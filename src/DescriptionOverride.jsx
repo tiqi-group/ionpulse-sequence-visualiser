@@ -171,7 +171,6 @@ function DescriptionOverride({
               setData(newData);
               setJsonParserErrorString("");
               setLastJsonParserErrorString("");
-              e.currentTarget.value = JSON.stringify(newData, null, 2);
             } catch (error) {
               setJsonParserErrorString(error.toString());
             }
