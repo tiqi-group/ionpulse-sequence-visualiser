@@ -12,6 +12,7 @@ function DescriptionOverride({
   setOverrideOn,
   defaultDescription,
 }) {
+  const inputRef = useRef(null);
   const [jsonParserErrorString, setJsonParserErrorString] = useState("");
   const [lastJsonParserErrorString, setLastJsonParserErrorString] =
     useState("");
@@ -44,11 +45,17 @@ function DescriptionOverride({
     }
   }, [localDescription, localDescriptionModified]);
 
+  const setInput = (sequence) => {
+    inputRef.current.value = JSON.stringify;
+  };
+
   const setData = (sequence) => {
     localDescriptionModified.current = true;
     setLocalDescription(sequence);
     if (overrideOn) {
       setUsedDescription(sequence);
+      if (inputRef.current)
+        inputRef.current.value = JSON.stringify(sequence, null, 2);
     }
   };
 
@@ -57,7 +64,12 @@ function DescriptionOverride({
       // Local description needs to be updated, don't touch used description
       setLocalDescription(remoteDescription);
     } else {
-      setUsedDescription(newOverrideOn ? localDescription : remoteDescription);
+      const newDescription = newOverrideOn
+        ? localDescription
+        : remoteDescription;
+      setUsedDescription(newDescription);
+      if (inputRef.current)
+        inputRef.current.value = JSON.stringify(newDescription, null, 2);
     }
     setOverrideOn(newOverrideOn);
   };
@@ -68,7 +80,7 @@ function DescriptionOverride({
         const reader = new FileReader();
 
         reader.onload = () => {
-          setOverrideOnLocal(true);
+          setOverrideOn(true);
           try {
             const newData = JSON.parse(new TextDecoder().decode(reader.result));
             setData(newData);
@@ -82,7 +94,7 @@ function DescriptionOverride({
         reader.readAsArrayBuffer(file);
       });
     },
-    [setOverrideOnLocal, setData],
+    [setOverrideOn, setData],
   );
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: onDrop,
@@ -145,35 +157,48 @@ function DescriptionOverride({
         </Modal.Header>
         <Modal.Body>{jsonParserErrorString}</Modal.Body>
       </Modal>
-      <pre
+      <textarea
+        ref={(c) => (inputRef.current = c)}
         className={
           "my-2 border" +
           (overrideOn ? "" : " bg-secondary-subtle") +
           (jsonParserErrorString != "" ? " border-danger" : "")
         }
-        contentEditable={overrideOn ? "plaintext-only" : "false"}
-        suppressContentEditableWarning={true}
         onBlur={(e) => {
-          try {
-            const newData = JSON.parse(e.currentTarget.textContent);
-            setData(newData);
-            setJsonParserErrorString("");
-            setLastJsonParserErrorString("");
-          } catch (error) {
-            setJsonParserErrorString(error.toString());
+          if (overrideOn) {
+            try {
+              const newData = JSON.parse(e.currentTarget.value);
+              setData(newData);
+              setJsonParserErrorString("");
+              setLastJsonParserErrorString("");
+              e.currentTarget.value = JSON.stringify(newData, null, 2);
+            } catch (error) {
+              setJsonParserErrorString(error.toString());
+            }
           }
         }}
         style={{
           height: "85vh",
+          width: "100%",
           overflowY: "scroll",
+          fontFamily: "monospace",
+          resize: "none",
+          overflowWrap: "break-word",
+          whiteSpace: "pre",
+          wordBreak: "keep-all",
+          overflow: "hidden",
         }}
-      >
-        {JSON.stringify(
+        defaultValue={JSON.stringify(
           overrideOn ? localDescription : remoteDescription,
           null,
           2,
         )}
-      </pre>
+        autoCapitalize="off"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        data-gramm={false}
+      />
     </Container>
   );
 }
