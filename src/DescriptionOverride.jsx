@@ -12,7 +12,6 @@ function DescriptionOverride({
   setOverrideOn,
   defaultDescription,
 }) {
-  console.log(defaultDescription);
   const [jsonParserErrorString, setJsonParserErrorString] = useState("");
   const [lastJsonParserErrorString, setLastJsonParserErrorString] =
     useState("");
@@ -32,14 +31,12 @@ function DescriptionOverride({
     }
     return init;
   });
-
-  // localDescriptionModified is true once there is a user-defined value.
   const localDescriptionModified = useRef(
     sessionStorage.getItem(localDescriptionKey) != null,
   );
 
   useEffect(() => {
-    if (localDescriptionModified.current) {
+    if (localDescriptionModified) {
       sessionStorage.setItem(
         localDescriptionKey,
         JSON.stringify(localDescription),
@@ -50,7 +47,6 @@ function DescriptionOverride({
   const setData = (sequence) => {
     localDescriptionModified.current = true;
     setLocalDescription(sequence);
-    console.log("setData: ", sequence);
     if (overrideOn) {
       setUsedDescription(sequence);
     }
@@ -95,12 +91,6 @@ function DescriptionOverride({
     },
     maxFiles: 1,
   });
-
-  const jsonString = JSON.stringify(
-    overrideOn ? localDescription : remoteDescription,
-    null,
-    2,
-  );
 
   return (
     <Container className="my-4" {...getRootProps()}>
@@ -154,66 +144,45 @@ function DescriptionOverride({
         </Modal.Header>
         <Modal.Body>{jsonParserErrorString}</Modal.Body>
       </Modal>
-      <div
+      <pre
         className={
           "my-2 border" +
           (overrideOn ? "" : " bg-secondary-subtle") +
           (jsonParserErrorString != "" ? " border-danger" : "")
         }
+        contentEditable={overrideOn ? "plaintext-only" : "false"}
+        suppressContentEditableWarning={true}
+        onBlur={(e) => {
+          try {
+            const newData = JSON.parse(e.currentTarget.textContent);
+            setData(newData);
+            setJsonParserErrorString("");
+            setLastJsonParserErrorString("");
+          } catch (error) {
+            setJsonParserErrorString(error.toString());
+          }
+        }}
         style={{
           height: "85vh",
           overflowY: "scroll",
-          position: "relative",
-          fontFamily: "monospace",
-          fontSize: "inherit",
         }}
       >
-        <pre
-          style={{
-            pointerEvents: "none",
-            position: "relative",
-            fontFamily: "inherit",
-            fontSize: "inherit",
-          }}
-        >
-          <code>{jsonString}</code>
-        </pre>
-        <textarea
-          value={jsonString}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            height: "100%",
-            width: "100%",
-            resize: "none",
-            padding: 0,
-            border: 0,
-            MozOsxFontSmoothing: "grayscale",
-            WebkitFontSmoothing: "antialiased",
-            WebkitTextFillColor: "transparent",
-            background: "none",
-            fontFamily: "inherit",
-            fontSize: "inherit",
-          }}
-          onChange={(e) => {
-            try {
-              console.log(e.currentTarget);
-              const newData = JSON.parse(e.currentTarget.value);
-              setData(newData);
-              setJsonParserErrorString("");
-              setLastJsonParserErrorString("");
-            } catch (error) {
-              setJsonParserErrorString(error.toString());
-            }
-          }}
-          autoCapitalize="off"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          data-gramm={false}
-        />
-      </div>
+        <code>
+          {JSON.stringify(
+            overrideOn ? localDescription : remoteDescription,
+            null,
+            2,
+          )}
+        </code>
+      </pre>
+      {
+        // <JsonEditor
+        //   className="mt-2"
+        //   data={overrideOn ? localDescription : remoteDescription}
+        //   setData={setData}
+        //   restrictEdit={!overrideOn}
+        // />
+      }
     </Container>
   );
 }
