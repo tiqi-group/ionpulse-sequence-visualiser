@@ -120,6 +120,7 @@ function DescriptionOverride({
           <Button
             className="align-middle mx-4"
             onClick={() => {
+              setOverrideOnLocal(true);
               setLocalDescription(defaultDescription);
               if (overrideOn) {
                 setUsedDescription(defaultDescription);
@@ -167,22 +168,12 @@ function DescriptionOverride({
           overflowY: "scroll",
         }}
       >
-        <code>
-          {JSON.stringify(
-            overrideOn ? localDescription : remoteDescription,
-            null,
-            2,
-          )}
-        </code>
+        {JSON.stringify(
+          overrideOn ? localDescription : remoteDescription,
+          null,
+          2,
+        )}
       </pre>
-      {
-        // <JsonEditor
-        //   className="mt-2"
-        //   data={overrideOn ? localDescription : remoteDescription}
-        //   setData={setData}
-        //   restrictEdit={!overrideOn}
-        // />
-      }
     </Container>
   );
 }

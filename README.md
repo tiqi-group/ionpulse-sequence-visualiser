@@ -45,7 +45,6 @@ Under the tab "Hardware" you can find the hardware description of your setup.
 
 - git clone this repo in a suittable location.
 - Install Node.js 22 (LTS Jod)
-
   - I recommend the [Node Version Manager](https://github.com/nvm-sh/nvm)
   - Or [n](https://github.com/tj/n) for a system wide installation
   - Also see https://nodejs.org/en/download
