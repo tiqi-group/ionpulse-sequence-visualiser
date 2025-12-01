@@ -25,10 +25,10 @@ function NavBar() {
               Configure
             </Nav.Link>
             <NavDropdown title="JSON source" id="collapsible-plot-dropdown">
-              <NavDropdown.Item href="/sequencejson">
+              <NavDropdown.Item as={Link} to="/sequencejson">
                 Sequence JSON
               </NavDropdown.Item>
-              <NavDropdown.Item href="/descriptionjson">
+              <NavDropdown.Item as={Link} to="/descriptionjson">
                 Hardware description JSON
               </NavDropdown.Item>
             </NavDropdown>
