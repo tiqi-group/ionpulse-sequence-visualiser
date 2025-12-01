@@ -15,12 +15,23 @@ function NavBar() {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
+            <Nav.Link as={Link} to="/plot">
+              Plot
+            </Nav.Link>
             <Nav.Link as={Link} to="/hardware">
               Hardware
             </Nav.Link>
             <Nav.Link as={Link} to="/config">
               Configure
             </Nav.Link>
+            <NavDropdown title="JSON source" id="collapsible-plot-dropdown">
+              <NavDropdown.Item href="/sequencejson">
+                Sequence JSON
+              </NavDropdown.Item>
+              <NavDropdown.Item href="/descriptionjson">
+                Hardware description JSON
+              </NavDropdown.Item>
+            </NavDropdown>
           </Nav>
         </Navbar.Collapse>
       </Container>
