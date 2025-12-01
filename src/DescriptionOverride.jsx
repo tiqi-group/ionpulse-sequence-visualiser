@@ -179,13 +179,12 @@ function DescriptionOverride({
         style={{
           height: "85vh",
           width: "100%",
-          overflowY: "scroll",
+          overflow: "scroll",
           fontFamily: "monospace",
           resize: "none",
           overflowWrap: "break-word",
           whiteSpace: "pre",
           wordBreak: "keep-all",
-          overflow: "hidden",
         }}
         defaultValue={JSON.stringify(
           overrideOn ? localDescription : remoteDescription,
