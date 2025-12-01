@@ -45,10 +45,6 @@ function DescriptionOverride({
     }
   }, [localDescription, localDescriptionModified]);
 
-  const setInput = (sequence) => {
-    inputRef.current.value = JSON.stringify;
-  };
-
   const setData = (sequence) => {
     localDescriptionModified.current = true;
     setLocalDescription(sequence);
@@ -58,6 +54,12 @@ function DescriptionOverride({
         inputRef.current.value = JSON.stringify(sequence, null, 2);
     }
   };
+
+  if (!overrideOn) {
+    if (inputRef.current) {
+      inputRef.current.value = JSON.stringify(remoteDescription, null, 2);
+    }
+  }
 
   const setOverrideOnLocal = (newOverrideOn) => {
     if (newOverrideOn && !localDescriptionModified.current) {
@@ -196,6 +198,7 @@ function DescriptionOverride({
         autoCorrect="off"
         spellCheck={false}
         data-gramm={false}
+        readOnly={!overrideOn}
       />
     </Container>
   );
