@@ -196,21 +196,7 @@ function App() {
         />
         <Route
           path="/hardware"
-          element={
-            <div>
-              <Hardware channelDescription={channelDescription} />
-              <DescriptionOverride
-                prefix="Channel"
-                remoteDescription={remoteChannelDescription.current}
-                setUsedDescription={setChannelDescription}
-                overrideOn={channelDescriptionOverride}
-                setOverrideOn={setChannelDescriptionOverride}
-                defaultDescription={generateChannelDescriptionFromSequence(
-                  ionpulseSequence,
-                )}
-              />
-            </div>
-          }
+          element={<Hardware channelDescription={channelDescription} />}
         />
         <Route
           exact
@@ -227,21 +213,38 @@ function App() {
         <Route
           path="/config"
           element={
-            <div>
-              <Configurator
-                library={library}
-                setLibrary={setLibrary}
-                connectionStatus={connectionStatus}
-              />
-              <div />
-              <DescriptionOverride
-                prefix="Sequence"
-                remoteDescription={remoteIonpulseSequence.current}
-                setUsedDescription={setIonpulseSequence}
-                overrideOn={sequenceOverride}
-                setOverrideOn={setSequenceOverride}
-              />
-            </div>
+            <Configurator
+              library={library}
+              setLibrary={setLibrary}
+              connectionStatus={connectionStatus}
+            />
+          }
+        />
+        <Route
+          path="/sequencejson"
+          element={
+            <DescriptionOverride
+              prefix="Sequence"
+              remoteDescription={remoteIonpulseSequence.current}
+              setUsedDescription={setIonpulseSequence}
+              overrideOn={sequenceOverride}
+              setOverrideOn={setSequenceOverride}
+            />
+          }
+        />
+        <Route
+          path="/descriptionjson"
+          element={
+            <DescriptionOverride
+              prefix="Channel"
+              remoteDescription={remoteChannelDescription.current}
+              setUsedDescription={setChannelDescription}
+              overrideOn={channelDescriptionOverride}
+              setOverrideOn={setChannelDescriptionOverride}
+              defaultDescription={generateChannelDescriptionFromSequence(
+                ionpulseSequence,
+              )}
+            />
           }
         />
       </Routes>
