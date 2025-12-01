@@ -11,13 +11,13 @@ import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
-  const remoteChannelDescription = useRef({});
+  const [remoteChannelDescription, setRemoteChannelDescription] = useState({});
   const [channelDescription, setChannelDescription] = useState(
-    remoteChannelDescription.current,
+    remoteChannelDescription,
   );
   const [channelDescriptionOverride, setChannelDescriptionOverride] =
     useState(false);
-  const remoteIonpulseSequence = useRef(() => {
+  const [remoteIonpulseSequence, setRemoteIonpulseSequence] = useState(() => {
     let init = {
       header: {
         channel_idx_to_hw: [],
@@ -39,7 +39,7 @@ function App() {
     return init;
   });
   const [ionpulseSequence, setIonpulseSequence] = useState(
-    remoteIonpulseSequence.current,
+    remoteIonpulseSequence,
   );
   const [sequenceOverride, setSequenceOverride] = useState(false);
 
@@ -73,14 +73,14 @@ function App() {
     if (!channelDescriptionOverride) {
       setChannelDescription(newDescription);
     }
-    remoteChannelDescription.current = newDescription;
+    setRemoteChannelDescription(newDescription);
   }
 
   function updateIonpulseSequence(sequence) {
     if (!sequenceOverride) {
       setIonpulseSequence(sequence);
     }
-    remoteIonpulseSequence.current = sequence;
+    setRemoteIonpulseSequence(sequence);
   }
 
   const [library, setLibrary] = useState(() => {
@@ -225,7 +225,7 @@ function App() {
           element={
             <DescriptionOverride
               prefix="Sequence"
-              remoteDescription={remoteIonpulseSequence.current}
+              remoteDescription={remoteIonpulseSequence}
               setUsedDescription={setIonpulseSequence}
               overrideOn={sequenceOverride}
               setOverrideOn={setSequenceOverride}
@@ -237,7 +237,7 @@ function App() {
           element={
             <DescriptionOverride
               prefix="Channel"
-              remoteDescription={remoteChannelDescription.current}
+              remoteDescription={remoteChannelDescription}
               setUsedDescription={setChannelDescription}
               overrideOn={channelDescriptionOverride}
               setOverrideOn={setChannelDescriptionOverride}
