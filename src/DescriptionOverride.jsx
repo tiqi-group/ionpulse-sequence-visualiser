@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Container, Button, Modal } from "react-bootstrap";
-import { JsonEditor } from "json-edit-react";
 import Switch from "react-switch";
 import { useDropzone } from "react-dropzone";
 
