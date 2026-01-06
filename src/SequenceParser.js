@@ -12,6 +12,12 @@ const N_INPUT_GATE_CHANNELS = 8;
 
 const N_TONES_PER_QUENCH_CHANNEL = 4;
 
+const ACCUMULATOR_ORDER = {
+  freq: 1,
+  phase: 0,
+  amp: 3,
+};
+
 /**
  * getChannelKey converts hardware channel to a unique string
  *
@@ -556,7 +562,7 @@ class SequenceParser {
             data[ch][type][dataChannelIdx].push({
               segment_length: value["segment_length"][loopIdx],
             });
-            for (let o = 0; o <= 3; o++) {
+            for (let o = 0; o <= ACCUMULATOR_ORDER[type]; o++) {
               data[ch][type][dataChannelIdx].at(-1)["x" + o] = value["x" + o][
                 loopIdx
               ]
@@ -911,11 +917,6 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       const paramKeys = ["freq", "phase", "amp"];
       let paramArrays = {};
       const storeSample = targets.includes("sample");
-      const accumulatorOrder = {
-        freq: 1,
-        phase: 0,
-        amp: 3,
-      };
 
       const paramObj = {
         freq: f,
@@ -930,7 +931,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
             paramArrays[key] = accumulate(
               paramObj[key],
               times,
-              accumulatorOrder[key],
+              ACCUMULATOR_ORDER[key],
             );
           } else {
             if (key === "amp" && slopeTime > 0) {
