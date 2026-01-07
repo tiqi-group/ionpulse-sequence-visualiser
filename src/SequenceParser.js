@@ -433,10 +433,20 @@ class SequenceParser {
                 if (dataType === "timeDomain") {
                   lastChannelData[dataType] = channelData[dataType].slice(-1);
                 } else {
-                  lastChannelData[dataType] = channelData[dataType].slice(
-                    lastDataLength[channel] - 1,
-                    lastDataLength[channel],
-                  );
+                  if (Object.hasOwn(channelData[dataType][0], "length")) {
+                    lastChannelData[dataType] = channelData[dataType].map(
+                      (events) =>
+                        events.slice(
+                          lastDataLength[channel] - 1,
+                          lastDataLength[channel],
+                        ),
+                    );
+                  } else {
+                    lastChannelData[dataType] = channelData[dataType].slice(
+                      lastDataLength[channel] - 1,
+                      lastDataLength[channel],
+                    );
+                  }
                 }
                 return lastChannelData;
               },
