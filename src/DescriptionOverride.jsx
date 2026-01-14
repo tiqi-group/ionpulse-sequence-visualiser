@@ -122,8 +122,7 @@ function DescriptionOverride({
         <Button
           className="align-middle mx-4"
           onClick={() => {
-            setLocalDescription(remoteDescription);
-            setUsedDescription(remoteDescription);
+            setData(remoteDescription);
           }}
           disabled={!overrideOn}
         >
@@ -133,11 +132,15 @@ function DescriptionOverride({
           <Button
             className="align-middle mx-4"
             onClick={() => {
-              setOverrideOnLocal(true);
               setLocalDescription(defaultDescription);
-              if (overrideOn) {
-                setUsedDescription(defaultDescription);
-              }
+              setUsedDescription(defaultDescription);
+              setOverrideOn(true);
+              if (inputRef.current)
+                inputRef.current.value = JSON.stringify(
+                  defaultDescription,
+                  null,
+                  2,
+                );
             }}
           >
             Use default {prefix} description
