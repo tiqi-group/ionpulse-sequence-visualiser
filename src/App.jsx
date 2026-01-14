@@ -224,6 +224,7 @@ function App() {
           path="/sequencejson"
           element={
             <DescriptionOverride
+              key="SequenceDescription"
               prefix="Sequence"
               remoteDescription={remoteIonpulseSequence}
               setUsedDescription={setIonpulseSequence}
@@ -236,6 +237,7 @@ function App() {
           path="/descriptionjson"
           element={
             <DescriptionOverride
+              key="ChannelDescription"
               prefix="Channel"
               remoteDescription={remoteChannelDescription}
               setUsedDescription={setChannelDescription}

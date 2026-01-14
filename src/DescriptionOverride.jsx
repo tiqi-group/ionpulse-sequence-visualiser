@@ -36,13 +36,13 @@ function DescriptionOverride({
   );
 
   useEffect(() => {
-    if (localDescriptionModified) {
+    if (localDescriptionModified.current) {
       sessionStorage.setItem(
         localDescriptionKey,
         JSON.stringify(localDescription),
       );
     }
-  }, [localDescription, localDescriptionModified]);
+  }, [localDescription, localDescriptionKey, localDescriptionModified]);
 
   const setData = (sequence) => {
     localDescriptionModified.current = true;
