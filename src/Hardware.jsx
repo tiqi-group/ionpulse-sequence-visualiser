@@ -2,6 +2,7 @@ import AOM from "./Aom";
 import { Card, CardGroup, Container, Col, Row } from "react-bootstrap";
 
 const channelGroups = ["RF", "TTL", "PMT", "RTD", "Readout"];
+// RTD: remote Triggered Devices
 
 const Hardware = function ({ channelDescription }) {
   let cards = channelGroups.reduce((obj, group) => {
