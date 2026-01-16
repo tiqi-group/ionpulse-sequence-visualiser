@@ -1,16 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
+import { generateChannelDescriptionFromSequence } from "./SequenceParser.js";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
+import { DescriptionOverride } from "./DescriptionOverride";
 
 import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 
 function App() {
-  const [channelDescription, setChannelDescription] = useState({});
-  const [ionpulseSequence, setIonpulseSequence] = useState(() => {
+  const [remoteChannelDescription, setRemoteChannelDescription] = useState({});
+  const [channelDescription, setChannelDescription] = useState(
+    remoteChannelDescription,
+  );
+  const [channelDescriptionOverride, setChannelDescriptionOverride] =
+    useState(false);
+  const [remoteIonpulseSequence, setRemoteIonpulseSequence] = useState(() => {
     let init = {
       header: {
         channel_idx_to_hw: [],
@@ -31,6 +38,10 @@ function App() {
     };
     return init;
   });
+  const [ionpulseSequence, setIonpulseSequence] = useState(
+    remoteIonpulseSequence,
+  );
+  const [sequenceOverride, setSequenceOverride] = useState(false);
 
   function updateChannelDescription(description) {
     let newDescription = {};
@@ -59,7 +70,17 @@ function App() {
         }
       }
     }
-    setChannelDescription(newDescription);
+    if (!channelDescriptionOverride) {
+      setChannelDescription(newDescription);
+    }
+    setRemoteChannelDescription(newDescription);
+  }
+
+  function updateIonpulseSequence(sequence) {
+    if (!sequenceOverride) {
+      setIonpulseSequence(sequence);
+    }
+    setRemoteIonpulseSequence(sequence);
   }
 
   const [library, setLibrary] = useState(() => {
@@ -88,11 +109,11 @@ function App() {
       autoConnect: false,
     });
 
-    function updateIonpulseSequence(value) {
+    function updateIonpulseSequenceFromJSON(value) {
       // Extracting data from the notification
       if (value.data.name == "Hardware.sequence") {
         const json_sequence = JSON.parse(value.data.value);
-        setIonpulseSequence(json_sequence);
+        updateIonpulseSequence(json_sequence);
       }
     }
 
@@ -130,7 +151,7 @@ function App() {
         .then((response) => response.json())
         .then((data) => {
           if (isConnectionUp) {
-            setIonpulseSequence(JSON.parse(data));
+            updateIonpulseSequence(JSON.parse(data));
           }
         })
         .catch((response) => {
@@ -141,7 +162,7 @@ function App() {
 
       if (isConnectionUp) {
         socket.connect();
-        socket.on("notify", updateIonpulseSequence);
+        socket.on("notify", updateIonpulseSequenceFromJSON);
       }
     };
 
@@ -150,7 +171,7 @@ function App() {
     return () => {
       isConnectionUp = false;
       controller.abort();
-      socket.off("notify", updateIonpulseSequence);
+      socket.off("notify", updateIonpulseSequenceFromJSON);
     };
   }, [library]);
 
@@ -164,7 +185,11 @@ function App() {
             <IonpulseSequenceVisualiser
               channelDescription={channelDescription}
               ionpulseSequence={ionpulseSequence}
-              connectionStatus={connectionStatus}
+              connectionStatus={
+                channelDescriptionOverride && sequenceOverride
+                  ? ConnectionStatus.connected
+                  : connectionStatus
+              }
               connectionErrMsg={connectionErrMsg}
             />
           }
@@ -177,7 +202,8 @@ function App() {
           exact
           path="/"
           element={
-            connectionStatus == ConnectionStatus.failed ? (
+            connectionStatus == ConnectionStatus.failed &&
+            !(channelDescriptionOverride && sequenceOverride) ? (
               <Navigate to="/config" />
             ) : (
               <Navigate to="/plot" />
@@ -191,6 +217,33 @@ function App() {
               library={library}
               setLibrary={setLibrary}
               connectionStatus={connectionStatus}
+            />
+          }
+        />
+        <Route
+          path="/sequencejson"
+          element={
+            <DescriptionOverride
+              prefix="Sequence"
+              remoteDescription={remoteIonpulseSequence}
+              setUsedDescription={setIonpulseSequence}
+              overrideOn={sequenceOverride}
+              setOverrideOn={setSequenceOverride}
+            />
+          }
+        />
+        <Route
+          path="/descriptionjson"
+          element={
+            <DescriptionOverride
+              prefix="Channel"
+              remoteDescription={remoteChannelDescription}
+              setUsedDescription={setChannelDescription}
+              overrideOn={channelDescriptionOverride}
+              setOverrideOn={setChannelDescriptionOverride}
+              defaultDescription={generateChannelDescriptionFromSequence(
+                ionpulseSequence,
+              )}
             />
           }
         />
