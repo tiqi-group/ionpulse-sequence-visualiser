@@ -63,7 +63,7 @@ class SequenceParser {
     "input_gate_state",
     "input_gate_mask",
   ];
-  WAVEFORM_PROPERTIES = [];
+  WAVEFORM_PROPERTIES = ["waveform_id", "reverse", "slowdown"];
   READOUT_PROPERTIES = ["pmt_channel", "offset_time"];
   constructor(ionpulseSequence, externalConfig) {
     if (
@@ -181,6 +181,9 @@ class SequenceParser {
           break;
         case ChannelType.waveform:
           // Provide binary values array for WaveformEvent timing blocks
+          for (const key of this.WAVEFORM_PROPERTIES) {
+            data[key] = [0];
+          }
           data["values"] = [0];
           break;
         default:
