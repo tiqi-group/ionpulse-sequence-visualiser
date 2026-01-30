@@ -210,7 +210,7 @@ class SequenceParser {
     }
 
     this.#main["header"]["channel_idx_to_hw"].forEach((hw, ch) => {
-      if (hw["hardware"] === ChannelType.dio) {
+      if (hw["hardware"] === ChannelType.dio && ch_mask.has(ch)) {
         let inputGateTimes = [...Array(N_INPUT_GATE_CHANNELS)].map(() => [0]);
         let lastGate = 0;
         plotData[ch]["time"].forEach((time, idx) => {
