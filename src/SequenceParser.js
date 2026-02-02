@@ -180,7 +180,6 @@ class SequenceParser {
           }
           break;
         case ChannelType.waveform:
-          // Provide binary values array for WaveformEvent timing blocks
           for (const key of this.WAVEFORM_PROPERTIES) {
             data[key] = [0];
           }
@@ -700,6 +699,9 @@ class SequenceParser {
               this.#main["header"]["channel_idx_to_hw"][ch]["hardware"] ==
               ChannelType.waveform
             ) {
+              for (let type of this.WAVEFORM_PROPERTIES) {
+                data[ch][type].push(data[ch][type].at(-1));
+              }
               data[ch]["values"].push(data[ch]["values"].at(-1));
             } else {
               // Quench or DDS
