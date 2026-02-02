@@ -287,7 +287,7 @@ files = [
 
 [[package]]
 name = "ionpulse-sequence-generator"
-version = "2.2.7"
+version = "2.3.0"
 description = ""
 optional = false
 python-versions = ">=3.10,<4"
@@ -305,8 +305,8 @@ scipy = ">=1.15,<2"
 [package.source]
 type = "git"
 url = "ssh://git@gitlab.phys.ethz.ch/tiqi-projects/ionpulse_sequence_generator.git"
-reference = "master"
-resolved_reference = "17cc0c8d2f1da120be8160f491259bff9ce94ba3"
+reference = "feature/simple_transport"
+resolved_reference = "91a52737e4c9147864f80dbca1c9e06a0d62e8c0"
 
 [[package]]
 name = "isort"
@@ -1254,4 +1254,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "0421db9c9e77a461b013b12b48f0ff449c82ff03b169047b58feb3d9afe2d103"
+content-hash = "5a8891d936ab62cb4a20758d75f00d97dc920a9114c1d02930de94e6829c3c76"
