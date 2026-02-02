@@ -141,7 +141,7 @@ if __name__ == "__main__":
             elif hw_ch["hardware"] == "QuenchADCHardware":
                 pass
             else:
-                raise KeyError(f"Unrecognized hardware type '{hw_ch["hardware"]}'")
+                raise KeyError(f"Unrecognized hardware type '{hw_ch['hardware']}'")
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
