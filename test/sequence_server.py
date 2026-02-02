@@ -122,6 +122,12 @@ if __name__ == "__main__":
                         "hw_channels":[hw_ch]
                         }
                 rf_idx = rf_idx + 1
+            elif hw_ch["hardware"] == "FastinoHardware":
+                d["RTDs"] = dict()
+                d["RTDs"]["Fastino"] = {
+                        "name": "Fastino",
+                        "hw_channels": [hw_ch]
+                        }
             elif hw_ch["hardware"] == "Readout":
                 d["Readouts"] = dict()
                 d["Readouts"][0] = {
