@@ -13,6 +13,12 @@ const N_INPUT_GATE_CHANNELS = 8;
 
 const N_TONES_PER_QUENCH_CHANNEL = 4;
 
+const ACCUMULATOR_ORDER = {
+  freq: 1,
+  phase: 0,
+  amp: 3,
+};
+
 /**
  * getChannelKey converts hardware channel to a unique string
  *
@@ -212,7 +218,7 @@ class SequenceParser {
     }
 
     this.#main["header"]["channel_idx_to_hw"].forEach((hw, ch) => {
-      if (hw["hardware"] === ChannelType.dio) {
+      if (hw["hardware"] === ChannelType.dio && ch_mask.has(ch)) {
         let inputGateTimes = [...Array(N_INPUT_GATE_CHANNELS)].map(() => [0]);
         let lastGate = 0;
         plotData[ch]["time"].forEach((time, idx) => {
@@ -435,10 +441,20 @@ class SequenceParser {
                 if (dataType === "timeDomain") {
                   lastChannelData[dataType] = channelData[dataType].slice(-1);
                 } else {
-                  lastChannelData[dataType] = channelData[dataType].slice(
-                    lastDataLength[channel] - 1,
-                    lastDataLength[channel],
-                  );
+                  if (Object.hasOwn(channelData[dataType][0], "length")) {
+                    lastChannelData[dataType] = channelData[dataType].map(
+                      (events) =>
+                        events.slice(
+                          lastDataLength[channel] - 1,
+                          lastDataLength[channel],
+                        ),
+                    );
+                  } else {
+                    lastChannelData[dataType] = channelData[dataType].slice(
+                      lastDataLength[channel] - 1,
+                      lastDataLength[channel],
+                    );
+                  }
                 }
                 return lastChannelData;
               },
@@ -564,7 +580,7 @@ class SequenceParser {
             data[ch][type][dataChannelIdx].push({
               segment_length: value["segment_length"][loopIdx],
             });
-            for (let o = 0; o <= 3; o++) {
+            for (let o = 0; o <= ACCUMULATOR_ORDER[type]; o++) {
               data[ch][type][dataChannelIdx].at(-1)["x" + o] = value["x" + o][
                 loopIdx
               ]
@@ -955,11 +971,6 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       const paramKeys = ["freq", "phase", "amp"];
       let paramArrays = {};
       const storeSample = targets.includes("sample");
-      const accumulatorOrder = {
-        freq: 1,
-        phase: 0,
-        amp: 3,
-      };
 
       const paramObj = {
         freq: f,
@@ -974,7 +985,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
             paramArrays[key] = accumulate(
               paramObj[key],
               times,
-              accumulatorOrder[key],
+              ACCUMULATOR_ORDER[key],
             );
           } else {
             if (key === "amp" && slopeTime > 0) {
