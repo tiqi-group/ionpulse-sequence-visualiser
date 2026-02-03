@@ -764,14 +764,16 @@ class SequenceParser {
             }
           }
         }
-        data = this.getParamValue(
-          "time",
-          event["time"],
-          channelMask,
-          data,
-          loopIteration,
-          recordEvents,
-        );
+        for (let type of this.WAVEFORM_PROPERTIES.concat(["time"])) {
+          data = this.getParamValue(
+            type,
+            event[type],
+            channelMask,
+            data,
+            loopIteration,
+            recordEvents,
+          );
+        }
         if (recordEvents) {
           for (const ch of channelMask) {
             // Set low at end
