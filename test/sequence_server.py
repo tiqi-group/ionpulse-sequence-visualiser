@@ -80,6 +80,7 @@ if __name__ == "__main__":
         d = dict()
         d["RFs"] = dict()
         rf_idx = 0
+        analog_idx = 0
         for hw_ch in channel_index_to_hw:
             if hw_ch["hardware"] == "DIOHardware":
 
@@ -124,10 +125,23 @@ if __name__ == "__main__":
                 rf_idx = rf_idx + 1
             elif hw_ch["hardware"] == "Readout":
                 d["Readouts"] = dict()
-                d["Readouts"][0] = {
+                d["Readouts"]["Readout0"] = {
                         "name": "Readout 0",
                         "hw_channels": [hw_ch]
                         }
+            elif hw_ch["hardware"] == "FastinoHardware":
+                d["RTDs"] = dict()
+                d["RTDs"][f"Fastino{analog_idx}"] = {
+                        "name": hw_ch.get("name", f"Waveform {analog_idx:02d}"),
+                        "hw_channels": [hw_ch]
+                        }
+                analog_idx += 1
+            elif hw_ch["hardware"] == "DDSADCHardware":
+                pass
+            elif hw_ch["hardware"] == "QuenchADCHardware":
+                pass
+            else:
+                raise KeyError(f"Unrecognized hardware type '{hw_ch['hardware']}'")
         
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))

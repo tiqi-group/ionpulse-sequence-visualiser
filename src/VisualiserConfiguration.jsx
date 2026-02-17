@@ -63,7 +63,7 @@ const EnablingGroup = memo(function EnablingGroup({
     );
   }
 
-  const cols = [["RF"], ["TTL", "PMT", "Readout"]].map((typeList) => {
+  const cols = [["RF"], ["TTL", "PMT", "RTD", "Readout"]].map((typeList) => {
     let rows = [
       <h4 key={"colHeader" + typeList[1]}>
         {typeList.reduce((h, el) => (h === "" ? el : h + ", " + el), "")}
