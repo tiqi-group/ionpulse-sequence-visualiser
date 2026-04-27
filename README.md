@@ -10,19 +10,6 @@ If you have access to a DPHYS ETH Zürich account, a maintained deployment is av
 
 ## Getting Started
 
-<!-- ### Building
-
-You will need Node.js 22 LTS. We recommend installing Node.js via [nvm](https://github.com/nvm-sh/nvm) or [n](https://github.com/tj/n) for a system wide installation.
-
-```bash
-git clone <repo-url>
-cd <repo>
-npm install
-npm run build
-```
-
-The build files can also be obtained from the latest GitLab CI build artifacts. -->
-
 ### Local deployment
 
 **Docker / Podman (recommended)**
