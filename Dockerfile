@@ -1,6 +1,27 @@
+# Stage 1: Build (Node 22)
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache bash
+
+# Copy package files and install dependencies
+COPY package*.json ./
+COPY scripts ./scripts
+RUN npm ci
+
+# Copy source files and build
+COPY index.html vite.config.mts ./
+COPY src ./src
+COPY public ./public
+RUN npm run build
+
+
+# Stage 2: Runtime (Nginx)
 FROM nginx:alpine
 
-COPY dist/ /usr/share/nginx/html
+# copy build output from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 

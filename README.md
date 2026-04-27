@@ -10,7 +10,7 @@ If you have access to a DPHYS ETH Zürich account, a maintained deployment is av
 
 ## Getting Started
 
-### Building
+<!-- ### Building
 
 You will need Node.js 22 LTS. We recommend installing Node.js via [nvm](https://github.com/nvm-sh/nvm) or [n](https://github.com/tj/n) for a system wide installation.
 
@@ -21,15 +21,16 @@ npm install
 npm run build
 ```
 
-The build files can also be obtained from the latest GitLab CI build artifacts.
+The build files can also be obtained from the latest GitLab CI build artifacts. -->
 
 ### Local deployment
 
 **Docker / Podman (recommended)**
 
-Once built, start the container with:
+The fastest way to build and deploy locally the application is to run podman compose:
 
 ```bash
+# podman and podman-compose must be installed
 podman compose up
 ```
 
@@ -37,6 +38,7 @@ The visualiser will be available at [http://localhost:8080](http://localhost:808
 
 **Manual deployment on an nginx server**
 
+- Download the build artifacts from the latest successfull pipeline.
 - Copy the build artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
 - Add a server block to the `http` section of `/etc/nginx/nginx.conf`:
 
@@ -84,6 +86,8 @@ The _Hardware_ tab shows the full hardware description of your setup.
 The visualiser is built on [plotly.js](https://plotly.com/javascript/), so you can zoom in and out of sequences interactively.
 
 ## Development
+
+You will need Node.js 22 LTS. We recommend installing Node.js via [nvm](https://github.com/nvm-sh/nvm) or [n](https://github.com/tj/n) for a system wide installation.
 
 ```bash
 # Clone the repository
