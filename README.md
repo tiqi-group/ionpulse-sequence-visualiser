@@ -1,99 +1,127 @@
 # Ionpulse Sequence Visualiser
 
-**Deployed at [tiqidocs.phys.ethz.ch](https://tiqidocs.phys.ethz.ch/visualiser/main/). Enjoy**
-
-This is the sequence visualiser used to have a nice real-time visualisation of your pulse sequences created using the Experiment Library, PyCrystal and the ionpulse sequence generator.
-For example, running the CoolDet from the Cryo setup looks like this:
+A real-time visualisation tool for pulse sequences created with the Experiment Library, PyCrystal, and the ionpulse sequence generator.
 
 ![example CoolDet](images/visualizer-cooldet.png)
 
+## Hosted deployment (ETH Zürich)
+
+If you have access to a DPHYS ETH Zürich account, a maintained deployment is available at [tiqidocs.phys.ethz.ch/visualiser/main/](https://tiqidocs.phys.ethz.ch/visualiser/main/). Specific versions can be accessed by browsing the subfolders at [tiqidocs.phys.ethz.ch/visualiser/](https://tiqidocs.phys.ethz.ch/visualiser/).
+
 ## Getting Started
 
-By default, you will be served the build of the latest commit to main.
-You can access specific version by navigating to https://tiqidocs.phys.ethz.ch/visualiser/ and selecting the appropriate subfolder.
+### Building
 
-### Help with connection issues
+You will need Node.js 22 LTS. We recommend installing Node.js via [nvm](https://github.com/nvm-sh/nvm) or [n](https://github.com/tj/n) for a system wide installation.
 
-If the visualiser cannot connect to your ionpulse experiment library instance that might be because your browser is blocking it.
-This is caused by tiqidocs providing SSL encryption while the experiment library does not.
-
-On Chrome, you have to allow the webpage to access "insecure content" in the site settings permissions: https://support.google.com/chrome/answer/114662  
-On Firefox, you have to disable the protection that blocks "mixed content" : https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox
-
-## Configuration
-
-The sequence visualiser uses cookies to store the address and port of the experiment library.
-Just go to the _Configure_ menu entry and fill in the details of the form and click _Connect_.
-The form will indicate whether the visualiser could connect or not.
-
-## Usage
-
-The visualiser connects to the Library using [socket.io](https://socket.io/docs/v3).
-The Experiment Library updates its `hardware/scope_sequence` attribute, and the visualiser gets notified about this update using the socket.
-As soon as the socket is updated the new sequence is rendered.
-Give it a try by using the `update_zedboard_sequence` in any of the experiments of your Library.
-
-The Visualiser is based on [plotly.js](https://plotly.com/javascript/) which gives us a great flexibility in its use.
-Try zooming in, and out of your sequence.
-
-The Visualiser will read your the `Hardware/hardware_description` attribute from your Library to know which RF and TTL channes are used, and will automatically enable this channels and hide the rest.
-You can however use the "Channels" button to decide which channels to show and hide.
-
-Under the tab "Hardware" you can find the hardware description of your setup.
-
-## Development
-
-- git clone this repo in a suittable location.
-- Install Node.js 22 (LTS Jod)
-  - I recommend the [Node Version Manager](https://github.com/nvm-sh/nvm)
-  - Or [n](https://github.com/tj/n) for a system wide installation
-  - Also see https://nodejs.org/en/download
-
-- Setup the environment with `npm install` in the repo
-
-- Use the development server instead of serving the static content by running
-
-```
-npm start
+```bash
+git clone <repo-url>
+cd <repo>
+npm install
+npm run build
 ```
 
-This will automatically build and update the visualiser.
-If you want to test the deployment you can use `npm run build` and `npm run serve` instead of `npm start`.
+The build files can also be obtained from the latest GitLab CI build artifacts.
 
-Once you have installed the visualiser, a pre-commit hook is added that uses `prettier` to check the code formatting before committing.
-If you get an error from the pre-commit hook, run `npm run prettier`
+### Local deployment
 
-There is a rudimentary set of tests that makes sure that the hardware page and the plot page renders. Run `npm test` to fire it up
+**Docker / Podman (recommended)**
 
-For convenience, there is a Flask server that emulates the used endpoints of the Experiment Library.
-See [test/README.md](test/README.md) for usage.
+Once built, start the container with:
 
-## Local deployment on an nginx server
-
-**Try to use the globally maintained tiqidocs.phys.ethz.ch/visualiser deployment if you can**
-
-To deploy the library visualiser, you can download the latest build artifacts and serve them through an nginx server.
-
-- Extract the artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
-- Add an nginx server configuration into the http section of `/etc/nginx/nginx.conf`
-
+```bash
+podman compose up
 ```
-   server {
-        listen 80;
-        root /var/www/html/library-visualiser/dist/;
-        index index.html;
-        server_name library-visualiser.lab;
 
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
+The visualiser will be available at [http://localhost:8080](http://localhost:8080).
+
+**Manual deployment on an nginx server**
+
+- Copy the build artifacts to `/var/www/html/library-visualiser`. This will put the files into `/var/www/html/library-visualiser/dist/`
+- Add a server block to the `http` section of `/etc/nginx/nginx.conf`:
+
+```nginx
+server {
+    listen 80;
+    root /var/www/html/library-visualiser/dist/;
+    index index.html;
+    server_name library-visualiser.lab;
+
+    location / {
+        try_files $uri $uri/ /index.html;
     }
+}
 ```
 
-- Restart nginx (`systemctl restart nginx`)
-- Configure your router to forward this URL to the nginx server.
-  If you're using an edgerouter, add
+- Restart nginx: `systemctl restart nginx`
+- Configure your router to forward the hostname to the nginx server. For example, on an EdgeRouter:
   ```
   address=/library-visualiser.lab/<server-ip-address>
   ```
-  to `Config Tree: service -> dns -> forwarding (options)`
+  under `Config Tree: service → dns → forwarding (options)`.
+
+## Configuration
+
+The visualiser uses cookies to store the address and port of your Experiment Library instance. Go to the _Configure_ menu entry, fill in the connection details, and click _Connect_. The form will indicate whether the connection succeeded.
+
+### Connection issues
+
+If the visualiser cannot reach your Experiment Library instance, your browser may be blocking the request due to mixed content (e.g. if the visualiser is served over HTTPS but the library does not use SSL).
+
+- **Chrome**: allow "insecure content" in the site settings permissions — see [Google's guide](https://support.google.com/chrome/answer/114662)
+- **Firefox**: disable "mixed content" blocking — see [Mozilla's guide](https://support.mozilla.org/en-US/kb/mixed-content-blocking-firefox)
+
+## Usage
+
+The visualiser connects to the Experiment Library using [socket.io](https://socket.io/docs/v3). When the library updates its `hardware/scope_sequence` attribute, the visualiser is notified via the socket and immediately renders the new sequence.
+
+Trigger an update from your Library using `update_zedboard_sequence` in any of your experiments.
+
+The visualiser reads `Hardware/hardware_description` from your Library to determine which RF and TTL channels are active, and automatically shows or hides them accordingly. You can also manage channel visibility manually via the _Channels_ button.
+
+The _Hardware_ tab shows the full hardware description of your setup.
+
+The visualiser is built on [plotly.js](https://plotly.com/javascript/), so you can zoom in and out of sequences interactively.
+
+## Development
+
+```bash
+# Clone the repository
+git clone <repo-url>
+cd <repo>
+
+# Install Node.js 22 LTS (recommended via nvm or n)
+# https://github.com/nvm-sh/nvm
+# https://github.com/tj/n
+
+# Install dependencies
+npm install
+
+# Start the development server (auto-rebuilds on changes)
+npm start
+```
+
+To test a production build locally:
+
+```bash
+npm run build
+npm run serve
+```
+
+A pre-commit hook using `prettier` is installed automatically. If it rejects a commit, run `npm run prettier` to fix formatting.
+
+### Tests
+
+A basic test suite verifies that the hardware page and the plot page render correctly:
+
+```bash
+npm test
+```
+
+### Emulating the Experiment Library
+
+A lightweight Flask server is included to emulate the endpoints used by the Experiment Library, useful for local development without a running library instance. See [test/README.md](test/README.md) for details.
+
+## License
+
+The `ionpulse-sequence-visualiser` is available under the MIT license. See [LICENSE](LICENSE).

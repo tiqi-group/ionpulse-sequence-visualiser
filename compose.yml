@@ -1,5 +1,8 @@
 services:
   frontend:
-    image:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ionpulse-sequence-visualiser
     ports:
       - "8080:80"
