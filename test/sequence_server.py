@@ -25,7 +25,7 @@ if __name__ == "__main__":
         print("Can't retrieve local ip");
     hosts += [socket.gethostname()]
     hosts += [socket.gethostname()+".lab"]
-    ports = [8003, 3000, 3006]
+    ports = [8003, 3000, 3006, 8080]
     ports = [ f":{port}" for port in ports ]
 
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
