@@ -1,14 +1,15 @@
+import argparse
+import itertools
+import json
+import socket
 from os.path import isfile
-import socketio 
+from time import sleep
+
+import socketio
 from flask import Flask
 from flask_cors import CORS
-import json
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from time import sleep
-import socket
-import itertools
-import argparse
+from watchdog.observers import Observer
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,8 +22,8 @@ if __name__ == "__main__":
     try:
         local_ip = socket.gethostbyname(socket.gethostname())
         hosts += [local_ip]
-    except:
-        print("Can't retrieve local ip");
+    except Exception:
+        print("Can't retrieve local ip")
     hosts += [socket.gethostname()]
     hosts += [socket.gethostname()+".lab"]
     ports = [8003, 3000, 3006, 8080]
@@ -73,9 +74,9 @@ if __name__ == "__main__":
                     try:
                         sequence_json = json.loads(data)
                         channel_index_to_hw = sequence_json["header"]["channel_idx_to_hw"]
-                    except:
+                    except Exception:
                         pass
-        except:
+        except Exception:
             pass
         d = dict()
         d["RFs"] = dict()
@@ -153,7 +154,7 @@ if __name__ == "__main__":
                 data = json.load(f)
             # Double dump to return a properly escaped string
             return json.dumps(json.dumps(data))
-        except:
+        except Exception:
             pass
 
         return ""
@@ -179,10 +180,10 @@ if __name__ == "__main__":
                                 "name": f"Hardware.{self.name}",
                                 "value": data
                                 }})
-                        except:
+                        except Exception:
                             print(f"Can't emit notification for change in file {self.filename}")
 
-            except:
+            except Exception:
                 print(f"Can't open file {self.filename}")
 
         def on_modified(self, event):
