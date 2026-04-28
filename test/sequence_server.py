@@ -15,6 +15,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
     parser.add_argument("--file", required=False, default="ionpulse_seq.json")
+    parser.add_argument("--hardware-file", required=False, default="")
     args = parser.parse_args()
 
     protocols = ["http://"]
@@ -62,6 +63,24 @@ if __name__ == "__main__":
 
     @app.route("/Hardware/description")
     def description() -> str:
+        if args.hardware_file:
+            try:
+                with open(args.hardware_file) as f:
+                    data = f.read()
+                    if len(data) > 0:
+                        try:
+                            d = json.loads(data)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        else:
+            d = _default_hardware_description()
+
+        # Double dump to return a properly escaped string
+        return json.dumps(json.dumps(d))
+        
+    def _default_hardware_description() -> dict:
         channel_index_to_hw = [
                 {
                     "type": "Readout"
@@ -143,9 +162,7 @@ if __name__ == "__main__":
                 pass
             else:
                 raise KeyError(f"Unrecognized hardware type '{hw_ch['hardware']}'")
-        
-        # Double dump to return a properly escaped string
-        return json.dumps(json.dumps(d))
+        return d
 
     @app.route("/Hardware/sequence")
     def sequence() -> str:
