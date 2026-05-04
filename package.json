@@ -38,7 +38,7 @@
   "scripts": {
     "preinstall": "./scripts/preinstall.sh",
     "start": "vite",
-    "build": "vite build --base=./",
+    "build": "vite build",
     "serve": "vite preview",
     "test": "./scripts/run-test-server.sh",
     "prettier": "prettier --write ."
