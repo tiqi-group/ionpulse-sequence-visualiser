@@ -16,3 +16,9 @@ services:
     volumes:
       - ${SEQUENCE_FILE}:/data/sequence.json:ro
       - ${HARDWARE_FILE}:/data/hardware.json:ro
+    command: >
+      python sequence_server.py
+      --file /data/sequence.json
+      --hardware-file /data/hardware.json
+      --visualizer-port ${VISUALIZER_PORT:-8080}
+      --server-port ${SEQUENCE_SERVER_PORT:-8003}

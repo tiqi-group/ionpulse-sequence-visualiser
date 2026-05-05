@@ -16,6 +16,8 @@ if __name__ == "__main__":
     parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
     parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     parser.add_argument("--hardware-file", required=False, default="")
+    parser.add_argument("--visualizer-port", type=int, default=8080)
+    parser.add_argument("--server-port", type=int, default=8003)
     args = parser.parse_args()
 
     protocols = ["http://"]
@@ -27,7 +29,7 @@ if __name__ == "__main__":
         print("Can't retrieve local ip")
     hosts += [socket.gethostname()]
     hosts += [socket.gethostname()+".lab"]
-    ports = [8003, 3000, 3006, 8080]
+    ports = list({args.server_port, args.visualizer_port, 3000, 3006})
     ports = [ f":{port}" for port in ports ]
 
     origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
