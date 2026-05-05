@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import json
+import logging
 import socket
 from os.path import isfile
 from time import sleep
@@ -12,13 +13,21 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--debug", help="Run flask server in debug mode", action="store_true")
+    parser.add_argument(
+        "--debug", help="Run flask server in debug mode", action="store_true"
+    )
     parser.add_argument("--file", required=False, default="ionpulse_seq.json")
     parser.add_argument("--hardware-file", required=False, default="")
     parser.add_argument("--visualizer-port", type=int, default=8080)
     parser.add_argument("--server-port", type=int, default=8003)
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG, format="%(levelname)s %(name)s: %(message)s"
+    )
 
     protocols = ["http://"]
     hosts = ["localhost"]
@@ -28,25 +37,36 @@ if __name__ == "__main__":
     except Exception:
         print("Can't retrieve local ip")
     hosts += [socket.gethostname()]
-    hosts += [socket.gethostname()+".lab"]
+    hosts += [socket.gethostname() + ".lab"]
+    fqdn = socket.getfqdn()
+    if fqdn not in hosts:
+        hosts += [fqdn]
     ports = list({args.server_port, args.visualizer_port, 3000, 3006})
-    ports = [ f":{port}" for port in ports ]
+    ports = [f":{port}" for port in ports]
 
-    origins = [ ''.join(comb) for comb in itertools.product(protocols, hosts, ports)]
+    origins = ["".join(comb) for comb in itertools.product(protocols, hosts, ports)]
 
     origins += ["https://tiqidocs.phys.ethz.ch"]
 
+    logger.info("hostname: %s", socket.gethostname())
+    logger.info("fqdn: %s", fqdn)
+    logger.info("Allowed CORS origins:\n  %s", "\n  ".join(origins))
+
     app = Flask("Sequence server")
     CORS(app, origins=origins)
+
+    @app.after_request
+    def add_private_network_header(response):
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
     # create a Socket.IO server
     sio = socketio.Server(
-            async_mode="threading",
-            logging=True,
-            cors_allowed_origins=origins
-            )
+        async_mode="threading", logging=True, cors_allowed_origins=origins
+    )
 
     # wrap with a WSGI application
-    app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app, socketio_path='ws/socket.io')
+    app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app, socketio_path="ws/socket.io")
 
     def get_channel_name(channel_map, i):
         for key in channel_map:
@@ -81,12 +101,10 @@ if __name__ == "__main__":
 
         # Double dump to return a properly escaped string
         return json.dumps(json.dumps(d))
-        
+
     def _default_hardware_description() -> dict:
         channel_index_to_hw = [
-                {
-                    "type": "Readout"
-                },
+            {"type": "Readout"},
         ]
         try:
             with open(args.file) as f:
@@ -94,7 +112,9 @@ if __name__ == "__main__":
                 if len(data) > 0:
                     try:
                         sequence_json = json.loads(data)
-                        channel_index_to_hw = sequence_json["header"]["channel_idx_to_hw"]
+                        channel_index_to_hw = sequence_json["header"][
+                            "channel_idx_to_hw"
+                        ]
                     except Exception:
                         pass
         except Exception:
@@ -105,58 +125,57 @@ if __name__ == "__main__":
         analog_idx = 0
         for hw_ch in channel_index_to_hw:
             if hw_ch["hardware"] == "DIOHardware":
-
                 d["TTLs"] = dict()
                 for i in range(32):
                     d["TTLs"][f"TTL{i}"] = {
-                            "name": hw_ch.get("name", f"TTL {i:02d}"),
-                            "hw_channels": [hw_ch],
-                            "sub_channel": {
-                                "idx": i,
-                                "type": "output",
-                                },
-                            }
+                        "name": hw_ch.get("name", f"TTL {i:02d}"),
+                        "hw_channels": [hw_ch],
+                        "sub_channel": {
+                            "idx": i,
+                            "type": "output",
+                        },
+                    }
 
                 d["PMTs"] = dict()
                 for i in range(8):
                     d["PMTs"][f"PMT{i}"] = {
-                            "name": hw_ch.get("name", f"PMT {i:02d}"),
-                            "hw_channels": [hw_ch],
-                            "sub_channel": {
-                                "idx": i,
-                                "type": "input_gate",
-                                },
-                            }
+                        "name": hw_ch.get("name", f"PMT {i:02d}"),
+                        "hw_channels": [hw_ch],
+                        "sub_channel": {
+                            "idx": i,
+                            "type": "input_gate",
+                        },
+                    }
             elif hw_ch["hardware"] == "QuenchHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
-                        "name": hw_ch.get("name", f"Quench RF {rf_idx:02d}"),
-                        "type": "single pass",
-                        "central_frequency": 100,
-                        "order": 1,
-                        "hw_channels":[hw_ch]
-                        }
+                    "name": hw_ch.get("name", f"Quench RF {rf_idx:02d}"),
+                    "type": "single pass",
+                    "central_frequency": 100,
+                    "order": 1,
+                    "hw_channels": [hw_ch],
+                }
                 rf_idx = rf_idx + 1
             elif hw_ch["hardware"] == "DDSHardware":
                 d["RFs"][f"RF{rf_idx}"] = {
-                        "name": hw_ch.get("name", f"DDS {rf_idx:02d}"),
-                        "type": "single pass",
-                        "central_frequency": 100,
-                        "order": 1,
-                        "hw_channels":[hw_ch]
-                        }
+                    "name": hw_ch.get("name", f"DDS {rf_idx:02d}"),
+                    "type": "single pass",
+                    "central_frequency": 100,
+                    "order": 1,
+                    "hw_channels": [hw_ch],
+                }
                 rf_idx = rf_idx + 1
             elif hw_ch["hardware"] == "Readout":
                 d["Readouts"] = dict()
                 d["Readouts"]["Readout0"] = {
-                        "name": "Readout 0",
-                        "hw_channels": [hw_ch]
-                        }
+                    "name": "Readout 0",
+                    "hw_channels": [hw_ch],
+                }
             elif hw_ch["hardware"] == "FastinoHardware":
                 d["RTDs"] = dict()
                 d["RTDs"][f"Fastino{analog_idx}"] = {
-                        "name": hw_ch.get("name", f"Waveform {analog_idx:02d}"),
-                        "hw_channels": [hw_ch]
-                        }
+                    "name": hw_ch.get("name", f"Waveform {analog_idx:02d}"),
+                    "hw_channels": [hw_ch],
+                }
                 analog_idx += 1
             elif hw_ch["hardware"] == "DDSADCHardware":
                 pass
@@ -181,7 +200,7 @@ if __name__ == "__main__":
     @app.route("/")
     def index() -> str:
         return "Index page"
-    
+
     class JsonChangeHandler(FileSystemEventHandler):
         def __init__(self, name, filename):
             self.name = name
@@ -195,12 +214,19 @@ if __name__ == "__main__":
                     if len(data) > 0:
                         try:
                             json.loads(data)
-                            sio.emit("notify",{"data": {
-                                "name": f"Hardware.{self.name}",
-                                "value": data
-                                }})
+                            sio.emit(
+                                "notify",
+                                {
+                                    "data": {
+                                        "name": f"Hardware.{self.name}",
+                                        "value": data,
+                                    }
+                                },
+                            )
                         except Exception:
-                            print(f"Can't emit notification for change in file {self.filename}")
+                            print(
+                                f"Can't emit notification for change in file {self.filename}"
+                            )
 
             except Exception:
                 print(f"Can't open file {self.filename}")
