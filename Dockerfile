@@ -8,7 +8,7 @@ RUN apk add --no-cache bash
 # Copy package files and install dependencies
 COPY package*.json ./
 COPY scripts ./scripts
-RUN npm ci
+RUN sed -i 's/\r$//' ./scripts/* && chmod +x ./scripts/*.sh && npm ci
 
 # Copy source files and build
 COPY index.html vite.config.mts ./
@@ -22,6 +22,9 @@ FROM nginx:alpine
 
 # copy build output from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# SPA fallback: serve index.html for all unknown routes
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

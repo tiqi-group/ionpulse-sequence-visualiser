@@ -20,6 +20,8 @@ ionpulse*.json
 
 __*
 .*
+!.env.example
+!.gitattributes
 !.gitignore
 !.gitmodules
 !.gitlab-ci.yml

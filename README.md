@@ -111,7 +111,7 @@ npm test
 
 ### Emulating the Experiment Library
 
-A lightweight Flask server is included to emulate the endpoints used by the Experiment Library, useful for local development without a running library instance. See [test/README.md](test/README.md) for details.
+A lightweight Flask server is included to emulate the endpoints used by the Experiment Library, useful for local development without a running library instance. See [test/README.md](test/README.md) for details, or [compose.md](compose.md) to run it via Docker Compose.
 
 ## License
 
