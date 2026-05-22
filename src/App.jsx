@@ -102,76 +102,42 @@ function App() {
 
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
-    const hardware_url = `http://${url}/Hardware`;
 
     const socket = io(`ws://${url}`, {
       path: "/ws/socket.io/",
-      autoConnect: false,
+      transports: ["websocket"],
     });
 
     function updateIonpulseSequenceFromJSON(value) {
-      // Extracting data from the notification
-      if (value.data.name == "Hardware.sequence") {
-        const json_sequence = JSON.parse(value.data.value);
-        updateIonpulseSequence(json_sequence);
-      }
+      updateIonpulseSequence(JSON.parse(value));
     }
 
-    let isConnectionUp = true;
     setConnectionStatus(ConnectionStatus.connecting);
-    const controller = new AbortController();
-    const fetchData = async () => {
-      let promise = fetch(hardware_url + "/description", {
-        signal: controller.signal,
-      })
-        .then((response) => {
-          if (response.ok) {
-            response.json().then((data) => {
-              if (isConnectionUp) {
-                updateChannelDescription(JSON.parse(data));
-              }
-            });
-            setConnectionStatus(ConnectionStatus.connected);
-          } else {
-            isConnectionUp = false;
-            setConnectionStatus(ConnectionStatus.failed);
-            setConnectionErrMsg(
-              "" + response.status + " " + response.statusText,
-            );
-          }
-        })
-        .catch((exception) => {
-          if (exception instanceof TypeError) {
-            setConnectionStatus(ConnectionStatus.failed);
-            setConnectionErrMsg(exception.message);
-          }
-          isConnectionUp = false;
-        });
-      fetch(hardware_url + "/sequence", { signal: controller.signal })
-        .then((response) => response.json())
-        .then((data) => {
-          if (isConnectionUp) {
-            updateIonpulseSequence(JSON.parse(data));
-          }
-        })
-        .catch((response) => {
-          isConnectionUp = false;
-        });
+    socket.on("connect", () => setConnectionStatus(ConnectionStatus.connected));
+    socket.on("disconnect", () => setConnectionStatus(ConnectionStatus.failed));
 
-      await promise;
+    socket.emit(
+      "trigger_method",
+      {
+        access_path: "experiments.get_hardware_description",
+        args: null,
+        kwargs: null,
+      },
+      (input) => {
+        updateChannelDescription(JSON.parse(input.value));
+      },
+    );
 
-      if (isConnectionUp) {
-        socket.connect();
-        socket.on("notify", updateIonpulseSequenceFromJSON);
-      }
-    };
-
-    fetchData();
+    socket.on("last_experiment_sequence", updateIonpulseSequenceFromJSON);
 
     return () => {
-      isConnectionUp = false;
-      controller.abort();
-      socket.off("notify", updateIonpulseSequenceFromJSON);
+      socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
+      socket.off("connect", () =>
+        setConnectionStatus(ConnectionStatus.connected),
+      );
+      socket.off("disconnect", () =>
+        setConnectionStatus(ConnectionStatus.failed),
+      );
     };
   }, [library]);
 
