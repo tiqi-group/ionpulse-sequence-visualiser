@@ -85,6 +85,7 @@ if __name__ == "__main__":
 
     @app.route("/Hardware/description")
     def description() -> str:
+        d = {}
         if args.hardware_file:
             try:
                 with open(args.hardware_file) as f:
@@ -96,7 +97,8 @@ if __name__ == "__main__":
                             pass
             except Exception:
                 pass
-        else:
+
+        if not d:
             d = _default_hardware_description()
 
         # Double dump to return a properly escaped string
