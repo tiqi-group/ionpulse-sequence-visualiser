@@ -152,9 +152,19 @@ function createLayout(
   const totalRFHeight = numberRFAxes * (rfAxisHeight + pad) - pad;
   const totalHeight = totalTTLHeight + totalRFHeight;
 
+  const isDark =
+    document.documentElement.getAttribute("data-bs-theme") === "dark";
+
   let the_layout = {
     width: window.innerWidth - 100,
     height: totalHeight + margin.t + margin.b,
+    // Inherit the page background (follows the bootstrap theme) instead of
+    // plotly's default white.
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: {
+      color: isDark ? "#dee2e6" : "#212529",
+    },
     margin: {
       ...margin,
     },
@@ -624,6 +634,8 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
+  const isDarkTheme =
+    document.documentElement.getAttribute("data-bs-theme") === "dark";
   let greyBackground = true;
   for (const channel of enabledKeys["RF"]) {
     const axisIndices = channelToAxisIdx[channel];
@@ -636,7 +648,7 @@ const PulseSequencePlot = function SequencePlot({
         y0: layout_to_use["yaxis" + axisIndices.at(-1)].domain[0],
         x1: 1,
         y1: layout_to_use["yaxis" + axisIndices.at(0)].domain[1],
-        fillcolor: "#d3d3d3",
+        fillcolor: isDarkTheme ? "#41464b" : "#d3d3d3",
         opacity: 0.7,
         line: {
           width: 0,

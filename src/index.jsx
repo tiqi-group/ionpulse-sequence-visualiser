@@ -8,6 +8,16 @@ import { BrowserRouter } from "react-router-dom";
 
 const getBasename = (path) => path.substr(0, path.lastIndexOf("/"));
 
+// Theme can be forced via ?theme=dark|light (used by ICON when embedding the
+// visualiser in an iframe); otherwise follow the browser preference.
+const themeParam = new URLSearchParams(window.location.search).get("theme");
+const theme = ["dark", "light"].includes(themeParam)
+  ? themeParam
+  : window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+document.documentElement.setAttribute("data-bs-theme", theme);
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
