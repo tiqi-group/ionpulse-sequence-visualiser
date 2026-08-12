@@ -113,8 +113,10 @@ function App() {
     }
 
     setConnectionStatus(ConnectionStatus.connecting);
-    socket.on("connect", () => setConnectionStatus(ConnectionStatus.connected));
-    socket.on("disconnect", () => setConnectionStatus(ConnectionStatus.failed));
+    const onConnect = () => setConnectionStatus(ConnectionStatus.connected);
+    const onDisconnect = () => setConnectionStatus(ConnectionStatus.failed);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     socket.emit(
       "trigger_method",
@@ -124,7 +126,11 @@ function App() {
         kwargs: null,
       },
       (input) => {
-        updateChannelDescription(JSON.parse(input.value));
+        try {
+          updateChannelDescription(JSON.parse(input.value));
+        } catch {
+          console.warn("Could not parse hardware description");
+        }
       },
     );
 
@@ -132,12 +138,9 @@ function App() {
 
     return () => {
       socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
-      socket.off("connect", () =>
-        setConnectionStatus(ConnectionStatus.connected),
-      );
-      socket.off("disconnect", () =>
-        setConnectionStatus(ConnectionStatus.failed),
-      );
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.disconnect();
     };
   }, [library]);
 
