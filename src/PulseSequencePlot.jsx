@@ -332,6 +332,10 @@ function getTraces(
   }
   if (["sample", "freq", "phase", "amp"].includes(plotType)) {
     const [time, yData] = expandToWaveform(channelPlotData, [plotType]);
+    // Map each time to its last index up front; a lastIndexOf() per event
+    // would scan the expanded waveform once per event (O(events * samples)).
+    const timeToIdx = new Map();
+    time.forEach((t, idx) => timeToIdx.set(t, idx));
     for (let toneIdx = 0; toneIdx < yData[plotType].length; toneIdx++) {
       let lineTrace = structuredClone(trace);
       lineTrace.mode = "lines";
@@ -339,7 +343,7 @@ function getTraces(
       lineTrace.y = yData[plotType][toneIdx];
       if (toneIdx === 0) {
         trace.y = channelPlotData.time.map(
-          (t) => lineTrace.y[lineTrace.x.lastIndexOf(t)],
+          (t) => lineTrace.y[timeToIdx.get(t) ?? -1],
         );
       }
       if (plotType === "amp") {
