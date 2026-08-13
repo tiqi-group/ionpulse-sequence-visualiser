@@ -5,6 +5,7 @@ import { SequenceParser } from "./SequenceParser.js";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { Modal, Spinner, Button } from "react-bootstrap";
 import { useNavigate } from "react-router";
+import { isEmbedded } from "./embeddedMode";
 
 /**
  * @param {Object} channelDescription description for each visual channel as returned by the experiment library
@@ -54,16 +55,18 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
           )}
         </Modal.Body>
 
-        <Modal.Footer>
-          <Button
-            variant="primary"
-            onClick={() => {
-              navigate("/config");
-            }}
-          >
-            Go to configuration
-          </Button>
-        </Modal.Footer>
+        {!isEmbedded && (
+          <Modal.Footer>
+            <Button
+              variant="primary"
+              onClick={() => {
+                navigate("/config");
+              }}
+            >
+              Go to configuration
+            </Button>
+          </Modal.Footer>
+        )}
       </Modal>
       <SequenceVisualiser
         channelDescription={channelDescription}
