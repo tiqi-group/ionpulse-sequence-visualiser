@@ -9,6 +9,7 @@ import { DescriptionOverride } from "./DescriptionOverride";
 
 import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { sequenceScope, isScoped } from "./sequenceScope";
 
 function App() {
   const [remoteChannelDescription, setRemoteChannelDescription] = useState({});
@@ -101,8 +102,9 @@ function App() {
   const [connectionErrMsg, setConnectionErrMsg] = useState("");
 
   // When disabled, incoming sequence events no longer overwrite the display
-  // (similar to the "Latest" switch of ICON's data view).
-  const [visualizeLatest, setVisualizeLatest] = useState(true);
+  // (similar to the "Latest" switch of ICON's data view). Windows opened for
+  // a specific past sequence start with live updates off.
+  const [visualizeLatest, setVisualizeLatest] = useState(!isScoped);
   const visualizeLatestRef = useRef(visualizeLatest);
   visualizeLatestRef.current = visualizeLatest;
 
@@ -142,6 +144,40 @@ function App() {
     );
 
     socket.on("last_experiment_sequence", updateIonpulseSequenceFromJSON);
+
+    // Fetch the initial sequence: the requested scope, or the latest executed
+    // one (the event above only covers sequences executed from now on).
+    const serialized = (type, value) => ({
+      full_access_path: "",
+      type: type,
+      value: value,
+      readonly: false,
+      doc: null,
+    });
+    const scopeKwargs = {};
+    if (sequenceScope.jobId !== null) {
+      scopeKwargs["job_id"] = serialized("int", sequenceScope.jobId);
+    }
+    if (sequenceScope.datapoint !== null) {
+      scopeKwargs["index"] = serialized("int", sequenceScope.datapoint);
+    }
+    socket.emit(
+      "trigger_method",
+      {
+        access_path: "data.get_hardware_instructions",
+        args: null,
+        kwargs: serialized("dict", scopeKwargs),
+      },
+      (input) => {
+        try {
+          if (input.value) {
+            updateIonpulseSequence(JSON.parse(input.value));
+          }
+        } catch {
+          console.warn("Could not parse sequence JSON");
+        }
+      },
+    );
 
     return () => {
       socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
