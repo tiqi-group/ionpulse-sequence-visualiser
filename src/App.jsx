@@ -100,6 +100,12 @@ function App() {
 
   const [connectionErrMsg, setConnectionErrMsg] = useState("");
 
+  // When disabled, incoming sequence events no longer overwrite the display
+  // (similar to the "Latest" switch of ICON's data view).
+  const [visualizeLatest, setVisualizeLatest] = useState(true);
+  const visualizeLatestRef = useRef(visualizeLatest);
+  visualizeLatestRef.current = visualizeLatest;
+
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
 
@@ -109,6 +115,7 @@ function App() {
     });
 
     function updateIonpulseSequenceFromJSON(value) {
+      if (!visualizeLatestRef.current) return;
       updateIonpulseSequence(JSON.parse(value));
     }
 
@@ -146,7 +153,10 @@ function App() {
 
   return (
     <>
-      <NavBar />
+      <NavBar
+        visualizeLatest={visualizeLatest}
+        onVisualizeLatestChange={setVisualizeLatest}
+      />
       <Routes>
         <Route
           path="/plot"
