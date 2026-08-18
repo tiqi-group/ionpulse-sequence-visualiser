@@ -464,29 +464,53 @@ function setOpacity(cString, opacity) {
   return cString.replace("1)", "" + opacity + ")");
 }
 
+/**
+ * useState variant persisted in localStorage, so plot settings survive
+ * reloads, popup windows, and browser restarts.
+ */
+function usePersistentState(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(key));
+      if (stored !== null) return stored;
+    } catch {
+      console.warn(`Invalid entry in localStorage for '${key}'`);
+    }
+    return initialValue;
+  });
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+  return [value, setValue];
+}
+
 const PulseSequencePlot = function SequencePlot({
   channelDescription,
   channelEnabled,
   sequenceData,
   sequenceBlockData,
 }) {
-  const [channelYDataType, setChannelYDataType] = useState(() => {
-    let init = {};
-    for (const k in channelDescription) {
-      if (k.includes("RF")) {
-        // Extend channels settings
-        init[k] = "freq";
-      }
-    }
-    return init;
-  });
+  // Missing channels are filled in with "freq" by the union check below.
+  const [channelYDataType, setChannelYDataType] = usePersistentState(
+    "channelYDataType",
+    {},
+  );
   const [figureConfig, setFigureConfig] = useState({});
 
-  const [individualRFHeight, setIndividualRFHeight] = useState(75);
-  const [individualTTLHeight, setIndividualTTLHeight] = useState(45);
-  const [axisPad, setAxisPad] = useState(10);
-  const [isAnnotation90, setIsAnnotation90] = useState(true);
-  const [isPlotMode, setIsPlotMode] = useState(false);
+  const [individualRFHeight, setIndividualRFHeight] = usePersistentState(
+    "rfAxisHeight",
+    75,
+  );
+  const [individualTTLHeight, setIndividualTTLHeight] = usePersistentState(
+    "ttlAxisHeight",
+    45,
+  );
+  const [axisPad, setAxisPad] = usePersistentState("axisPad", 10);
+  const [isAnnotation90, setIsAnnotation90] = usePersistentState(
+    "rotateAnnotations",
+    true,
+  );
+  const [isPlotMode, setIsPlotMode] = usePersistentState("plotMode", false);
 
   const channelYDataTypeKeys = Object.keys(channelYDataType);
   const channelDescKeys = Object.keys(channelDescription).filter(
