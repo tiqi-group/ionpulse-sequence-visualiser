@@ -10,8 +10,10 @@ import { DescriptionOverride } from "./DescriptionOverride";
 import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { sequenceScope, isScoped } from "./sequenceScope";
+import { loadSequenceView, saveSequenceView } from "./sequenceViewState";
 
 function App() {
+  const [restoredView] = useState(loadSequenceView);
   const [remoteChannelDescription, setRemoteChannelDescription] = useState({});
   const [channelDescription, setChannelDescription] = useState(
     remoteChannelDescription,
@@ -40,7 +42,7 @@ function App() {
     return init;
   });
   const [ionpulseSequence, setIonpulseSequence] = useState(
-    remoteIonpulseSequence,
+    () => restoredView?.sequence ?? remoteIonpulseSequence,
   );
   const [sequenceOverride, setSequenceOverride] = useState(false);
 
@@ -104,9 +106,15 @@ function App() {
   // When disabled, incoming sequence events no longer overwrite the display
   // (similar to the "Latest" switch of ICON's data view). Windows opened for
   // a specific past sequence start with live updates off.
-  const [visualizeLatest, setVisualizeLatest] = useState(!isScoped);
+  const [visualizeLatest, setVisualizeLatest] = useState(
+    restoredView?.visualizeLatest ?? !isScoped,
+  );
   const visualizeLatestRef = useRef(visualizeLatest);
   visualizeLatestRef.current = visualizeLatest;
+
+  useEffect(() => {
+    saveSequenceView(visualizeLatest, ionpulseSequence);
+  }, [visualizeLatest, ionpulseSequence]);
 
   useEffect(() => {
     const url = `${library.address}:${library.port}`;
@@ -146,7 +154,8 @@ function App() {
     socket.on("last_experiment_sequence", updateIonpulseSequenceFromJSON);
 
     // Fetch the initial sequence: the requested scope, or the latest executed
-    // one (the event above only covers sequences executed from now on).
+    // one (the event above only covers sequences executed from now on). A
+    // restored sequence is kept instead, so that it is not overwritten.
     const serialized = (type, value) => ({
       full_access_path: "",
       type: type,
@@ -161,23 +170,25 @@ function App() {
     if (sequenceScope.datapoint !== null) {
       scopeKwargs["index"] = serialized("int", sequenceScope.datapoint);
     }
-    socket.emit(
-      "trigger_method",
-      {
-        access_path: "data.get_hardware_instructions",
-        args: null,
-        kwargs: serialized("dict", scopeKwargs),
-      },
-      (input) => {
-        try {
-          if (input.value) {
-            updateIonpulseSequence(JSON.parse(input.value));
+    if (restoredView?.sequence == null) {
+      socket.emit(
+        "trigger_method",
+        {
+          access_path: "data.get_hardware_instructions",
+          args: null,
+          kwargs: serialized("dict", scopeKwargs),
+        },
+        (input) => {
+          try {
+            if (input.value) {
+              updateIonpulseSequence(JSON.parse(input.value));
+            }
+          } catch {
+            console.warn("Could not parse sequence JSON");
           }
-        } catch {
-          console.warn("Could not parse sequence JSON");
-        }
-      },
-    );
+        },
+      );
+    }
 
     return () => {
       socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
