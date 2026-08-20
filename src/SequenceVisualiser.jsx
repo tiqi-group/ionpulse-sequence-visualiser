@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { lazy, Suspense } from "react";
 
 import ChannelEnableOffcanvas from "./ChannelEnableOffcanvas";
@@ -14,6 +14,12 @@ const SequenceVisualiser = function SequenceVisualiser({
   sequenceConfig,
   setSequenceConfig,
 }) {
+  // Whether the user has made an explicit channel selection (in this session
+  // or a previous one). Until then, channels with data are enabled
+  // automatically.
+  const userConfigured = useRef(
+    localStorage.getItem("channelEnabledUserChosen") === "true",
+  );
   const [channelEnabled, setChannelEnabled] = useState(() => {
     let initObject;
     try {
@@ -50,6 +56,8 @@ const SequenceVisualiser = function SequenceVisualiser({
   }
 
   function handleEnableChange(e) {
+    userConfigured.current = true;
+    localStorage.setItem("channelEnabledUserChosen", "true");
     let newChannelEnabled = { ...channelEnabled };
     newChannelEnabled[e.name] = !newChannelEnabled[e.name];
     setChannelEnabled(newChannelEnabled);
@@ -142,6 +150,22 @@ const SequenceVisualiser = function SequenceVisualiser({
     },
     {},
   );
+
+  // Enable channels with data automatically until the user makes an explicit
+  // selection via the Channels panel.
+  useEffect(() => {
+    if (userConfigured.current) return;
+    const newlyAvailable = Object.keys(availableChannels).filter(
+      (key) => availableChannels[key] && !channelEnabled[key],
+    );
+    if (newlyAvailable.length > 0) {
+      setChannelEnabled((prev) => {
+        const next = { ...prev };
+        for (const key of newlyAvailable) next[key] = true;
+        return next;
+      });
+    }
+  });
 
   return (
     <div className="mx-3">

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useImmer } from "use-immer";
 import { SequenceVisualiser } from "./SequenceVisualiser";
 
@@ -5,6 +6,9 @@ import { SequenceParser } from "./SequenceParser.js";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { Modal, Spinner, Button } from "react-bootstrap";
 import { useNavigate } from "react-router";
+import { isEmbedded } from "./embeddedMode";
+
+const SEQUENCE_CONFIG_KEY = "sequenceConfig";
 
 /**
  * @param {Object} channelDescription description for each visual channel as returned by the experiment library
@@ -17,7 +21,24 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
   connectionStatus,
   connectionErrMsg,
 }) {
-  const [sequenceConfig, setSequenceConfig] = useImmer({});
+  // How the sequence blocks are displayed (full, contracted, minimized,
+  // hidden). Kept in sessionStorage so that it survives reloads and being
+  // unmounted by an embedding application. Entries of blocks that the current
+  // sequence does not contain are simply unused.
+  const [sequenceConfig, setSequenceConfig] = useImmer(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(SEQUENCE_CONFIG_KEY)) ?? {};
+    } catch {
+      console.warn(
+        `Invalid entry in sessionStorage for '${SEQUENCE_CONFIG_KEY}'`,
+      );
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(SEQUENCE_CONFIG_KEY, JSON.stringify(sequenceConfig));
+  }, [sequenceConfig]);
 
   // TODO: Use function instead of Object
   let sequenceParser = new SequenceParser(ionpulseSequence, sequenceConfig);
@@ -54,16 +75,18 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
           )}
         </Modal.Body>
 
-        <Modal.Footer>
-          <Button
-            variant="primary"
-            onClick={() => {
-              navigate("/config");
-            }}
-          >
-            Go to configuration
-          </Button>
-        </Modal.Footer>
+        {!isEmbedded && (
+          <Modal.Footer>
+            <Button
+              variant="primary"
+              onClick={() => {
+                navigate("/config");
+              }}
+            >
+              Go to configuration
+            </Button>
+          </Modal.Footer>
+        )}
       </Modal>
       <SequenceVisualiser
         channelDescription={channelDescription}
