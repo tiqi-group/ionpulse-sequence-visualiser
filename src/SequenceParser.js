@@ -1028,15 +1028,16 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
           const dt = times[1] - times[0];
           times.forEach((_, idx) => {
             value["sample"][0][currentIdx + idx] +=
-              paramArrays["amp"][idx % paramsArrays["amp"].length] *
+              paramArrays["amp"][idx % paramArrays["amp"].length] *
               Math.cos(
                 2 *
                   Math.PI *
                   (cumSumPhase +
                     paramArrays["phase"][idx % paramArrays["phase"].length] /
-                      360),
+                      360 +
+                    paramArrays["freq"][0] * times[0] * freqScaling),
               );
-            cumSumPhase += paramsArrays["freq"][idx] * freqScaling * dt;
+            cumSumPhase += paramArrays["freq"][idx] * freqScaling * dt;
           });
         } else {
           times.forEach((timeVal, idx) => {
