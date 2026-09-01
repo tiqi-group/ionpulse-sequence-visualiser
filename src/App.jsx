@@ -89,7 +89,7 @@ function App() {
   const [library, setLibrary] = useState(() => {
     return {
       address: localStorage.getItem("libraryAddress") || "localhost",
-      port: localStorage.getItem("libraryPort") || "8003",
+      port: localStorage.getItem("libraryPort"),
     };
   });
   useEffect(() => {
@@ -116,10 +116,15 @@ function App() {
     saveSequenceView(visualizeLatest, ionpulseSequence);
   }, [visualizeLatest, ionpulseSequence]);
 
-  useEffect(() => {
-    const url = `${library.address}:${library.port}`;
+  const url = new URL(
+    `${window.location.protocol === "https:" ? "wss" : "ws"}://${library.address}`,
+  );
+  if (library.port) {
+    url.port = library.port;
+  }
 
-    const socket = io(`ws://${url}`, {
+  useEffect(() => {
+    const socket = io(url.toString(), {
       path: "/ws/socket.io/",
       transports: ["websocket"],
     });
