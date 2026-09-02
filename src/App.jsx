@@ -129,9 +129,18 @@ function App() {
       transports: ["websocket"],
     });
 
-    function updateIonpulseSequenceFromJSON(value) {
+    const experimentDataEvent = /^experiment_\d+$/;
+
+    function onAnyEvent(eventName, data) {
+      if (!experimentDataEvent.test(eventName)) return;
       if (!visualizeLatestRef.current) return;
-      updateIonpulseSequence(JSON.parse(value));
+      const hardwareInstructions = data?.hardware_instructions;
+      if (!hardwareInstructions) return;
+      try {
+        updateIonpulseSequence(JSON.parse(hardwareInstructions));
+      } catch {
+        console.warn(`Could not parse sequence JSON of ${eventName}`);
+      }
     }
 
     setConnectionStatus(ConnectionStatus.connecting);
@@ -167,7 +176,7 @@ function App() {
       },
     );
 
-    socket.on("last_experiment_sequence", updateIonpulseSequenceFromJSON);
+    socket.onAny(onAnyEvent);
 
     // Fetch the initial sequence: the requested scope, or the latest executed
     // one (the event above only covers sequences executed from now on). A
@@ -207,7 +216,7 @@ function App() {
     }
 
     return () => {
-      socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
+      socket.offAny(onAnyEvent);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
