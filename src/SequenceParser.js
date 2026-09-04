@@ -909,20 +909,34 @@ function accumulate(ppoly, tArray, order = 3) {
   });
 }
 
+// Upper bound on the number of expanded waveform samples per channel. Long
+// sequences are downsampled to stay below it; without a bound, a sequence of a
+// few seconds would allocate hundreds of millions of samples and freeze or
+// crash the browser tab.
+const MAX_WAVEFORM_SAMPLES = 2_000_000;
+
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   targets.forEach((target) => {
     if (!["freq", "phase", "amp", "sample"].includes(target))
       console.error("Unexpected waveform expansion target: " + target);
   });
+  const totalTime = sequenceDataChannel["time"].at(-1);
+  const effectiveSamplingRate =
+    totalTime * samplingRate > MAX_WAVEFORM_SAMPLES
+      ? MAX_WAVEFORM_SAMPLES / totalTime
+      : samplingRate;
   // time is in units of us so sampling rate of 10 equal 10 MSPS
-  const nSamples = Math.ceil(sequenceDataChannel["time"].at(-1) * samplingRate);
+  const nSamples = Math.ceil(totalTime * effectiveSamplingRate);
 
   // Create an array of times uniformly spaced by
-  // 1 / samplingRate in the intervall [t0, t0+duration]
+  // 1 / effectiveSamplingRate in the intervall [t0, t0+duration]
   // (note the including limits up and down to create steep edges
   // in the line plot later)
   let getTimeArray = (t0, duration) => {
-    const nSamples = Math.ceil(duration * samplingRate);
+    const nSamples = Math.ceil(duration * effectiveSamplingRate);
+    if (nSamples < 2) {
+      return nSamples === 1 ? [t0] : [];
+    }
     return Array.from(
       { length: nSamples },
       (_, idx) => t0 + idx * (duration / (nSamples - 1)),
@@ -1028,15 +1042,16 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
           const dt = times[1] - times[0];
           times.forEach((_, idx) => {
             value["sample"][0][currentIdx + idx] +=
-              paramArrays["amp"][idx % paramsArrays["amp"].length] *
+              paramArrays["amp"][idx % paramArrays["amp"].length] *
               Math.cos(
                 2 *
                   Math.PI *
                   (cumSumPhase +
                     paramArrays["phase"][idx % paramArrays["phase"].length] /
-                      360),
+                      360 +
+                    paramArrays["freq"][0] * times[0] * freqScaling),
               );
-            cumSumPhase += paramsArrays["freq"][idx] * freqScaling * dt;
+            cumSumPhase += paramArrays["freq"][idx] * freqScaling * dt;
           });
         } else {
           times.forEach((timeVal, idx) => {

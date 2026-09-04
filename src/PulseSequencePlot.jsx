@@ -152,9 +152,19 @@ function createLayout(
   const totalRFHeight = numberRFAxes * (rfAxisHeight + pad) - pad;
   const totalHeight = totalTTLHeight + totalRFHeight;
 
+  const isDark =
+    document.documentElement.getAttribute("data-bs-theme") === "dark";
+
   let the_layout = {
     width: window.innerWidth - 100,
     height: totalHeight + margin.t + margin.b,
+    // Inherit the page background (follows the bootstrap theme) instead of
+    // plotly's default white.
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    font: {
+      color: isDark ? "#dee2e6" : "#212529",
+    },
     margin: {
       ...margin,
     },
@@ -332,6 +342,10 @@ function getTraces(
   }
   if (["sample", "freq", "phase", "amp"].includes(plotType)) {
     const [time, yData] = expandToWaveform(channelPlotData, [plotType]);
+    // Map each time to its last index up front; a lastIndexOf() per event
+    // would scan the expanded waveform once per event (O(events * samples)).
+    const timeToIdx = new Map();
+    time.forEach((t, idx) => timeToIdx.set(t, idx));
     for (let toneIdx = 0; toneIdx < yData[plotType].length; toneIdx++) {
       let lineTrace = structuredClone(trace);
       lineTrace.mode = "lines";
@@ -339,7 +353,7 @@ function getTraces(
       lineTrace.y = yData[plotType][toneIdx];
       if (toneIdx === 0) {
         trace.y = channelPlotData.time.map(
-          (t) => lineTrace.y[lineTrace.x.lastIndexOf(t)],
+          (t) => lineTrace.y[timeToIdx.get(t) ?? -1],
         );
       }
       if (plotType === "amp") {
@@ -450,29 +464,53 @@ function setOpacity(cString, opacity) {
   return cString.replace("1)", "" + opacity + ")");
 }
 
+/**
+ * useState variant persisted in localStorage, so plot settings survive
+ * reloads, popup windows, and browser restarts.
+ */
+function usePersistentState(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(key));
+      if (stored !== null) return stored;
+    } catch {
+      console.warn(`Invalid entry in localStorage for '${key}'`);
+    }
+    return initialValue;
+  });
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+  return [value, setValue];
+}
+
 const PulseSequencePlot = function SequencePlot({
   channelDescription,
   channelEnabled,
   sequenceData,
   sequenceBlockData,
 }) {
-  const [channelYDataType, setChannelYDataType] = useState(() => {
-    let init = {};
-    for (const k in channelDescription) {
-      if (k.includes("RF")) {
-        // Extend channels settings
-        init[k] = "freq";
-      }
-    }
-    return init;
-  });
+  // Missing channels are filled in with "freq" by the union check below.
+  const [channelYDataType, setChannelYDataType] = usePersistentState(
+    "channelYDataType",
+    {},
+  );
   const [figureConfig, setFigureConfig] = useState({});
 
-  const [individualRFHeight, setIndividualRFHeight] = useState(75);
-  const [individualTTLHeight, setIndividualTTLHeight] = useState(45);
-  const [axisPad, setAxisPad] = useState(10);
-  const [isAnnotation90, setIsAnnotation90] = useState(true);
-  const [isPlotMode, setIsPlotMode] = useState(false);
+  const [individualRFHeight, setIndividualRFHeight] = usePersistentState(
+    "rfAxisHeight",
+    75,
+  );
+  const [individualTTLHeight, setIndividualTTLHeight] = usePersistentState(
+    "ttlAxisHeight",
+    45,
+  );
+  const [axisPad, setAxisPad] = usePersistentState("axisPad", 10);
+  const [isAnnotation90, setIsAnnotation90] = usePersistentState(
+    "rotateAnnotations",
+    true,
+  );
+  const [isPlotMode, setIsPlotMode] = usePersistentState("plotMode", false);
 
   const channelYDataTypeKeys = Object.keys(channelYDataType);
   const channelDescKeys = Object.keys(channelDescription).filter(
@@ -620,6 +658,8 @@ const PulseSequencePlot = function SequencePlot({
     }
   }
 
+  const isDarkTheme =
+    document.documentElement.getAttribute("data-bs-theme") === "dark";
   let greyBackground = true;
   for (const channel of enabledKeys["RF"]) {
     const axisIndices = channelToAxisIdx[channel];
@@ -632,7 +672,7 @@ const PulseSequencePlot = function SequencePlot({
         y0: layout_to_use["yaxis" + axisIndices.at(-1)].domain[0],
         x1: 1,
         y1: layout_to_use["yaxis" + axisIndices.at(0)].domain[1],
-        fillcolor: "#d3d3d3",
+        fillcolor: isDarkTheme ? "#41464b" : "#d3d3d3",
         opacity: 0.7,
         line: {
           width: 0,

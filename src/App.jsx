@@ -9,8 +9,11 @@ import { DescriptionOverride } from "./DescriptionOverride";
 
 import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { sequenceScope, isScoped } from "./sequenceScope";
+import { loadSequenceView, saveSequenceView } from "./sequenceViewState";
 
 function App() {
+  const [restoredView] = useState(loadSequenceView);
   const [remoteChannelDescription, setRemoteChannelDescription] = useState({});
   const [channelDescription, setChannelDescription] = useState(
     remoteChannelDescription,
@@ -39,7 +42,7 @@ function App() {
     return init;
   });
   const [ionpulseSequence, setIonpulseSequence] = useState(
-    remoteIonpulseSequence,
+    () => restoredView?.sequence ?? remoteIonpulseSequence,
   );
   const [sequenceOverride, setSequenceOverride] = useState(false);
 
@@ -86,7 +89,7 @@ function App() {
   const [library, setLibrary] = useState(() => {
     return {
       address: localStorage.getItem("libraryAddress") || "localhost",
-      port: localStorage.getItem("libraryPort") || "8003",
+      port: localStorage.getItem("libraryPort"),
     };
   });
   useEffect(() => {
@@ -100,90 +103,53 @@ function App() {
 
   const [connectionErrMsg, setConnectionErrMsg] = useState("");
 
-  useEffect(() => {
-    const url = `${library.address}:${library.port}`;
+  // When disabled, incoming sequence events no longer overwrite the display
+  // (similar to the "Latest" switch of ICON's data view). Windows opened for
+  // a specific past sequence start with live updates off.
+  const [visualizeLatest, setVisualizeLatest] = useState(
+    restoredView?.visualizeLatest ?? !isScoped,
+  );
+  const visualizeLatestRef = useRef(visualizeLatest);
+  visualizeLatestRef.current = visualizeLatest;
 
-    const socket = io(`ws://${url}`, {
+  useEffect(() => {
+    saveSequenceView(visualizeLatest, ionpulseSequence);
+  }, [visualizeLatest, ionpulseSequence]);
+
+  const url = new URL(
+    `${window.location.protocol === "https:" ? "wss" : "ws"}://${library.address}`,
+  );
+  if (library.port) {
+    url.port = library.port;
+  }
+
+  useEffect(() => {
+    const socket = io(url.toString(), {
       path: "/ws/socket.io/",
       transports: ["websocket"],
     });
 
     function updateIonpulseSequenceFromJSON(value) {
-      // Extracting data from the notification
-      if (
-        Object.hasOwn(value, "data") &&
-        value.data.name == "Hardware.sequence"
-      ) {
-        const json_sequence = JSON.parse(value.data.value);
-        updateIonpulseSequence(json_sequence);
-      } else {
-        updateIonpulseSequence(JSON.parse(value));
-      }
+      if (!visualizeLatestRef.current) return;
+      updateIonpulseSequence(JSON.parse(value));
     }
 
     setConnectionStatus(ConnectionStatus.connecting);
-
-    let isConnectionUp = true;
-    const controller = new AbortController();
-
-    const fetchData = async () => {
-      let promise = fetch("http://" + url + "/Hardware/description", {
-        signal: controller.signal,
-      })
-        .then((response) => {
-          if (response.ok) {
-            response
-              .json()
-              .then((data) => {
-                if (isConnectionUp) {
-                  updateChannelDescription(JSON.parse(data));
-                }
-              })
-              .catch((err) => {
-                isConnectionUp = false;
-                // console.log(err);
-              });
-            setConnectionStatus(ConnectionStatus.connected);
-          } else {
-            isConnectionUp = false;
-            setConnectionStatus(ConnectionStatus.failed);
-            setConnectionErrMsg(
-              "" + response.status + " " + response.statusText,
-            );
-          }
-        })
-        .catch((exception) => {
-          if (exception instanceof TypeError) {
-            setConnectionStatus(ConnectionStatus.failed);
-            setConnectionErrMsg(exception.message);
-          }
-          isConnectionUp = false;
-        });
-      fetch("http://" + url + "/Hardware/sequence", {
-        signal: controller.signal,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (isConnectionUp) {
-            updateIonpulseSequence(JSON.parse(data));
-          }
-        })
-        .catch((response) => {
-          isConnectionUp = false;
-        });
-
-      await promise;
-
-      if (isConnectionUp) {
-        socket.connect();
-        socket.on("notify", updateIonpulseSequenceFromJSON);
-      }
+    const onConnect = () => {
+      setConnectionStatus(ConnectionStatus.connected);
+      setConnectionErrMsg("");
     };
-
-    fetchData();
-
-    socket.on("connect", () => setConnectionStatus(ConnectionStatus.connected));
-    socket.on("disconnect", () => setConnectionStatus(ConnectionStatus.failed));
+    const onDisconnect = (reason) => {
+      setConnectionStatus(ConnectionStatus.failed);
+      setConnectionErrMsg(`Disconnected from ${url}: ${reason}`);
+    };
+    const onConnectError = (error) => {
+      setConnectionStatus(ConnectionStatus.failed);
+      setConnectionErrMsg(`Could not connect to ${url}: ${error.message}`);
+    };
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
 
     socket.emit(
       "trigger_method",
@@ -193,29 +159,68 @@ function App() {
         kwargs: null,
       },
       (input) => {
-        updateChannelDescription(JSON.parse(input.value));
+        try {
+          updateChannelDescription(JSON.parse(input.value));
+        } catch {
+          console.warn("Could not parse hardware description");
+        }
       },
     );
 
     socket.on("last_experiment_sequence", updateIonpulseSequenceFromJSON);
 
-    return () => {
-      isConnectionUp = false;
-      socket.off("notify", updateIonpulseSequenceFromJSON);
+    // Fetch the initial sequence: the requested scope, or the latest executed
+    // one (the event above only covers sequences executed from now on). A
+    // restored sequence is kept instead, so that it is not overwritten.
+    const serialized = (type, value) => ({
+      full_access_path: "",
+      type: type,
+      value: value,
+      readonly: false,
+      doc: null,
+    });
+    const scopeKwargs = {};
+    if (sequenceScope.jobId !== null) {
+      scopeKwargs["job_id"] = serialized("int", sequenceScope.jobId);
+    }
+    if (sequenceScope.datapoint !== null) {
+      scopeKwargs["index"] = serialized("int", sequenceScope.datapoint);
+    }
+    if (restoredView?.sequence == null) {
+      socket.emit(
+        "trigger_method",
+        {
+          access_path: "data.get_hardware_instructions",
+          args: null,
+          kwargs: serialized("dict", scopeKwargs),
+        },
+        (input) => {
+          try {
+            if (input.value) {
+              updateIonpulseSequence(JSON.parse(input.value));
+            }
+          } catch {
+            console.warn("Could not parse sequence JSON");
+          }
+        },
+      );
+    }
 
+    return () => {
       socket.off("last_experiment_sequence", updateIonpulseSequenceFromJSON);
-      socket.off("connect", () =>
-        setConnectionStatus(ConnectionStatus.connected),
-      );
-      socket.off("disconnect", () =>
-        setConnectionStatus(ConnectionStatus.failed),
-      );
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.disconnect();
     };
   }, [library]);
 
   return (
     <>
-      <NavBar />
+      <NavBar
+        visualizeLatest={visualizeLatest}
+        onVisualizeLatestChange={setVisualizeLatest}
+      />
       <Routes>
         <Route
           path="/plot"
