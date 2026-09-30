@@ -29,6 +29,29 @@ function getChannelKey(hw) {
 }
 
 /**
+ * nameWithDeviceIds appends the unique, non-empty device ids of a channel's
+ * hardware channels to its display name, e.g. "Quench A (MTCA Rack)", so
+ * that channels of multi-device setups are distinguishable.
+ *
+ * @param {string} name Display name of the channel
+ * @param {Array} hwChannels Raw hw channel objects with a "device" field
+ * @returns {string} The name with the device ids in parentheses appended
+ */
+function nameWithDeviceIds(name, hwChannels) {
+  const deviceIds = [
+    ...new Set(
+      (hwChannels ?? [])
+        .map((hw_ch) => hw_ch["device"])
+        .filter((deviceId) => deviceId !== undefined && deviceId !== ""),
+    ),
+  ];
+  if (name == null || deviceIds.length === 0) {
+    return name;
+  }
+  return name + " (" + deviceIds.join(", ") + ")";
+}
+
+/**
  * stripIdxFromName removes the optional "[<idx>] " prefix from sequence/event names
  * @param  {string} name Name of the sequence or event
  * @return {string} The name without the prefix or an empty string if name is undefined
@@ -1087,14 +1110,14 @@ function generateChannelDescriptionFromSequence(sequence) {
       switch (hw_channel["hardware"]) {
         case ChannelType.readout:
           desc.push({
-            name: "Readout " + desc.length,
+            name: nameWithDeviceIds("Readout " + desc.length, [hw_channel]),
             hw_channels: [getChannelKey(hw_channel)],
             group: "Readout",
           });
           break;
         case ChannelType.quench:
           desc.push({
-            name: "Quench RF " + desc.length,
+            name: nameWithDeviceIds("Quench RF " + desc.length, [hw_channel]),
             hw_channels: [getChannelKey(hw_channel)],
             center_frequency: 0,
             order: 1,
@@ -1104,7 +1127,7 @@ function generateChannelDescriptionFromSequence(sequence) {
           break;
         case ChannelType.dds:
           desc.push({
-            name: "DDS " + desc.length,
+            name: nameWithDeviceIds("DDS " + desc.length, [hw_channel]),
             hw_channels: [getChannelKey(hw_channel)],
             center_frequency: 0,
             order: 1,
@@ -1115,7 +1138,7 @@ function generateChannelDescriptionFromSequence(sequence) {
         case ChannelType.dio:
           for (let i = 0; i < 32; i++) {
             desc.push({
-              name: "TTL " + i,
+              name: nameWithDeviceIds("TTL " + i, [hw_channel]),
               hw_channels: [getChannelKey(hw_channel)],
               sub_channel: {
                 type: "output",
@@ -1126,7 +1149,7 @@ function generateChannelDescriptionFromSequence(sequence) {
           }
           for (let i = 0; i < N_INPUT_GATE_CHANNELS; i++) {
             desc.push({
-              name: "PMT " + i,
+              name: nameWithDeviceIds("PMT " + i, [hw_channel]),
               hw_channels: [getChannelKey(hw_channel)],
               sub_channel: {
                 type: "input_gate",
@@ -1148,4 +1171,5 @@ export {
   ChannelType,
   N_TONES_PER_QUENCH_CHANNEL,
   generateChannelDescriptionFromSequence,
+  nameWithDeviceIds,
 };

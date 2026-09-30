@@ -4,6 +4,7 @@ import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
 import {
   generateChannelDescriptionFromSequence,
+  nameWithDeviceIds,
   ChannelType,
 } from "./SequenceParser.js";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
@@ -76,6 +77,11 @@ function App() {
             ...value,
             group: group,
           };
+          // The device ids are still raw hw channel objects here
+          newDescription[key]["name"] = nameWithDeviceIds(
+            value["name"],
+            value["hw_channels"],
+          );
           newDescription[key]["hw_channels"] = newDescription[key][
             "hw_channels"
           ].map((v) => {
@@ -218,6 +224,7 @@ function App() {
         }
         updateChannelDescription(description);
         if (restoredView?.sequence != null) return;
+        console.log(description);
         const deviceId = getQuenchDeviceId(description);
         if (deviceId === null) {
           console.warn(
