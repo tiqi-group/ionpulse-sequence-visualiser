@@ -914,6 +914,10 @@ function accumulate(ppoly, tArray, order = 3) {
 // crash the browser tab.
 const MAX_WAVEFORM_SAMPLES = 2_000_000;
 
+// Points per trace spread over the constant segments, so that hovering along
+// a flat line still finds a point at moderate zoom.
+const HOVER_POINTS = 4000;
+
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   targets.forEach((target) => {
     if (!["freq", "phase", "amp", "sample"].includes(target))
@@ -923,8 +927,8 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   const durations = eventTimes.slice(1).map((t, i) => t - eventTimes[i]);
 
   // Between two events the plotted parameters only change along a slope or a
-  // piecewise polynomial. Any other segment is a straight line, for which the
-  // two end points are enough.
+  // piecewise polynomial. Any other segment is a straight line and needs no
+  // dense sampling.
   const isSampled = durations.map(
     (_, i) =>
       sequenceDataChannel["slope_time"][0][i] > 0 ||
@@ -943,9 +947,11 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
       ? MAX_WAVEFORM_SAMPLES / sampledTime
       : samplingRate;
   // time is in units of us so sampling rate of 10 equal 10 MSPS
+  const hoverSpacing = eventTimes.at(-1) / HOVER_POINTS;
   const sampleCounts = durations.map((duration, i) => {
-    if (isSampled[i]) return Math.ceil(duration * effectiveSamplingRate);
-    return duration > 0 ? 2 : 0;
+    const nDense = Math.ceil(duration * effectiveSamplingRate);
+    if (isSampled[i] || nDense < 2) return nDense;
+    return Math.min(nDense, Math.ceil(duration / hoverSpacing) + 1);
   });
   const nSamples = sampleCounts.reduce((sum, n) => sum + n, 0);
 
