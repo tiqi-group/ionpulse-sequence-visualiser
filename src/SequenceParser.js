@@ -364,22 +364,19 @@ class SequenceParser {
           ChannelType.readout
         )
           continue;
+        const callTime = this.#sequenceBlockData[idx]["calls"].at(-1)[key];
+        const channelTime = data[ch]["timeDomain"].at(-1);
         console.assert(
-          this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return (
-              Math.abs(call[key] - data[ch]["timeDomain"].at(-1)) <=
-              1e6 * Number.EPSILON
-            );
-          }),
+          Math.abs(callTime - channelTime) <= TIME_TOLERANCE,
           key +
             " on channel " +
             ch +
             " don't match for Sequence " +
             idx +
             ". " +
-            data[ch]["timeDomain"].at(-1) +
-            " is not in " +
-            this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
+            channelTime +
+            " is not " +
+            callTime,
         );
         // if (
         //   !this.#sequenceBlockData[idx]["calls"].some((call) => {
@@ -868,6 +865,8 @@ function blackman(t) {
 const freqScaling = 0.002;
 
 const clockRate = 250;
+// Times closer than a thousandth of a clock tick are considered equal
+const TIME_TOLERANCE = 1e-3 / clockRate;
 const samplingRate = 25;
 const lengthBits = 16;
 function accumulate(ppoly, tArray, order = 3) {
