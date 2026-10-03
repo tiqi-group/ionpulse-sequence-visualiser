@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useImmer } from "use-immer";
 import { SequenceVisualiser } from "./SequenceVisualiser";
 
@@ -40,8 +40,14 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
     sessionStorage.setItem(SEQUENCE_CONFIG_KEY, JSON.stringify(sequenceConfig));
   }, [sequenceConfig]);
 
-  // TODO: Use function instead of Object
-  let sequenceParser = new SequenceParser(ionpulseSequence, sequenceConfig);
+  const { plotData, sequenceBlockData } = useMemo(() => {
+    // TODO: Use function instead of Object
+    const sequenceParser = new SequenceParser(ionpulseSequence, sequenceConfig);
+    return {
+      plotData: sequenceParser.plotData,
+      sequenceBlockData: sequenceParser.sequenceBlockData,
+    };
+  }, [ionpulseSequence, sequenceConfig]);
 
   function updateSequenceConfig(recipe) {
     setSequenceConfig(recipe);
@@ -90,8 +96,8 @@ const IonpulseSequenceVisualiser = function IonpulseSequenceVisualiser({
       </Modal>
       <SequenceVisualiser
         channelDescription={channelDescription}
-        pulseSequenceData={sequenceParser.plotData}
-        sequenceBlockData={sequenceParser.sequenceBlockData}
+        pulseSequenceData={plotData}
+        sequenceBlockData={sequenceBlockData}
         sequenceConfig={sequenceConfig}
         setSequenceConfig={updateSequenceConfig}
       />
