@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import NavBar from "./Header";
 import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { Hardware, channelGroups } from "./Hardware";
-import { generateChannelDescriptionFromSequence } from "./SequenceParser.js";
+import {
+  generateChannelDescriptionFromSequence,
+  nameWithDeviceIds,
+  ChannelType,
+} from "./SequenceParser.js";
 import { IonpulseSequenceVisualiser } from "./IonpulseSequenceVisualiser";
 import { Configurator } from "./Configurator";
 import { DescriptionOverride } from "./DescriptionOverride";
@@ -11,6 +15,24 @@ import { io } from "socket.io-client";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { sequenceScope, isScoped } from "./sequenceScope";
 import { loadSequenceView, saveSequenceView } from "./sequenceViewState";
+
+// The device_id for data.get_hardware_instructions is the device of the
+// first channel of the QuenchHardware in the hardware description.
+function getQuenchDeviceId(description) {
+  for (const group of channelGroups) {
+    if (Object.hasOwn(description, group + "s")) {
+      for (const channel of Object.values(description[group + "s"])) {
+        const hw_channel = (channel["hw_channels"] ?? []).find(
+          (hw_ch) => hw_ch["hardware"] === ChannelType.quench,
+        );
+        if (hw_channel !== undefined) {
+          return hw_channel["device"];
+        }
+      }
+    }
+  }
+  return null;
+}
 
 function App() {
   const [restoredView] = useState(loadSequenceView);
@@ -55,6 +77,11 @@ function App() {
             ...value,
             group: group,
           };
+          // The device ids are still raw hw channel objects here
+          newDescription[key]["name"] = nameWithDeviceIds(
+            value["name"],
+            value["hw_channels"],
+          );
           newDescription[key]["hw_channels"] = newDescription[key][
             "hw_channels"
           ].map((v) => {
@@ -130,11 +157,15 @@ function App() {
     });
 
     const experimentDataEvent = /^experiment_\d+$/;
+    let deviceId = null;
 
     function onAnyEvent(eventName, data) {
       if (!experimentDataEvent.test(eventName)) return;
       if (!visualizeLatestRef.current) return;
-      const hardwareInstructions = data?.hardware_instructions;
+      const deviceData = data?.device_data ?? [];
+      const hardwareInstructions = (
+        deviceData.find((dev) => dev["device_id"] === deviceId) ?? deviceData[0]
+      )?.hardware_instructions;
       if (!hardwareInstructions) return;
       try {
         updateIonpulseSequence(JSON.parse(hardwareInstructions));
@@ -160,27 +191,11 @@ function App() {
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
 
-    socket.emit(
-      "trigger_method",
-      {
-        access_path: "experiments.get_hardware_description",
-        args: null,
-        kwargs: null,
-      },
-      (input) => {
-        try {
-          updateChannelDescription(JSON.parse(input.value));
-        } catch {
-          console.warn("Could not parse hardware description");
-        }
-      },
-    );
-
-    socket.onAny(onAnyEvent);
-
     // Fetch the initial sequence: the requested scope, or the latest executed
     // one (the event above only covers sequences executed from now on). A
-    // restored sequence is kept instead, so that it is not overwritten.
+    // restored sequence is kept instead, so that it is not overwritten. The
+    // request needs the device_id, which is only known once the hardware
+    // description has been received, hence it is emitted in that callback.
     const serialized = (type, value) => ({
       full_access_path: "",
       type: type,
@@ -195,25 +210,56 @@ function App() {
     if (sequenceScope.datapoint !== null) {
       scopeKwargs["index"] = serialized("int", sequenceScope.datapoint);
     }
-    if (restoredView?.sequence == null) {
-      socket.emit(
-        "trigger_method",
-        {
-          access_path: "data.get_hardware_instructions",
-          args: null,
-          kwargs: serialized("dict", scopeKwargs),
-        },
-        (input) => {
-          try {
-            if (input.value) {
-              updateIonpulseSequence(JSON.parse(input.value));
+
+    socket.emit(
+      "trigger_method",
+      {
+        access_path: "experiments.get_hardware_description",
+        args: null,
+        kwargs: null,
+      },
+      (input) => {
+        let description;
+        try {
+          description = JSON.parse(input.value);
+        } catch {
+          console.warn("Could not parse hardware description");
+          return;
+        }
+        updateChannelDescription(description);
+        deviceId = getQuenchDeviceId(description);
+        if (restoredView?.sequence != null) return;
+        console.log(description);
+        if (deviceId === null) {
+          console.warn(
+            "Could not fetch sequence: no QuenchHardware device in hardware description",
+          );
+          return;
+        }
+        socket.emit(
+          "trigger_method",
+          {
+            access_path: "data.get_hardware_instructions",
+            args: null,
+            kwargs: serialized("dict", {
+              ...scopeKwargs,
+              device_id: serialized("str", deviceId),
+            }),
+          },
+          (input) => {
+            try {
+              if (input.value) {
+                updateIonpulseSequence(JSON.parse(input.value));
+              }
+            } catch {
+              console.warn("Could not parse sequence JSON");
             }
-          } catch {
-            console.warn("Could not parse sequence JSON");
-          }
-        },
-      );
-    }
+          },
+        );
+      },
+    );
+
+    socket.onAny(onAnyEvent);
 
     return () => {
       socket.offAny(onAnyEvent);
