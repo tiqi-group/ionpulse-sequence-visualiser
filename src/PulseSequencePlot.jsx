@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ChannelType, expandToWaveform } from "./SequenceParser";
 import { channelGroups } from "./Hardware";
 import { Button, ToggleButton, Form, Accordion } from "react-bootstrap";
@@ -392,6 +392,73 @@ function getTraces(
   return data;
 }
 
+// Plot type of the i-th axis of a channel
+function getPlotType(description, yDataType, i) {
+  if (description.group !== "RF") return description.group;
+  return i === 0 ? (yDataType ?? "freq") : "amp";
+}
+
+function buildTraces(
+  plotData,
+  channelDescription,
+  channelEnabled,
+  channelYDataType,
+  channelToAxisIdx,
+  sequenceBlockData,
+) {
+  let data = [];
+  for (const [channel, value] of Object.entries(plotData)) {
+    if (!channelEnabled[channel]) continue;
+    for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
+      getTraces(
+        channelToAxisIdx[channel][i],
+        getPlotType(channelDescription[channel], channelYDataType[channel], i),
+        value,
+        channelDescription[channel].name,
+      ).forEach((trace) => data.push(trace));
+    }
+  }
+
+  sequenceBlockData.forEach((sequence) => {
+    if (
+      sequence["type"] === "LoopSequence" &&
+      (sequence["display"] === "minimized" ||
+        sequence["display"] === "contracted")
+    ) {
+      for (const call of sequence["calls"].slice(1)) {
+        const callPlotData = getPlotData(call["data"], channelDescription);
+        for (const [channel, value] of Object.entries(callPlotData)) {
+          if (!channelEnabled[channel]) continue;
+          const localData = {
+            ...value,
+            time: value.time.map((t) => {
+              return (
+                t - (call["startTime"] - sequence["calls"][0]["startTime"])
+                // t
+              );
+            }),
+          };
+
+          for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
+            getTraces(
+              channelToAxisIdx[channel][i],
+              getPlotType(
+                channelDescription[channel],
+                channelYDataType[channel],
+                i,
+              ),
+              localData,
+              channelDescription[channel].name,
+              0.5 / sequence["calls"].length,
+            ).forEach((trace) => data.push(trace));
+          }
+        }
+      }
+    }
+  });
+  return data;
+}
+
 let data_template_TTL = {
   line: { shape: "hv" },
   type: "scatter",
@@ -546,7 +613,10 @@ const PulseSequencePlot = function SequencePlot({
     setChannelYDataType(newChannelYDataType);
   }
 
-  const plotData = getPlotData(sequenceData, channelDescription);
+  const plotData = useMemo(
+    () => getPlotData(sequenceData, channelDescription),
+    [sequenceData, channelDescription],
+  );
   const enabledKeys = Object.keys(channelDescription).reduce(
     (enabledKeys, key) => {
       if (
@@ -583,7 +653,6 @@ const PulseSequencePlot = function SequencePlot({
     sessionStorage.setItem("xLimits", JSON.stringify(xLimits));
   }, [xLimits]);
 
-  let data = [];
   let [layout_to_use, channelToAxisIdx, numberRFAxes] = createLayout(
     enabledKeys,
     xLimits.slice(),
@@ -592,6 +661,26 @@ const PulseSequencePlot = function SequencePlot({
     individualTTLHeight,
     axisPad,
     isPlotMode,
+  );
+  // Kept across renders (zoom, plot style), so that the waveforms are not
+  // expanded and redrawn again. channelToAxisIdx follows from the dependencies.
+  const data = useMemo(
+    () =>
+      buildTraces(
+        plotData,
+        channelDescription,
+        channelEnabled,
+        channelYDataType,
+        channelToAxisIdx,
+        sequenceBlockData,
+      ),
+    [
+      plotData,
+      channelDescription,
+      channelEnabled,
+      channelYDataType,
+      sequenceBlockData,
+    ],
   );
   if (isAnnotation90) {
     layout_to_use["margin"]["l"] = margin["l"] - 120;
@@ -607,28 +696,18 @@ const PulseSequencePlot = function SequencePlot({
     },
   };
 
-  for (const [channel, value] of Object.entries(plotData)) {
+  for (const channel of Object.keys(plotData)) {
     if (!channelEnabled[channel]) continue;
     let annotation_position_1;
     let annotation_position_2;
     for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
       const index = channelToAxisIdx[channel][i];
 
-      let plotType =
-        channelDescription[channel].group === "RF"
-          ? i === 0
-            ? Object.hasOwn(channelYDataType, channel)
-              ? channelYDataType[channel]
-              : "freq"
-            : "amp"
-          : channelDescription[channel].group;
-
-      getTraces(
-        index,
-        plotType,
-        value,
-        channelDescription[channel].name,
-      ).forEach((trace) => data.push(trace));
+      let plotType = getPlotType(
+        channelDescription[channel],
+        channelYDataType[channel],
+        i,
+      );
 
       layout_to_use["xaxis" + index] = {
         ...xAxisParams,
@@ -808,47 +887,6 @@ const PulseSequencePlot = function SequencePlot({
   layout_to_use.annotations = layout_to_use.annotations.concat(
     loopData["annotations"],
   );
-
-  sequenceBlockData.forEach((sequence) => {
-    if (
-      sequence["type"] === "LoopSequence" &&
-      (sequence["display"] === "minimized" ||
-        sequence["display"] === "contracted")
-    ) {
-      for (const call of sequence["calls"].slice(1)) {
-        let plotData = getPlotData(call["data"], channelDescription);
-        for (const [channel, value] of Object.entries(plotData)) {
-          if (!channelEnabled[channel]) continue;
-          const localData = {
-            ...value,
-            time: value.time.map((t) => {
-              return (
-                t - (call["startTime"] - sequence["calls"][0]["startTime"])
-                // t
-              );
-            }),
-          };
-
-          for (let i = 0; i < channelToAxisIdx[channel].length; i++) {
-            const index = channelToAxisIdx[channel][i];
-            let plotType =
-              channelDescription[channel].group === "RF"
-                ? i === 0
-                  ? channelYDataType[channel]
-                  : "amp"
-                : channelDescription[channel].group;
-            getTraces(
-              index,
-              plotType,
-              localData,
-              channelDescription[channel].name,
-              0.5 / sequence["calls"].length,
-            ).forEach((trace) => data.push(trace));
-          }
-        }
-      }
-    }
-  });
 
   return (
     <>
