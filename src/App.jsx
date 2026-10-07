@@ -157,11 +157,15 @@ function App() {
     });
 
     const experimentDataEvent = /^experiment_\d+$/;
+    let deviceId = null;
 
     function onAnyEvent(eventName, data) {
       if (!experimentDataEvent.test(eventName)) return;
       if (!visualizeLatestRef.current) return;
-      const hardwareInstructions = data?.hardware_instructions;
+      const deviceData = data?.device_data ?? [];
+      const hardwareInstructions = (
+        deviceData.find((dev) => dev["device_id"] === deviceId) ?? deviceData[0]
+      )?.hardware_instructions;
       if (!hardwareInstructions) return;
       try {
         updateIonpulseSequence(JSON.parse(hardwareInstructions));
@@ -223,9 +227,9 @@ function App() {
           return;
         }
         updateChannelDescription(description);
+        deviceId = getQuenchDeviceId(description);
         if (restoredView?.sequence != null) return;
         console.log(description);
-        const deviceId = getQuenchDeviceId(description);
         if (deviceId === null) {
           console.warn(
             "Could not fetch sequence: no QuenchHardware device in hardware description",
@@ -237,7 +241,10 @@ function App() {
           {
             access_path: "data.get_hardware_instructions",
             args: null,
-            kwargs: serialized("dict", { ...scopeKwargs, device_id: deviceId }),
+            kwargs: serialized("dict", {
+              ...scopeKwargs,
+              device_id: serialized("str", deviceId),
+            }),
           },
           (input) => {
             try {
