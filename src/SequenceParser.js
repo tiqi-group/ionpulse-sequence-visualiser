@@ -387,22 +387,19 @@ class SequenceParser {
           ChannelType.readout
         )
           continue;
+        const callTime = this.#sequenceBlockData[idx]["calls"].at(-1)[key];
+        const channelTime = data[ch]["timeDomain"].at(-1);
         console.assert(
-          this.#sequenceBlockData[idx]["calls"].some((call) => {
-            return (
-              Math.abs(call[key] - data[ch]["timeDomain"].at(-1)) <=
-              1e6 * Number.EPSILON
-            );
-          }),
+          Math.abs(callTime - channelTime) <= TIME_TOLERANCE,
           key +
             " on channel " +
             ch +
             " don't match for Sequence " +
             idx +
             ". " +
-            data[ch]["timeDomain"].at(-1) +
-            " is not in " +
-            this.#sequenceBlockData[idx]["calls"].map((v) => v[key]),
+            channelTime +
+            " is not " +
+            callTime,
         );
         // if (
         //   !this.#sequenceBlockData[idx]["calls"].some((call) => {
@@ -891,6 +888,8 @@ function blackman(t) {
 const freqScaling = 0.002;
 
 const clockRate = 250;
+// Times closer than a thousandth of a clock tick are considered equal
+const TIME_TOLERANCE = 1e-3 / clockRate;
 const samplingRate = 25;
 const lengthBits = 16;
 function accumulate(ppoly, tArray, order = 3) {
@@ -938,31 +937,57 @@ function accumulate(ppoly, tArray, order = 3) {
 // crash the browser tab.
 const MAX_WAVEFORM_SAMPLES = 2_000_000;
 
+// Points per trace spread over the constant segments, so that hovering along
+// a flat line still finds a point at moderate zoom.
+const HOVER_POINTS = 4000;
+
 function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
   targets.forEach((target) => {
     if (!["freq", "phase", "amp", "sample"].includes(target))
       console.error("Unexpected waveform expansion target: " + target);
   });
-  const totalTime = sequenceDataChannel["time"].at(-1);
+  const eventTimes = sequenceDataChannel["time"];
+  const durations = eventTimes.slice(1).map((t, i) => t - eventTimes[i]);
+
+  // Between two events the plotted parameters only change along a slope or a
+  // piecewise polynomial. Any other segment is a straight line and needs no
+  // dense sampling.
+  const isSampled = durations.map(
+    (_, i) =>
+      sequenceDataChannel["slope_time"][0][i] > 0 ||
+      targets.some(
+        (key) =>
+          key === "sample" ||
+          sequenceDataChannel[key].some((tone) => typeof tone[i] === "object"),
+      ),
+  );
+  const sampledTime = durations.reduce(
+    (sum, duration, i) => (isSampled[i] ? sum + duration : sum),
+    0,
+  );
   const effectiveSamplingRate =
-    totalTime * samplingRate > MAX_WAVEFORM_SAMPLES
-      ? MAX_WAVEFORM_SAMPLES / totalTime
+    sampledTime * samplingRate > MAX_WAVEFORM_SAMPLES
+      ? MAX_WAVEFORM_SAMPLES / sampledTime
       : samplingRate;
   // time is in units of us so sampling rate of 10 equal 10 MSPS
-  const nSamples = Math.ceil(totalTime * effectiveSamplingRate);
+  const hoverSpacing = eventTimes.at(-1) / HOVER_POINTS;
+  const sampleCounts = durations.map((duration, i) => {
+    const nDense = Math.ceil(duration * effectiveSamplingRate);
+    if (isSampled[i] || nDense < 2) return nDense;
+    return Math.min(nDense, Math.ceil(duration / hoverSpacing) + 1);
+  });
+  const nSamples = sampleCounts.reduce((sum, n) => sum + n, 0);
 
-  // Create an array of times uniformly spaced by
-  // 1 / effectiveSamplingRate in the intervall [t0, t0+duration]
-  // (note the including limits up and down to create steep edges
-  // in the line plot later)
-  let getTimeArray = (t0, duration) => {
-    const nSamples = Math.ceil(duration * effectiveSamplingRate);
-    if (nSamples < 2) {
-      return nSamples === 1 ? [t0] : [];
+  // Create an array of n times uniformly spaced in the intervall
+  // [t0, t0+duration] (note the including limits up and down to create steep
+  // edges in the line plot later)
+  let getTimeArray = (t0, duration, n) => {
+    if (n < 2) {
+      return n === 1 ? [t0] : [];
     }
     return Array.from(
-      { length: nSamples },
-      (_, idx) => t0 + idx * (duration / (nSamples - 1)),
+      { length: n },
+      (_, idx) => t0 + idx * (duration / (n - 1)),
     );
   };
 
@@ -984,7 +1009,7 @@ function expandToWaveform(sequenceDataChannel, targets = ["sample"]) {
     const duration =
       sequenceDataChannel["time"][i + 1] - sequenceDataChannel["time"][i];
     const t = sequenceDataChannel["time"][i];
-    const times = getTimeArray(t, duration);
+    const times = getTimeArray(t, duration, sampleCounts[i]);
 
     for (
       let toneIdx = 0;
